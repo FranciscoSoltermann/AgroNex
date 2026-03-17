@@ -38,7 +38,7 @@ public class SecurityConfig {
 
                 // 4. Reglas de rutas (Acá definís qué es público y qué es privado)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/public/**").permitAll() // Rutas abiertas (ej: login/registro si lo manejaras acá)
+                        .requestMatchers("/api/public/**", "/v3/api-docs/**", "/swagger-ui/**").permitAll() // Rutas abiertas (ej: login/registro si lo manejaras acá)
                         .anyRequest().authenticated() // CUALQUIER otra ruta exige token válido
                 )
 
