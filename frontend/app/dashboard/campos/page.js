@@ -1,0 +1,362 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import apiClient from "@/lib/api-client";
+import {
+    Plus, MapPin, Loader2, AlertCircle, MoreVertical,
+    LayoutGrid, List, CheckCircle2, AlertTriangle, X
+} from "lucide-react";
+
+const IMAGES = [
+    "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1574943320219-553eb213f72d?q=80&w=600&auto=format&fit=crop",
+];
+
+export default function CamposPage() {
+    const [campos, setCampos] = useState([]);
+    const [stats, setStats] = useState({ totalHa: 0, camposActivos: 0, lotesTotales: 0 });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [vista, setVista] = useState("grid");
+    const [userId, setUserId] = useState(null);
+
+    // Modal nuevo campo
+    const [showModalCampo, setShowModalCampo] = useState(false);
+    const [formCampo, setFormCampo] = useState({ nombre: "", ubicacion: "", superficieTotal: "" });
+    const [submitLoading, setSubmitLoading] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
+    const [submitSuccess, setSubmitSuccess] = useState(null);
+
+    // Modal nuevo lote
+    const [showModalLote, setShowModalLote] = useState(false);
+    const [campoSeleccionado, setCampoSeleccionado] = useState(null);
+    const [formLote, setFormLote] = useState({ nombre: "", superficie: "" });
+
+    const fetchData = useCallback(async (uid) => {
+        try {
+            setError(null);
+            const [camposRes, statsRes] = await Promise.all([
+                apiClient.get("/campos"),
+                apiClient.get("/campos/stats"),
+            ]);
+            setCampos(camposRes.data || []);
+            const s = statsRes.data || {};
+            setStats({
+                totalHa: s.hectareasTotales ?? 0,
+                camposActivos: s.camposActivos ?? 0,
+                lotesTotales: s.lotesTotales ?? 0,
+            });
+        } catch (err) {
+            setError("No se pudo cargar la información. Verificá que el backend esté activo.");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const init = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                setUserId(session.user.id);
+                await fetchData(session.user.id);
+            } else {
+                setLoading(false);
+            }
+        };
+        init();
+    }, [fetchData]);
+
+    const handleCrearCampo = async (e) => {
+        e.preventDefault();
+        setSubmitLoading(true);
+        setSubmitError(null);
+        try {
+            await apiClient.post("/campos", {
+                nombre: formCampo.nombre,
+                ubicacion: formCampo.ubicacion,
+                superficieTotal: parseFloat(formCampo.superficieTotal),
+                idUsuario: userId,
+            });
+            setSubmitSuccess("¡Campo creado con éxito!");
+            setFormCampo({ nombre: "", ubicacion: "", superficieTotal: "" });
+            await fetchData(userId);
+            setTimeout(() => { setShowModalCampo(false); setSubmitSuccess(null); }, 1500);
+        } catch (err) {
+            setSubmitError(err.response?.data?.message || "Error al crear el campo.");
+        } finally {
+            setSubmitLoading(false);
+        }
+    };
+
+    const handleCrearLote = async (e) => {
+        e.preventDefault();
+        setSubmitLoading(true);
+        setSubmitError(null);
+        try {
+            await apiClient.post("/lotes", {
+                nombre: formLote.nombre,
+                superficie: parseFloat(formLote.superficie),
+                idCampo: campoSeleccionado.idCampo,
+            });
+            setSubmitSuccess("¡Lote creado con éxito!");
+            setFormLote({ nombre: "", superficie: "" });
+            await fetchData(userId);
+            setTimeout(() => { setShowModalLote(false); setSubmitSuccess(null); }, 1500);
+        } catch (err) {
+            setSubmitError(err.response?.data?.message || "Error al crear el lote.");
+        } finally {
+            setSubmitLoading(false);
+        }
+    };
+
+    if (loading) return (
+        <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" />
+        </div>
+    );
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+                <div>
+                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Campos y Lotes</p>
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tight">Resumen de la Estancia</h1>
+                    <p className="text-[13px] text-gray-500 mt-1">Gestioná tus zonas de cultivo y unidades de producción.</p>
+                </div>
+                <button
+                    onClick={() => { setShowModalCampo(true); setSubmitError(null); setSubmitSuccess(null); }}
+                    className="flex items-center gap-2 bg-[#2D6A4F] text-white px-4 py-2.5 rounded-xl text-[12px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/20"
+                >
+                    <Plus size={15} /> Agregar Campo/Lote
+                </button>
+            </div>
+
+            {/* Error global */}
+            {error && (
+                <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+                    <AlertCircle size={16} className="flex-shrink-0" />
+                    {error}
+                </div>
+            )}
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4">
+                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Superficie Total</p>
+                    <p className="text-3xl font-black text-gray-900">{Number(stats.totalHa).toLocaleString("es-AR", { maximumFractionDigits: 1 })} <span className="text-lg font-semibold text-gray-400">Ha</span></p>
+                    <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-[#2D6A4F] rounded-full" style={{ width: "72%" }} />
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1.5 font-medium">72% de la capacidad en producción</p>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Campos Activos</p>
+                    <p className="text-3xl font-black text-gray-900">{stats.camposActivos}</p>
+                    <p className="text-[11px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                        <CheckCircle2 size={11} /> Todos los sistemas normales
+                    </p>
+                </div>
+                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Lotes de Producción</p>
+                    <p className="text-3xl font-black text-gray-900">{stats.lotesTotales}</p>
+                    <p className="text-[11px] text-gray-400 font-medium mt-2">Del total de campos registrados</p>
+                </div>
+            </div>
+
+            {/* Campos list */}
+            <div>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-[14px] font-bold text-gray-900">Campos de Cultivo Activos</h2>
+                    <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                        <button onClick={() => setVista("grid")} className={`p-1.5 rounded-md transition-all ${vista === "grid" ? "bg-white shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><LayoutGrid size={14} /></button>
+                        <button onClick={() => setVista("lista")} className={`p-1.5 rounded-md transition-all ${vista === "lista" ? "bg-white shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><List size={14} /></button>
+                    </div>
+                </div>
+
+                {campos.length === 0 ? (
+                    <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+                        <p className="text-gray-400 font-medium text-sm">No tenés campos registrados todavía.</p>
+                        <button onClick={() => setShowModalCampo(true)} className="mt-4 text-[#2D6A4F] font-bold text-sm hover:underline">+ Crear tu primer campo</button>
+                    </div>
+                ) : (
+                    <div className={vista === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
+                        {campos.map((campo, i) => (
+                            <CampoCard
+                                key={campo.idCampo}
+                                campo={campo}
+                                imagen={IMAGES[i % IMAGES.length]}
+                                vista={vista}
+                                onAgregarLote={() => {
+                                    setCampoSeleccionado(campo);
+                                    setShowModalLote(true);
+                                    setSubmitError(null);
+                                    setSubmitSuccess(null);
+                                    setFormLote({ nombre: "", superficie: "" });
+                                }}
+                            />
+                        ))}
+
+                        {/* Card "Definir nuevo territorio" solo en grid */}
+                        {vista === "grid" && (
+                            <button
+                                onClick={() => setShowModalCampo(true)}
+                                className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-8 flex flex-col items-center justify-center gap-3 hover:border-[#2D6A4F] hover:bg-green-50/30 transition-all group min-h-[280px]"
+                            >
+                                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                                    <Plus size={22} className="text-[#2D6A4F]" />
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-[13px] font-bold text-gray-700">Definir Nuevo Territorio</p>
+                                    <p className="text-[11px] text-gray-400 mt-1">Registrá un nuevo límite de campo y perfil de suelo.</p>
+                                </div>
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Modal: Nuevo Campo */}
+            {showModalCampo && (
+                <Modal titulo="Registro de Campo" onClose={() => setShowModalCampo(false)}>
+                    <form onSubmit={handleCrearCampo} className="space-y-4">
+                        <FormField label="Nombre del campo" required>
+                            <input type="text" required value={formCampo.nombre} onChange={e => setFormCampo(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Sunset Ridge" />
+                        </FormField>
+                        <FormField label="Referencia de ubicación">
+                            <input type="text" value={formCampo.ubicacion} onChange={e => setFormCampo(p => ({ ...p, ubicacion: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Seleccionar región..." />
+                        </FormField>
+                        <FormField label="Superficie total (Ha)" required>
+                            <div className="relative">
+                                <input type="number" step="0.01" min="0.01" required value={formCampo.superficieTotal} onChange={e => setFormCampo(p => ({ ...p, superficieTotal: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="0.00" />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
+                            </div>
+                        </FormField>
+                        {submitError && <ErrorMsg msg={submitError} />}
+                        {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                        <SubmitBtn loading={submitLoading} text="Confirmar Registro" />
+                        <p className="text-[10px] text-gray-400 text-center">Definir un campo crea automáticamente un ciclo de cultivo predeterminado para asignación inmediata.</p>
+                    </form>
+                </Modal>
+            )}
+
+            {/* Modal: Nuevo Lote */}
+            {showModalLote && campoSeleccionado && (
+                <Modal titulo="Agregar Lote" onClose={() => setShowModalLote(false)}>
+                    <p className="text-[12px] text-gray-500 mb-4">Campo: <strong>{campoSeleccionado.nombre}</strong></p>
+                    <form onSubmit={handleCrearLote} className="space-y-4">
+                        <FormField label="Nombre del lote" required>
+                            <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
+                        </FormField>
+                        <FormField label="Superficie (Ha)" required>
+                            <div className="relative">
+                                <input type="number" step="0.01" min="0.01" required value={formLote.superficie} onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="0.00" />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
+                            </div>
+                        </FormField>
+                        {submitError && <ErrorMsg msg={submitError} />}
+                        {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                        <SubmitBtn loading={submitLoading} text="Confirmar Lote" />
+                    </form>
+                </Modal>
+            )}
+        </div>
+    );
+}
+
+function CampoCard({ campo, imagen, vista, onAgregarLote }) {
+    if (vista === "lista") {
+        return (
+            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                <div className="flex-1 min-w-0">
+                    <p className="font-bold text-gray-900 text-[13px] truncate">{campo.nombre}</p>
+                    {campo.ubicacion && <p className="text-[11px] text-gray-400 flex items-center gap-1"><MapPin size={10} />{campo.ubicacion}</p>}
+                </div>
+                <div className="text-right flex-shrink-0">
+                    <p className="font-black text-gray-900">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
+                    <p className="text-[10px] text-gray-400">{campo.cantidadLotes} lotes</p>
+                </div>
+                <button onClick={onAgregarLote} className="ml-2 p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-400">
+                    <MoreVertical size={14} />
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="h-36 relative" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 p-4 text-white">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-0.5">{campo.ubicacion || "Sin ubicación"}</p>
+                    <p className="font-black text-[15px] leading-tight">{campo.nombre}</p>
+                </div>
+            </div>
+            <div className="p-4">
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                        <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest">Superficie</p>
+                        <p className="font-black text-gray-900">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
+                    </div>
+                    <div>
+                        <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest">Lotes</p>
+                        <p className="font-black text-gray-900">{campo.cantidadLotes} Unidades</p>
+                    </div>
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <button onClick={onAgregarLote} className="text-[11px] font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors flex items-center gap-1">
+                        Gestionar Lotes →
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Componentes reutilizables ───
+const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white transition-colors placeholder:text-gray-400";
+
+function Modal({ titulo, onClose, children }) {
+    return (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-[16px] font-black text-gray-900">{titulo}</h3>
+                    <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors"><X size={16} /></button>
+                </div>
+                {children}
+            </div>
+        </div>
+    );
+}
+
+function FormField({ label, required, children }) {
+    return (
+        <div>
+            <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-1.5">
+                {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+            </label>
+            {children}
+        </div>
+    );
+}
+
+function SubmitBtn({ loading, text }) {
+    return (
+        <button type="submit" disabled={loading} className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#1B4332] transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-green-900/20 mt-2">
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+            {text}
+        </button>
+    );
+}
+
+function ErrorMsg({ msg }) {
+    return <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-[12px] font-semibold"><AlertCircle size={14} className="flex-shrink-0" />{msg}</div>;
+}
+
+function SuccessMsg({ msg }) {
+    return <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl p-3 text-green-700 text-[12px] font-semibold"><CheckCircle2 size={14} className="flex-shrink-0" />{msg}</div>;
+}
