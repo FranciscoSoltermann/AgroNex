@@ -1,6 +1,8 @@
 package org.agronex.backend.exception;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,8 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     // 1. Errores de validación de DTOs (@Valid) -> 400 BAD REQUEST
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
@@ -28,8 +32,10 @@ public class GlobalExceptionHandler {
     // 2. Errores de Base de Datos (Ej: Email o CUIT duplicado) -> 409 CONFLICT
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", "Error al guardar: Es posible que el registro ya exista o los datos sean inválidos.");
+        error.put("detail", ex.getMostSpecificCause().getMessage());
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
@@ -68,9 +74,11 @@ public class GlobalExceptionHandler {
     // 7. FALLBACK: Cualquier otro error imprevisto -> 500 INTERNAL SERVER ERROR
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleAllExceptions(Exception ex) {
+        log.error("Error inesperado [{}]: {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
         Map<String, String> error = new HashMap<>();
         error.put("error", "Ocurrió un error inesperado en el servidor.");
-        error.put("detalle", ex.getMessage()); // Opcional: podés comentarlo en producción para no dar pistas
+        error.put("message", ex.getMessage());
+        error.put("type", ex.getClass().getSimpleName());
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
