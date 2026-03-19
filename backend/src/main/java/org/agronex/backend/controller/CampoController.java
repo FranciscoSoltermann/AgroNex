@@ -12,10 +12,11 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/campos") // Esta ruta es PRIVADA (requiere Token)
+@RequestMapping("/api/campos")
 @RequiredArgsConstructor
 public class CampoController {
 
@@ -24,11 +25,8 @@ public class CampoController {
     @PostMapping
     public ResponseEntity<CampoResponse> crear(
             @Valid @RequestBody CampoRequest request,
-            @AuthenticationPrincipal Jwt jwt) { // <--- Extraemos el token validado
-
-        // El 'sub' del JWT de Supabase es el UUID del usuario
+            @AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = UUID.fromString(jwt.getSubject());
-
         return new ResponseEntity<>(campoService.crearCampo(request, idUsuario), HttpStatus.CREATED);
     }
 
@@ -36,5 +34,12 @@ public class CampoController {
     public ResponseEntity<List<CampoResponse>> listar(@AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(campoService.listarMisCampos(idUsuario));
+    }
+
+    // ESTE MÉTODO TIENE QUE ESTAR ACÁ ADENTRO
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getStats(@AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        return ResponseEntity.ok(campoService.obtenerEstadisticas(idUsuario));
     }
 }

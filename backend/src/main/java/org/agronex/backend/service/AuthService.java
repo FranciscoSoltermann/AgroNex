@@ -22,30 +22,28 @@ public class AuthService {
 
     private final PersonaFisicaRepository fisicaRepository;
     private final PersonaJuridicaRepository juridicaRepository;
-    private final PersonaFisicaMapper fisicaMapper; // <-- Inyectamos
-    private final PersonaJuridicaMapper juridicaMapper; // <-- Inyectamos
+    private final PersonaFisicaMapper fisicaMapper;
+    private final PersonaJuridicaMapper juridicaMapper;
 
     @Transactional
     public PersonaFisicaResponse registrarPersonaFisica(PersonaFisicaRequest request, UUID supabaseUuid) {
-        // 1. MAPPER: Mapear DTO a Entidad
+        // El Mapper ya hace el trabajo pesado
         PersonaFisica persona = fisicaMapper.toEntity(request, supabaseUuid);
 
-        // 2. Guardar en DB
+        // Al guardar, Hibernate insertará en 'usuario' y 'persona_fisica'
         PersonaFisica guardada = fisicaRepository.save(persona);
 
-        // 3. MAPPER: Retornar Response DTO
         return fisicaMapper.toResponse(guardada);
     }
 
     @Transactional
     public PersonaJuridicaResponse registrarPersonaJuridica(PersonaJuridicaRequest request, UUID supabaseUuid) {
-        // 1. MAPPER: Mapear DTO a Entidad
         PersonaJuridica empresa = juridicaMapper.toEntity(request, supabaseUuid);
 
-        // 2. Guardar en DB
-        PersonaJuridica guardada = juridicaRepository.save(empresa);
+        // Seteamos la fecha manualmente antes de guardar
+        empresa.setFechaRegistro(java.time.OffsetDateTime.now());
 
-        // 3. MAPPER: Retornar Response DTO
+        PersonaJuridica guardada = juridicaRepository.save(empresa);
         return juridicaMapper.toResponse(guardada);
     }
 }
