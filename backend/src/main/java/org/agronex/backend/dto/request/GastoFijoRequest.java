@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID; // 1. Importar UUID
 
 @Data
 @Builder
@@ -27,10 +28,10 @@ public class GastoFijoRequest {
     @PositiveOrZero(message = "El monto no puede ser negativo")
     private BigDecimal montoTotal;
 
-    private String moneda; // En la entidad le pusimos ARS por defecto, puede venir nulo.
+    private String moneda;
 
     @NotNull(message = "El ID del campo es obligatorio")
-    private Long idCampo;
+    private UUID idCampo; // 2. Cambiado de Long a UUID
 
-    private Long idCampania;
+    private UUID idCampania; // 3. Cambiado de Long a UUID
 }

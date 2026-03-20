@@ -19,7 +19,7 @@ public class GastoFijoMapper {
                 .montoTotal(request.getMontoTotal())
                 .moneda(request.getMoneda() != null ? request.getMoneda() : "ARS")
                 .campo(campo)
-                .campania(campania) // Puede ser null si el gasto es del campo en general
+                .campania(campania)
                 .build();
     }
 

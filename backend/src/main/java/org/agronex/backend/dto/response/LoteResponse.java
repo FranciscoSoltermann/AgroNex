@@ -3,12 +3,13 @@ package org.agronex.backend.dto.response;
 import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
 public class LoteResponse {
-    private Long idLote;
+    private UUID idLote;     // 🔹 UUID
     private String nombre;
     private BigDecimal superficie;
-    private Long idCampo;
+    private UUID idCampo;    // 🔹 UUID
 }

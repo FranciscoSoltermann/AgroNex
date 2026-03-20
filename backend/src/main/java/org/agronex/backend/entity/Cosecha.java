@@ -8,6 +8,7 @@ import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "cosecha")
@@ -22,7 +23,7 @@ public class Cosecha extends Auditable {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "cosecha_seq")
     @SequenceGenerator(name = "cosecha_seq", sequenceName = "cosecha_id_cosecha_seq", allocationSize = 1)
     @Column(name = "id_cosecha")
-    private Long idCosecha;
+    private UUID idCosecha;
 
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;

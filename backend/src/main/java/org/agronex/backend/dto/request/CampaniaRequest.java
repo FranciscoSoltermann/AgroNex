@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -22,5 +23,5 @@ public class CampaniaRequest {
     private LocalDate fechaFin; // Puede ser nulo si la campaña sigue activa
 
     @NotNull(message = "El ID del lote es obligatorio")
-    private Long idLote;
+    private UUID idLote;
 }

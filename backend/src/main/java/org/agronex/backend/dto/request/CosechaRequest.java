@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -30,5 +31,5 @@ public class CosechaRequest {
     private String observaciones;
 
     @NotNull(message = "El ID de la campaña es obligatorio")
-    private Long idCampania;
+    private UUID idCampania;
 }

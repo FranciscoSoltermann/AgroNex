@@ -49,7 +49,17 @@ export default function CamposPage() {
                 lotesTotales: s.lotesTotales ?? 0,
             });
         } catch (err) {
-            setError("No se pudo cargar la información. Verificá que el backend esté activo.");
+            const status = err?.response?.status;
+
+            if (status === 401 || status === 403) {
+                setError("Tu sesión venció o no es válida. Cerrá sesión e iniciá nuevamente.");
+            } else if (status === 404) {
+                setError("No se encontró el endpoint del backend. Revisá la URL del API (debe incluir /api).");
+            } else if (!err?.response) {
+                setError("No se pudo conectar con el backend. Verificá que esté activo y accesible.");
+            } else {
+                setError("Ocurrió un error al cargar la información.");
+            }
         } finally {
             setLoading(false);
         }
@@ -76,15 +86,19 @@ export default function CamposPage() {
             await apiClient.post("/campos", {
                 nombre: formCampo.nombre,
                 ubicacion: formCampo.ubicacion,
-                superficieTotal: parseFloat(formCampo.superficieTotal),
-                idUsuario: userId,
+                superficieTotal: parseFloat(formCampo.superficieTotal)
             });
             setSubmitSuccess("¡Campo creado con éxito!");
             setFormCampo({ nombre: "", ubicacion: "", superficieTotal: "" });
             await fetchData(userId);
             setTimeout(() => { setShowModalCampo(false); setSubmitSuccess(null); }, 1500);
         } catch (err) {
-            setSubmitError(err.response?.data?.message || "Error al crear el campo.");
+            const status = err?.response?.status;
+            if (status === 401 || status === 403) {
+                setSubmitError("Tu sesión venció o no es válida. Volvé a iniciar sesión.");
+            } else {
+                setSubmitError(err.response?.data?.message || "Error al crear el campo.");
+            }
         } finally {
             setSubmitLoading(false);
         }
@@ -105,7 +119,12 @@ export default function CamposPage() {
             await fetchData(userId);
             setTimeout(() => { setShowModalLote(false); setSubmitSuccess(null); }, 1500);
         } catch (err) {
-            setSubmitError(err.response?.data?.message || "Error al crear el lote.");
+            const status = err?.response?.status;
+            if (status === 401 || status === 403) {
+                setSubmitError("Tu sesión venció o no es válida. Volvé a iniciar sesión.");
+            } else {
+                setSubmitError(err.response?.data?.message || "Error al crear el lote.");
+            }
         } finally {
             setSubmitLoading(false);
         }

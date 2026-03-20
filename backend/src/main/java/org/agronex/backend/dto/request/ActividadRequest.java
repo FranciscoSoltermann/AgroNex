@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID; // <--- 1. Importante agregar el import
 
 @Data
 @Builder
@@ -25,5 +26,5 @@ public class ActividadRequest {
     private LocalDate fecha;
 
     @NotNull(message = "El ID de la campaña es obligatorio")
-    private Long idCampania;
+    private UUID idCampania; // <--- 2. Cambiado de Long a UUID
 }

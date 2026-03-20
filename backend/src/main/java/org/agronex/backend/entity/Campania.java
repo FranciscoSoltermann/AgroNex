@@ -5,6 +5,7 @@ import lombok.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "campania")
@@ -14,10 +15,9 @@ import java.util.List;
 public class Campania {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "campania_seq")
-    @SequenceGenerator(name = "campania_seq", sequenceName = "campania_id_campania_seq", allocationSize = 1)
+    @GeneratedValue
     @Column(name = "id_campania")
-    private Long idCampania;
+    private UUID idCampania;
 
     @Column(name = "cultivo", nullable = false, length = 100)
     private String cultivo;

@@ -1,19 +1,16 @@
 package org.agronex.backend.dto.response;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class CampaniaResponse {
-    private Long idCampania;
+    private UUID idCampania;   // 🔹 UUID
     private String cultivo;
-    private LocalDate fechaInicio;
-    private LocalDate fechaFin;
-    private Long idLote;
+    private OffsetDateTime fechaInicio;
+    private OffsetDateTime fechaFin;
+    private UUID idLote;       // 🔹 UUID
 }

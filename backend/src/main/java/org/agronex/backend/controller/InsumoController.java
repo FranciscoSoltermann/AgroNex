@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/insumos")
@@ -26,7 +27,7 @@ public class InsumoController {
 
     // Obtener un insumo específico (útil para ver detalles)
     @GetMapping("/{id}")
-    public ResponseEntity<InsumoResponse> obtenerPorId(@PathVariable Long id) {
+    public ResponseEntity<InsumoResponse> obtenerPorId(@PathVariable UUID id) { // 🔹 Cambiado de Long a UUID
         return ResponseEntity.ok(insumoService.buscarPorId(id));
     }
 

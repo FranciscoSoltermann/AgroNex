@@ -1,14 +1,22 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 
+const normalizeApiBaseUrl = (rawBaseUrl) => {
+    const fallback = 'http://localhost:8080/api';
+    const value = (rawBaseUrl || fallback).trim().replace(/\/$/, '');
+    return value.endsWith('/api') ? value : `${value}/api`;
+};
+
 const apiClient = axios.create({
-    // El baseURL ya tiene el /api
-    baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
+    // Si en .env o docker-compose falta /api, lo agregamos automáticamente.
+    baseURL: normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL),
 });
 
 apiClient.interceptors.request.use(async (config) => {
+    const url = config.url || '';
+
     // 1. No agregamos token si la ruta es pública (contiene /public/)
-    if (config.url.includes('/public/')) {
+    if (url.includes('/public/')) {
         return config;
     }
 

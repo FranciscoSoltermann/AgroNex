@@ -24,8 +24,8 @@ public class CampaniaMapper {
         return CampaniaResponse.builder()
                 .idCampania(campania.getIdCampania())
                 .cultivo(campania.getCultivo())
-                .fechaInicio(campania.getFechaInicio())
-                .fechaFin(campania.getFechaFin())
+                .fechaInicio(campania.getFechaInicio() != null ? campania.getFechaInicio().atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null)
+                .fechaFin(campania.getFechaFin() != null ? campania.getFechaFin().atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null)
                 .idLote(campania.getLote() != null ? campania.getLote().getIdLote() : null)
                 .build();
     }
