@@ -12,4 +12,5 @@ public class LoteResponse {
     private String nombre;
     private BigDecimal superficie;
     private UUID idCampo;    // 🔹 UUID
+    private String nombreCampo;
 }
