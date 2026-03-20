@@ -17,4 +17,7 @@ public class InsumoResponse {
     private String nombre;
     private BigDecimal precioUnitario;
     private UnidadMedida unidad;
+    private BigDecimal cantidad;
+    private UUID idCampo;
+    private String nombreCampo;
 }

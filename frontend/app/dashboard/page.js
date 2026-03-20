@@ -44,17 +44,19 @@ export default function DashboardHome() {
                     const nombre = session.user.user_metadata?.nombre || "Productor";
                     setUserName(nombre);
                     try {
-                        const timestamp = new Date().getTime();
-                        const [resStats, resActs, resCampanias, resGastos] = await Promise.all([
-                            apiClient.get(`/campos/stats?t=${timestamp}`).catch(() => ({ data: {} })),
-                            apiClient.get(`/actividades?t=${timestamp}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/campanias?t=${timestamp}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/gastos?t=${timestamp}`).catch(() => ({ data: [] }))
+                        const t = new Date().getTime();
+                        const [resStats, resActs, resCampanias, resGastos, resCosechas] = await Promise.all([
+                            apiClient.get(`/campos/stats?t=${t}`).catch(() => ({ data: {} })),
+                            apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] })),
+                            apiClient.get(`/campanias?t=${t}`).catch(() => ({ data: [] })),
+                            apiClient.get(`/gastos?t=${t}`).catch(() => ({ data: [] })),
+                            apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] }))
                         ]);
                         
                         const actos = resActs.data || [];
                         const gast = resGastos.data || [];
                         const camps = resCampanias.data || [];
+                        const coses = resCosechas.data || [];
                         const d = resStats.data || {};
 
                         const totalCostosActs = actos.reduce((sum, a) => sum + (a.costoServicio || 0), 0);
@@ -68,53 +70,81 @@ export default function DashboardHome() {
                         });
                         setActividades(actos);
 
-                        // Lógica para Gráfico Mensual
-                        const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
-                        const monthData = {};
-                        actos.forEach(a => {
-                            if (!a.fecha) return;
-                            const dt = new Date(a.fecha + "T00:00:00"); // avoid tz shifts
-                            const m = dt.getMonth();
-                            monthData[m] = monthData[m] || { costos: 0, cosecha: 0 };
-                            monthData[m].costos += (a.costoServicio || 0);
-                        });
-                        gast.forEach(g => {
-                            if (!g.fecha) return;
-                            const dt = new Date(g.fecha + "T00:00:00");
-                            const m = dt.getMonth();
-                            monthData[m] = monthData[m] || { costos: 0, cosecha: 0 };
-                            monthData[m].costos += (g.montoTotal || 0);
-                        });
-
-                        const today = new Date();
+                        // Lógica de Gráfico
                         const finalChartData = [];
-                        let maxChartVal = 10; 
-                        for(let i=4; i>=0; i--) {
-                           const dt = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                           const mIndex = dt.getMonth();
-                           const data = monthData[mIndex] || { costos: 0, cosecha: 0 };
-                           if (data.costos > maxChartVal) maxChartVal = data.costos;
-                           if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
-                           
-                           finalChartData.push({
-                              mes: monthNames[mIndex],
-                              costos: data.costos,
-                              cosecha: data.cosecha
-                           });
+                        let maxChartVal = 100;
+
+                        if (chartMode === "Mensual") {
+                            const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+                            const monthData = {};
+                            
+                            const processItem = (dateStr, val, type) => {
+                                if (!dateStr) return;
+                                const dt = new Date(dateStr + "T00:00:00");
+                                const m = dt.getMonth();
+                                monthData[m] = monthData[m] || { costos: 0, cosecha: 0 };
+                                monthData[m][type] += val;
+                            };
+
+                            actos.forEach(a => processItem(a.fecha, a.costoServicio || 0, "costos"));
+                            gast.forEach(g => processItem(g.fecha, g.montoTotal || 0, "costos"));
+                            coses.forEach(c => processItem(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
+
+                            const today = new Date();
+                            for(let i=4; i>=0; i--) {
+                                const dt = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                                const mIdx = dt.getMonth();
+                                const data = monthData[mIdx] || { costos: 0, cosecha: 0 };
+                                finalChartData.push({ mes: monthNames[mIdx], costos: data.costos, cosecha: data.cosecha });
+                                if (data.costos > maxChartVal) maxChartVal = data.costos;
+                                if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
+                            }
+                        } else {
+                            // Semanal (últimas 5 semanas)
+                            const getWeekNumber = (d) => {
+                                d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                                return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+                            };
+
+                            const weekData = {};
+                            const processWeekly = (dateStr, val, type) => {
+                                if (!dateStr) return;
+                                const dt = new Date(dateStr + "T00:00:00");
+                                const w = getWeekNumber(dt);
+                                weekData[w] = weekData[w] || { costos: 0, cosecha: 0 };
+                                weekData[w][type] += val;
+                            };
+
+                            actos.forEach(a => processWeekly(a.fecha, a.costoServicio || 0, "costos"));
+                            gast.forEach(g => processWeekly(g.fecha, g.montoTotal || 0, "costos"));
+                            coses.forEach(c => processWeekly(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
+
+                            const now = new Date();
+                            const currentWeek = getWeekNumber(now);
+                            for(let i=4; i>=0; i--) {
+                                const wIdx = currentWeek - i;
+                                const data = weekData[wIdx] || { costos: 0, cosecha: 0 };
+                                finalChartData.push({ mes: `S${wIdx}`, costos: data.costos, cosecha: data.cosecha });
+                                if (data.costos > maxChartVal) maxChartVal = data.costos;
+                                if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
+                            }
                         }
+
                         setDynChartData(finalChartData);
                         setDynMaxVal(maxChartVal * 1.1);
 
-                    } catch (err) { console.error("Error backend stats", err); }
+                    } catch (err) { console.error("Error fetching dashboard data", err); }
                 }
             } catch (e) {
-                console.error("Error cargando auth:", e);
+                console.error("Error auth dashboard:", e);
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [chartMode]);
 
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 

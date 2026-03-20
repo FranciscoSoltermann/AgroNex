@@ -10,8 +10,10 @@ import {
 
 export default function InventarioPage() {
     const [insumos, setInsumos] = useState([]);
+    const [campos, setCampos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filtroActivo, setFiltroActivo] = useState("Todos");
+    const [filtroCampoId, setFiltroCampoId] = useState("Todos");
     const [searchTerm, setSearchTerm] = useState("");
 
     // Modal State
@@ -20,25 +22,31 @@ export default function InventarioPage() {
     const [formInsumo, setFormInsumo] = useState({
         nombre: "",
         precioUnitario: "",
-        unidad: "LITROS"
+        unidad: "LITROS",
+        cantidad: "",
+        idCampo: ""
     });
 
-    const fetchInsumos = useCallback(async () => {
+    const fetchData = useCallback(async () => {
         try {
             setLoading(true);
-            const timestamp = new Date().getTime();
-            const res = await apiClient.get(`/insumos?t=${timestamp}`);
-            setInsumos(res.data || []);
+            const t = new Date().getTime();
+            const [insRes, camRes] = await Promise.all([
+                apiClient.get(`/insumos?t=${t}`),
+                apiClient.get(`/campos?t=${t}`).catch(() => ({ data: [] }))
+            ]);
+            setInsumos(insRes.data || []);
+            setCampos(camRes.data || []);
         } catch (error) {
-            console.error("Error al cargar insumos", error);
+            console.error("Error al cargar inventario", error);
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchInsumos();
-    }, [fetchInsumos]);
+        fetchData();
+    }, [fetchData]);
 
     const handleRegistrarInsumo = async (e) => {
         e.preventDefault();
@@ -47,59 +55,79 @@ export default function InventarioPage() {
             const res = await apiClient.post("/insumos", {
                 nombre: formInsumo.nombre,
                 precioUnitario: parseFloat(formInsumo.precioUnitario),
-                unidad: formInsumo.unidad
+                unidad: formInsumo.unidad,
+                cantidad: parseFloat(formInsumo.cantidad),
+                idCampo: formInsumo.idCampo
             });
             setInsumos(prev => [res.data, ...prev]);
             setShowModal(false);
-            setFormInsumo({ nombre: "", precioUnitario: "", unidad: "LITROS" });
+            setFormInsumo({ nombre: "", precioUnitario: "", unidad: "LITROS", cantidad: "", idCampo: "" });
         } catch (error) {
-            alert("Error al registrar insumo.");
+            alert("Error al registrar insumo. Verificá que todos los datos sean correctos.");
         } finally {
             setSubmitLoading(false);
         }
     };
 
     const displayInsumos = insumos.filter(i => {
+        // Filtro por Campo
+        if (filtroCampoId !== "Todos" && i.idCampo !== filtroCampoId) return false;
+
+        // Filtro por Categoría (Tab)
         if (filtroActivo !== "Todos") {
-            // Un filtro basico visual
             const normFilter = filtroActivo.toLowerCase().slice(0, 4);
             const normName = i.nombre.toLowerCase();
             if (!normName.includes(normFilter)) return false;
         }
+
+        // Buscador
         if (searchTerm) {
             return i.nombre.toLowerCase().includes(searchTerm.toLowerCase());
         }
         return true;
     });
 
-    const totalInsumos = insumos.length;
-    const valorEstimado = insumos.reduce((acc, curr) => acc + (curr.precioUnitario * 10), 0); // Mock * 10 unidades simulado
+    const valorEstimado = displayInsumos.reduce((acc, curr) => acc + (Number(curr.precioUnitario) * Number(curr.cantidad || 0)), 0);
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
-            {/* Top Bar Simulado (Buscador) */}
-            <div className="flex items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-                <div className="relative w-full max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            {/* Barra de Filtros y Búsqueda */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+                <div className="relative w-full max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input
                         type="text"
-                        placeholder="Buscar por artículo..."
+                        placeholder="Buscar artículo..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-gray-100/70 border-none rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]/20 transition-all"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all"
                     />
+                </div>
+                
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:block">Filtrar por Campo:</p>
+                    <select
+                        value={filtroCampoId}
+                        onChange={(e) => setFiltroCampoId(e.target.value)}
+                        className="flex-1 md:flex-none min-w-[180px] bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all"
+                    >
+                        <option value="Todos">Todos los campos</option>
+                        {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
+                    </select>
                 </div>
             </div>
 
-            {/* Header de la Página */}
+            {/* Header de la Página - YA MODIFICADO ARRIBA, PERO CONTINÚO DESDE AHÍ */}
             <div className="flex items-end justify-between mt-2">
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">Gestión de Catálogo</h1>
+                    <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                        Catálogo e Inventario
+                    </h1>
                     <div className="flex items-center gap-3 text-sm text-gray-500 mt-2 font-medium">
-                        <span className="flex items-center gap-1"><MapPin size={14} /> Estancia Principal</span>
+                        <span className="flex items-center gap-1.5"><Package size={14} className="text-[#2D6A4F]" /> {displayInsumos.length} Artículos en vista</span>
                         <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                        <span>{totalInsumos} SKUs Activos</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Estado: Operativo</span>
                     </div>
                 </div>
                 <button
@@ -120,7 +148,7 @@ export default function InventarioPage() {
                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valor Total del Catálogo</p>
                             <p className="text-4xl font-black text-gray-900 tracking-tight">${valorEstimado.toLocaleString("es-AR")}</p>
                             <p className="text-[13px] font-bold text-green-600 mt-2 flex items-center gap-1">
-                                <TrendingUp size={16} /> Valoración estandar
+                                <TrendingUp size={16} /> Valoración de activos
                             </p>
                         </div>
 
@@ -129,7 +157,7 @@ export default function InventarioPage() {
                                 <AlertTriangle size={120} className="text-orange-500" />
                             </div>
                             <p className="text-[10px] font-bold text-orange-800 uppercase tracking-widest mb-2">Artículos Controlados</p>
-                            <p className="text-4xl font-black text-orange-600 tracking-tight">00</p>
+                            <p className="text-4xl font-black text-orange-600 tracking-tight">{displayInsumos.length}</p>
                             <p className="text-[13px] font-medium text-orange-700 mt-2 flex items-center gap-1.5">
                                 <AlertTriangle size={14} /> Verificación sin faltantes críticos
                             </p>
@@ -168,9 +196,10 @@ export default function InventarioPage() {
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-gray-100 bg-gray-50/50">
-                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Artículo</th>
-                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio de Referencia</th>
-                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Unidad de Medida</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Artículo / Campo</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio Ref.</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Stock Actual</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Unidad</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</th>
                                     </tr>
                                 </thead>
@@ -186,21 +215,26 @@ export default function InventarioPage() {
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-gray-900 text-sm">{item.nombre}</p>
-                                                        <p className="text-[11px] text-gray-500 mt-0.5">Catálogo de Aplicaciones</p>
+                                                        <p className="text-[11px] text-gray-400 font-bold uppercase">{item.nombreCampo || "Sin campo"}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="p-4 text-sm text-gray-900 font-bold text-right">${Number(item.precioUnitario).toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td>
-                                            <td className="p-4">
-                                                <p className="text-sm font-medium text-gray-900">{item.unidad}</p>
+                                            <td className="p-4 text-center">
+                                                <div className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-50 border border-gray-100 text-sm font-black text-gray-900">
+                                                    {Number(item.cantidad || 0).toLocaleString("es-AR")}
+                                                </div>
                                             </td>
                                             <td className="p-4">
-                                                <BadgeEstado />
+                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.unidad}</p>
+                                            </td>
+                                            <td className="p-4">
+                                                <BadgeEstado stock={item.cantidad} />
                                             </td>
                                         </tr>
                                     ))}
                                     {displayInsumos.length === 0 && (
-                                        <tr><td colSpan="4" className="text-center py-6 text-gray-400">No hay insumos registrados.</td></tr>
+                                        <tr><td colSpan="5" className="text-center py-10 text-gray-400 font-medium">No se encontraron artículos con estos filtros.</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -218,27 +252,43 @@ export default function InventarioPage() {
                         </div>
                         <form onSubmit={handleRegistrarInsumo} className="space-y-4">
                             <div>
-                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Nombre del Artículo (ej. Semilla Soja...)</label>
-                                <input required type="text" value={formInsumo.nombre} onChange={e => setFormInsumo(p => ({ ...p, nombre: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] focus:bg-white outline-none transition-colors" />
+                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Nombre del Artículo</label>
+                                <input required type="text" value={formInsumo.nombre} onChange={e => setFormInsumo(p => ({ ...p, nombre: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] focus:bg-white outline-none transition-colors" placeholder="ej. Semilla de Maíz" />
                             </div>
+
+                            <div>
+                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Campo Asociado</label>
+                                <select required value={formInsumo.idCampo} onChange={e => setFormInsumo(p => ({ ...p, idCampo: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
+                                    <option value="" disabled>-- Seleccionar Campo --</option>
+                                    {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
+                                </select>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Precio Unitario ($)</label>
+                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Precio Unit. ($)</label>
                                     <input required type="number" step="0.01" min="0" value={formInsumo.precioUnitario} onChange={e => setFormInsumo(p => ({ ...p, precioUnitario: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none" placeholder="0.00" />
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Unidad</label>
-                                    <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
-                                        <option value="UNIDADES">UNIDADES</option>
-                                        <option value="LITROS">LITROS</option>
-                                        <option value="KILOGRAMOS">KILOGRAMOS</option>
-                                        <option value="TONELADAS">TONELADAS</option>
-                                    </select>
+                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Stock Inicial</label>
+                                    <input required type="number" step="0.01" min="0" value={formInsumo.cantidad} onChange={e => setFormInsumo(p => ({ ...p, cantidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none" placeholder="0.00" />
                                 </div>
                             </div>
-                            <button type="submit" disabled={submitLoading} className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1B4332] transition-colors mt-2 shadow-lg shadow-green-900/20 flex items-center justify-center">
-                                {submitLoading ? <Loader2 size={16} className="animate-spin" /> : 'Guardar Insumo'}
+                            
+                            <div>
+                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Unidad de Medida</label>
+                                <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
+                                    <option value="UNIDADES">UNIDADES</option>
+                                    <option value="LITROS">LITROS</option>
+                                    <option value="KILOGRAMOS">KILOGRAMOS</option>
+                                    <option value="TONELADAS">TONELADAS</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" disabled={submitLoading || campos.length === 0} className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1B4332] transition-colors mt-2 shadow-lg shadow-green-900/20 flex items-center justify-center">
+                                {submitLoading ? <Loader2 size={16} className="animate-spin" /> : 'Guardar en Inventario'}
                             </button>
+                            {campos.length === 0 && <p className="text-[10px] text-red-500 text-center font-bold">Debes crear al menos un campo primero.</p>}
                         </form>
                     </div>
                 </div>
@@ -247,6 +297,8 @@ export default function InventarioPage() {
     );
 }
 
-function BadgeEstado() {
-    return <span className="bg-[#bbf7d0] text-[#166534] px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">CONSOLIDADO</span>;
+function BadgeEstado({ stock }) {
+    if (Number(stock) <= 0) return <span className="bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-red-100">SIN STOCK</span>;
+    if (Number(stock) < 10) return <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-orange-100">STOCK BAJO</span>;
+    return <span className="bg-[#bbf7d0] text-[#166534] px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-200">DISPONIBLE</span>;
 }

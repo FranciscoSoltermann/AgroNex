@@ -13,7 +13,9 @@ import org.agronex.backend.repository.CosechaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +24,14 @@ public class CosechaService {
     private final CosechaRepository cosechaRepository;
     private final CampaniaRepository campaniaRepository;
     private final CosechaMapper cosechaMapper;
+
+    @Transactional(readOnly = true) // <-- Importante optimización
+    public List<CosechaResponse> listarTodas(UUID idUsuario) {
+        return cosechaRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idUsuario)
+                .stream()
+                .map(cosechaMapper::toResponse)
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public CosechaResponse registrarCosecha(CosechaRequest request, UUID idUsuarioToken) {

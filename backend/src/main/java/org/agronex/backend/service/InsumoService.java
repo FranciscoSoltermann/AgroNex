@@ -4,8 +4,10 @@ import jakarta.persistence.EntityNotFoundException; // <-- Import para consisten
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.InsumoRequest;
 import org.agronex.backend.dto.response.InsumoResponse;
+import org.agronex.backend.entity.Campo;
 import org.agronex.backend.entity.Insumo;
 import org.agronex.backend.mapper.InsumoMapper;
+import org.agronex.backend.repository.CampoRepository;
 import org.agronex.backend.repository.InsumoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,24 +21,31 @@ import java.util.stream.Collectors;
 public class InsumoService {
 
     private final InsumoRepository insumoRepository;
+    private final CampoRepository campoRepository;
     private final InsumoMapper insumoMapper;
 
     @Transactional
     public InsumoResponse crearInsumo(InsumoRequest request) {
-        // MAPPER: Request -> Entity
+        Campo campo = campoRepository.findById(request.getIdCampo())
+                .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
+
         Insumo nuevoInsumo = insumoMapper.toEntity(request);
+        nuevoInsumo.setCampo(campo);
 
-        // GUARDAR
         Insumo guardado = insumoRepository.save(nuevoInsumo);
-
-        // MAPPER: Entity -> Response
         return insumoMapper.toResponse(guardado);
     }
 
     @Transactional(readOnly = true)
-    public List<InsumoResponse> listarTodos() {
-        return insumoRepository.findAll()
-                .stream()
+    public List<InsumoResponse> listarTodos(UUID idUsuario, UUID idCampo) {
+        List<Insumo> list;
+        if (idCampo != null) {
+            list = insumoRepository.findByCampoIdCampo(idCampo);
+        } else {
+            list = insumoRepository.findByCampoUsuarioIdUsuario(idUsuario);
+        }
+
+        return list.stream()
                 .map(insumoMapper::toResponse)
                 .collect(Collectors.toList());
     }

@@ -28,4 +28,12 @@ public class Insumo {
     @Enumerated(EnumType.STRING)
     @Column(name = "unidad", nullable = false, columnDefinition = "unidad_medida_enum")
     private UnidadMedida unidad;
+
+    @Column(name = "cantidad", precision = 12, scale = 2)
+    @Builder.Default
+    private BigDecimal cantidad = BigDecimal.ZERO;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_campo")
+    private Campo campo;
 }
