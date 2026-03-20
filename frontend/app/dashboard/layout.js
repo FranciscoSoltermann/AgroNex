@@ -19,8 +19,22 @@ export default function DashboardLayout({ children }) {
         const getUser = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const nombre = session.user.user_metadata?.nombre || "Usuario";
-                setUserName(nombre);
+                const meta = session.user.user_metadata || {};
+                const razonSocial = meta.razonSocial?.trim();
+                const nombre = meta.nombre?.trim();
+                const apellido = meta.apellido?.trim();
+                const fullName = meta.full_name?.trim();
+                const name = meta.name?.trim();
+
+                const displayName =
+                    razonSocial ||
+                    [nombre, apellido].filter(Boolean).join(" ") ||
+                    fullName ||
+                    name ||
+                    session.user.email?.split("@")[0] ||
+                    "Usuario";
+
+                setUserName(displayName);
             }
         };
         getUser();
@@ -116,16 +130,9 @@ export default function DashboardLayout({ children }) {
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-500" title="Estado del clima">
-                            <Cloud size={16} />
-                        </button>
-                        <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-500" title="Estado del sistema">
-                            <CheckCircle2 size={16} />
-                        </button>
-                        <button className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-500 relative" title="Alertas">
-                            <Bell size={16} />
-                            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                        </button>
+                        <p className="text-sm font-semibold text-gray-700">
+                            Bienvenido, {userName}
+                        </p>
                     </div>
                 </header>
 
