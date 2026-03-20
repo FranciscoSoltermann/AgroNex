@@ -295,7 +295,7 @@ export default function CiclosPage() {
                                     <option value="" disabled>-- Elegí un lote --</option>
                                     {lotes.map(lote => (
                                         <option key={lote.idLote} value={lote.idLote}>
-                                            {lote.nombre} ({lote.superficie} Ha)
+                                            {lote.nombre} ({lote.superficie} Ha) - {lote.nombreCampo}
                                         </option>
                                     ))}
                                 </select>

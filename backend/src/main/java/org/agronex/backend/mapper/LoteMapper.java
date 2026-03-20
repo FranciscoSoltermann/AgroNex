@@ -25,6 +25,7 @@ public class LoteMapper {
                 .nombre(lote.getNombre())
                 .superficie(lote.getSuperficie())
                 .idCampo(lote.getCampo() != null ? lote.getCampo().getIdCampo() : null)
+                .nombreCampo(lote.getCampo() != null ? lote.getCampo().getNombre() : "General")
                 .build();
     }
 }

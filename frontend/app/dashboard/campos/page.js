@@ -36,18 +36,24 @@ export default function CamposPage() {
 
     const fetchData = useCallback(async (uid) => {
         try {
-            setError(null);
             const timestamp = new Date().getTime();
-            const [camposRes, statsRes] = await Promise.all([
+            const [camposRes, lotesRes] = await Promise.all([
                 apiClient.get(`/campos?t=${timestamp}`),
-                apiClient.get(`/campos/stats?t=${timestamp}`),
+                apiClient.get(`/lotes?t=${timestamp}`),
             ]);
-            setCampos(camposRes.data || []);
-            const s = statsRes.data || {};
+            const cList = camposRes.data || [];
+            const lList = lotesRes.data || [];
+            
+            setCampos(cList);
+
+            const totalHa = cList.reduce((acc, val) => acc + val.superficieTotal, 0);
+            const lotesHa = lList.reduce((acc, val) => acc + val.superficie, 0);
+
             setStats({
-                totalHa: s.hectareasTotales ?? 0,
-                camposActivos: s.camposActivos ?? 0,
-                lotesTotales: s.lotesTotales ?? 0,
+                totalHa: totalHa,
+                camposActivos: cList.length,
+                lotesTotales: lList.length,
+                capacidadRatio: totalHa > 0 ? Math.round((lotesHa / totalHa) * 100) : 0
             });
         } catch (err) {
             const status = err?.response?.status;
@@ -169,9 +175,9 @@ export default function CamposPage() {
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Superficie Total</p>
                     <p className="text-3xl font-black text-gray-900">{Number(stats.totalHa).toLocaleString("es-AR", { maximumFractionDigits: 1 })} <span className="text-lg font-semibold text-gray-400">Ha</span></p>
                     <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#2D6A4F] rounded-full" style={{ width: "72%" }} />
+                        <div className="h-full bg-[#2D6A4F] rounded-full" style={{ width: `${stats.capacidadRatio}%` }} />
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-1.5 font-medium">72% de la capacidad en producción</p>
+                    <p className="text-[10px] text-gray-400 mt-1.5 font-medium">{stats.capacidadRatio}% de la capacidad en producción</p>
                 </div>
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Campos Activos</p>

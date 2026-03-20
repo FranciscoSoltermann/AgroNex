@@ -17,4 +17,7 @@ public class ActividadResponse {
     private BigDecimal costoServicio;
     private LocalDate fecha; // 🔹 Cambiar de OffsetDateTime a LocalDate
     private UUID idCampania;
+    private String nombreCultivo;
+    private String nombreLote;
+    private String nombreCampo;
 }

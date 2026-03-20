@@ -33,6 +33,9 @@ export default function DashboardHome() {
     const [chartMode, setChartMode] = useState("Mensual");
     const [userName, setUserName] = useState("Productor");
 
+    const [dynChartData, setDynChartData] = useState([{ mes: "MAR", costos: 0, cosecha: 0 }]);
+    const [dynMaxVal, setDynMaxVal] = useState(100);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -41,22 +44,71 @@ export default function DashboardHome() {
                     const nombre = session.user.user_metadata?.nombre || "Productor";
                     setUserName(nombre);
                     try {
-                        const [resStats, resActs] = await Promise.all([
-                            apiClient.get("/campos/stats"),
-                            apiClient.get("/actividades")
+                        const timestamp = new Date().getTime();
+                        const [resStats, resActs, resCampanias, resGastos] = await Promise.all([
+                            apiClient.get(`/campos/stats?t=${timestamp}`).catch(() => ({ data: {} })),
+                            apiClient.get(`/actividades?t=${timestamp}`).catch(() => ({ data: [] })),
+                            apiClient.get(`/campanias?t=${timestamp}`).catch(() => ({ data: [] })),
+                            apiClient.get(`/gastos?t=${timestamp}`).catch(() => ({ data: [] }))
                         ]);
+                        
+                        const actos = resActs.data || [];
+                        const gast = resGastos.data || [];
+                        const camps = resCampanias.data || [];
                         const d = resStats.data || {};
+
+                        const totalCostosActs = actos.reduce((sum, a) => sum + (a.costoServicio || 0), 0);
+                        const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
+
                         setStats({
                             camposActivos: d.camposActivos ?? 0,
                             hectareasTotales: d.hectareasTotales ?? 0,
-                            gastosAcumulados: d.gastosAcumulados ?? 0,
-                            ciclosActivos: d.ciclosActivos ?? 0,
+                            gastosAcumulados: totalCostosActs + totalGastosFijos,
+                            ciclosActivos: camps.length,
                         });
-                        setActividades(resActs.data || []);
-                    } catch (_) { /* backend stats opcional */ }
+                        setActividades(actos);
+
+                        // Lógica para Gráfico Mensual
+                        const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+                        const monthData = {};
+                        actos.forEach(a => {
+                            if (!a.fecha) return;
+                            const dt = new Date(a.fecha + "T00:00:00"); // avoid tz shifts
+                            const m = dt.getMonth();
+                            monthData[m] = monthData[m] || { costos: 0, cosecha: 0 };
+                            monthData[m].costos += (a.costoServicio || 0);
+                        });
+                        gast.forEach(g => {
+                            if (!g.fecha) return;
+                            const dt = new Date(g.fecha + "T00:00:00");
+                            const m = dt.getMonth();
+                            monthData[m] = monthData[m] || { costos: 0, cosecha: 0 };
+                            monthData[m].costos += (g.montoTotal || 0);
+                        });
+
+                        const today = new Date();
+                        const finalChartData = [];
+                        let maxChartVal = 10; 
+                        for(let i=4; i>=0; i--) {
+                           const dt = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                           const mIndex = dt.getMonth();
+                           const data = monthData[mIndex] || { costos: 0, cosecha: 0 };
+                           if (data.costos > maxChartVal) maxChartVal = data.costos;
+                           if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
+                           
+                           finalChartData.push({
+                              mes: monthNames[mIndex],
+                              costos: data.costos,
+                              cosecha: data.cosecha
+                           });
+                        }
+                        setDynChartData(finalChartData);
+                        setDynMaxVal(maxChartVal * 1.1);
+
+                    } catch (err) { console.error("Error backend stats", err); }
                 }
             } catch (e) {
-                console.error("Error cargando stats:", e);
+                console.error("Error cargando auth:", e);
             } finally {
                 setLoading(false);
             }
@@ -110,11 +162,11 @@ export default function DashboardHome() {
                         </div>
                     </div>
                     <div className="mt-6 flex items-end justify-between gap-3 h-40">
-                        {CHART_DATA.map((d, i) => (
+                        {dynChartData.map((d, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-1">
                                 <div className="w-full flex gap-1 items-end" style={{ height: "120px" }}>
-                                    <div className="flex-1 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${(d.costos / MAX_VAL) * 120}px` }} />
-                                    <div className="flex-1 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${(d.cosecha / MAX_VAL) * 120}px` }} />
+                                    <div className="flex-1 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${(d.costos / Math.max(1, dynMaxVal)) * 120}px` }} title={`$${d.costos.toFixed(2)}`} />
+                                    <div className="flex-1 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${(d.cosecha / Math.max(1, dynMaxVal)) * 120}px` }} title={`Rend.: ${d.cosecha}`} />
                                 </div>
                                 <span className="text-[10px] font-bold text-gray-400">{d.mes}</span>
                             </div>
@@ -140,7 +192,7 @@ export default function DashboardHome() {
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[12px] font-bold text-gray-900 truncate">{act.tipoActv}</p>
                                         <p className="text-[10px] text-gray-400 truncate">
-                                            {act.campania ? `${act.campania.cultivo} (${act.campania.nombreLote || 'General'})` : 'Sin campaña vinculada'}
+                                            {act.idCampania ? `${act.nombreCultivo} (${act.nombreLote} - ${act.nombreCampo})` : 'Sin campaña vinculada'}
                                         </p>
                                     </div>
                                     <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">{act.fecha}</span>

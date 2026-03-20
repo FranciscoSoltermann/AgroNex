@@ -14,6 +14,9 @@ export default function FinanzasPage() {
     const [gastos, setGastos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [filtroCampoId, setFiltroCampoId] = useState("");
+
+    const gastosFiltrados = filtroCampoId ? gastos.filter(g => g.idCampo === filtroCampoId) : gastos;
 
     // Form gasto fijo
     const [formGasto, setFormGasto] = useState({
@@ -235,7 +238,17 @@ export default function FinanzasPage() {
 
             {/* Historial de Gastos Fijos */}
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-6 overflow-hidden">
-                <h3 className="text-[15px] font-black text-gray-900 mb-4">Historial de Gastos Estructurales Detallados</h3>
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-[15px] font-black text-gray-900">Historial de Gastos Estructurales Detallados</h3>
+                    <select 
+                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-[11px] font-bold text-gray-800 focus:outline-none focus:border-[#2D6A4F]"
+                        value={filtroCampoId}
+                        onChange={e => setFiltroCampoId(e.target.value)}
+                    >
+                        <option value="">Todos los campos</option>
+                        {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
+                    </select>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -248,9 +261,9 @@ export default function FinanzasPage() {
                             </tr>
                         </thead>
                         <tbody className="text-[13px] text-gray-800">
-                            {gastos.length === 0 ? (
-                                <tr><td colSpan="5" className="py-6 text-center text-gray-400">No hay historial de gastos fijos.</td></tr>
-                            ) : gastos.sort((a,b) => new Date(b.fecha) - new Date(a.fecha)).map(g => (
+                            {gastosFiltrados.length === 0 ? (
+                                <tr><td colSpan="5" className="py-6 text-center text-gray-400">No hay historial de gastos fijos para este filtro.</td></tr>
+                            ) : gastosFiltrados.sort((a,b) => new Date(b.fecha) - new Date(a.fecha)).map(g => (
                                 <tr key={g.idGasto} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
                                     <td className="py-3 pr-4 text-gray-500 font-medium whitespace-nowrap">{g.fecha}</td>
                                     <td className="py-3 pr-4 whitespace-nowrap"><span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md font-bold text-[11px]">{g.categoria}</span></td>

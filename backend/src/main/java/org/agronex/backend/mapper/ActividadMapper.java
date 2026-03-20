@@ -31,6 +31,9 @@ public class ActividadMapper {
                                 ? actividad.getCampania().getIdCampania()  // 🔹 UUID
                                 : null
                 )
+                .nombreCultivo(actividad.getCampania() != null ? actividad.getCampania().getCultivo() : null)
+                .nombreLote(actividad.getCampania() != null && actividad.getCampania().getLote() != null ? actividad.getCampania().getLote().getNombre() : "General")
+                .nombreCampo(actividad.getCampania() != null && actividad.getCampania().getLote() != null && actividad.getCampania().getLote().getCampo() != null ? actividad.getCampania().getLote().getCampo().getNombre() : "Campo no asignado")
                 .build();
     }
 }

@@ -52,6 +52,7 @@ export default function DashboardLayout({ children }) {
         { name: "Ciclos de Producción", path: "/dashboard/lotes", icon: <RefreshCw size={18} /> },
         { name: "Costos", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} /> },
         { name: "Cosechas", path: "/dashboard/actividades", icon: <Wheat size={18} /> },
+        { name: "Inventario", path: "/dashboard/inventario", icon: <Bell size={18} /> },
         { name: "Configuración", path: "/dashboard/settings", icon: <Settings size={18} /> },
     ];
 
