@@ -14,26 +14,16 @@ export const Navbar = () => {
                 <span>Agronex</span>
             </Link>
 
-            {/* LINKS CENTRALES: Usamos absolute y left-1/2 para que el centrado sea perfecto independientemente de los otros elementos */}
-            <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 space-x-10 text-sm font-semibold text-gray-600">
-                <Link href="#soluciones" className="hover:text-green-700 transition-colors uppercase tracking-wider">
-                    Soluciones
-                </Link>
-                <Link href="#subscripciones" className="hover:text-green-700 transition-colors uppercase tracking-wider">
-                    Subscripciones
-                </Link>
-            </div>
-
             {/* BOTONES DERECHOS */}
             <div className="flex items-center space-x-6">
-                <Link href="/login" className="text-sm font-bold text-green-800 hover:text-green-900 transition-colors">
-                    Iniciar Sesión
+                <Link href="#soluciones" className="text-sm font-bold text-green-800 hover:text-green-900 transition-colors">
+                    Soluciones
                 </Link>
                 <Link
-                    href="/login"
+                    href="#suscripciones"
                     className="bg-green-800 hover:bg-green-900 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
                 >
-                    Comenzar
+                    Suscripciones
                 </Link>
             </div>
         </nav>

@@ -24,6 +24,23 @@ export default function AuthPage() {
 
     useEffect(() => { setError(null); }, [isLogin]);
 
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                    redirectTo: `${window.location.origin}/dashboard`,
+                },
+            });
+            if (oauthError) throw oauthError;
+        } catch (err) {
+            setError(err.message || "No se pudo iniciar sesión con Google.");
+            setLoading(false);
+        }
+    };
+
     const handleAuth = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -51,69 +68,47 @@ export default function AuthPage() {
     return (
         <div className="h-screen flex flex-col bg-[#F9FBFA] overflow-hidden font-sans selection:bg-green-100 antialiased">
             <Navbar />
-            <div className="flex-1 flex overflow-hidden">
-
-                {/* --- PANEL IZQUIERDO: Efecto Sol Radiante + Zoom --- */}
-                <div className="hidden md:flex md:w-1/2 relative flex-col justify-between p-12 overflow-hidden group">
+            <div className="flex-1 flex overflow-hidden relative group">
+                <div className="hidden md:block absolute inset-0">
                     <div className="absolute inset-0 transition-all duration-[1500ms] ease-out group-hover:scale-110 group-hover:brightness-110">
                         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center"></div>
-                        {/* El Efecto Sol: Bajamos la opacidad del verde oscuro al pasar el mouse para que "brille" */}
                         <div className="absolute inset-0 bg-gradient-to-br from-[#2D6A4F]/90 to-[#1B4332]/95 mix-blend-multiply opacity-85 transition-opacity duration-700 group-hover:opacity-30"></div>
                     </div>
 
-                    <div className="relative z-10 flex items-center gap-2 text-white">
-                    </div>
-
-                    <div className="relative z-10 max-w-lg transition-transform duration-700 group-hover:-translate-y-2">
-                        <span className="inline-block bg-white/10 text-white text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-widest mb-6 border border-white/20">
-                            Digital Cultivator
-                        </span>
-                        <h1 className="text-6xl font-black text-white leading-tight mb-6 tracking-tighter uppercase italic">
-                            Cultivating <br /> the Future.
-                        </h1>
-                        <p className="text-lg text-green-50/70 leading-relaxed font-medium">
-                            Smart Farming & Data Analysis para la UTN FRSF.
-                        </p>
-                    </div>
-
-                    <div className="relative z-10 flex items-center gap-8 text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">
-                        <span>UTN Santa Fe</span>
-                        <span>v1.0.4</span>
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 px-12 z-10">
+                        <div className="max-w-2xl transition-transform duration-700 group-hover:-translate-y-2">
+                            <h1 className="text-6xl font-black text-white leading-tight mb-6 tracking-tighter uppercase italic whitespace-nowrap">
+                                Sembrando eficiencia,<br />cosechando rentabilidad.
+                            </h1>
+                            <p className="pl-3 text-lg text-green-50/70 leading-relaxed font-medium">
+                                Agricultura Inteligente & Analisis de Datos.
+                            </p>
+                        </div>
                     </div>
                 </div>
 
                 {/* --- PANEL DERECHO: Card 3D con GIRO REAL --- */}
-                <div className="flex-1 flex flex-col justify-center items-center p-6 bg-[#F9FBFA] relative perspective-1000">
+                <div className="w-full md:w-2/5 md:ml-auto flex flex-col justify-center items-center p-6 bg-[#F9FBFA] md:bg-transparent relative perspective-1000 z-10">
 
                     {/* Selector Superior */}
                     <div className="flex flex-col items-center mb-10 z-20">
-                        <div className="flex bg-gray-200/40 p-1.5 rounded-full mb-5 border border-gray-200 backdrop-blur-sm shadow-inner">
-                            <button onClick={() => setIsLogin(true)} className={`px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 ${isLogin ? "bg-white text-[#2D6A4F] shadow-lg scale-105" : "text-gray-400 hover:text-gray-600"}`}>Log In</button>
-                            <button onClick={() => setIsLogin(false)} className={`px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all duration-300 ${!isLogin ? "bg-white text-[#2D6A4F] shadow-lg scale-105" : "text-gray-400 hover:text-gray-600"}`}>Sign Up</button>
+                        <div className="flex bg-white/25 p-1.5 rounded-[999px] mb-5 border border-white/50 backdrop-blur-md shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
+                            <button onClick={() => setIsLogin(true)} className={`min-w-[170px] px-7 py-2.5 rounded-[999px] text-xs font-black uppercase tracking-widest transition-all duration-300 ${isLogin ? "bg-white text-[#2D6A4F] shadow-sm" : "text-white/90 hover:text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"}`}>Iniciar Sesión</button>
+                            <button onClick={() => setIsLogin(false)} className={`min-w-[170px] px-7 py-2.5 rounded-[999px] text-xs font-black uppercase tracking-widest transition-all duration-300 ${!isLogin ? "bg-white text-[#2D6A4F] shadow-sm" : "text-white/90 hover:text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"}`}>Registrarse</button>
                         </div>
 
                         {/* SWITCH DE LA PLANTA (MÁS GRANDE) */}
-                        <div
-                            className="w-24 h-11 bg-gray-200/50 rounded-full relative cursor-pointer border border-gray-200 p-1.5 shadow-inner transition-colors hover:border-green-300"
-                            onClick={() => setIsLogin(!isLogin)}
-                        >
-                            <div className={`
-                                absolute top-1 h-8 w-12 bg-[#2D6A4F] rounded-full flex items-center justify-center transition-all duration-700 shadow-xl
-                                ${isLogin ? "left-1.5" : "left-10"}
-                            `}>
-                                <Leaf className={`h-6 w-6 text-white transition-transform duration-700 ${isLogin ? "-rotate-45" : "rotate-0"}`} />
-                            </div>
-                        </div>
+                       
                     </div>
 
                     {/* --- CARD CONTAINER (COPIÁ DESDE ACÁ) --- */}
                     <div className={`relative w-full max-w-[420px] h-[550px] transition-all duration-1000 preserve-3d ${!isLogin ? "is-flipped" : ""}`}>
 
                         {/* CARA FRONT: LOGIN */}
-                        <div className="card-face absolute inset-0 bg-white rounded-[2.5rem] p-10 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.08)]">
-                            <div className="h-24 flex flex-col justify-center mb-8">
+                        <div className="card-face absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2.5rem] p-10 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)]">
+                            <div className="h-24 flex flex-col items-center text-center justify-center gap-2 mb-8">
                                 <h2 className="text-4xl font-black text-gray-900 tracking-tighter uppercase italic transition-colors hover:text-[#2D6A4F] cursor-default">
-                                    Log In
+                                    Bienvenido
                                 </h2>
                                 <p className="text-gray-700 text-sm font-medium italic">Accedé a tu ecosistema digital.</p>
                             </div>
@@ -129,24 +124,45 @@ export default function AuthPage() {
                                         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl pl-12 pr-5 py-4 text-sm font-bold text-gray-900 focus:bg-white focus:border-[#2D6A4F] outline-none transition-all placeholder:text-gray-500 hover:border-green-300" placeholder="Contraseña" />
                                     </div>
                                 </div>
-                                <button type="submit" className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white py-4.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl transition-all active:scale-95 mt-6 flex items-center justify-center gap-2">
-                                    Access<ArrowRight size={14} />
+                                <button type="submit" className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white py-4.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 mt-6 flex items-center justify-center gap-2">
+                                    Acceder<ArrowRight size={14} />
                                 </button>
                             </form>
+
+                            <div className="mt-8">
+                                <div className="relative mb-4">
+                                    <div className="h-px bg-gray-200"></div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleGoogleLogin}
+                                    disabled={loading}
+                                    className="w-full rounded-xl border border-gray-200 bg-[#F5F7F4] hover:bg-[#eef3ee] text-gray-900 py-3.5 font-bold text-[15px] transition-colors flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+                                >
+                                    <span className="text-xl leading-none">G</span>
+                                    Continuar con Google
+                                </button>
+                                <button
+                                    type="button"
+                                    className="mt-4 w-full text-center text-sm font-semibold text-[white] transition-colors"
+                                >
+                                    ¿Olvidaste tu contraseña?
+                                </button>
+                            </div>
                         </div>
 
                         {/* CARA BACK: REGISTER */}
-                        <div className="card-face card-face-back absolute inset-0 bg-white rounded-[2.5rem] p-10 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.08)] overflow-hidden">
-                            <div className="h-24 flex flex-col justify-center mb-8">
+                        <div className="card-face card-face-back absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2.5rem] p-10 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)] overflow-hidden">
+                            <div className="h-24 flex flex-col items-center text-center justify-center gap-2 mb-8">
                                 <h2 className="text-4xl font-black text-gray-900 tracking-tighter uppercase italic transition-colors hover:text-[#2D6A4F] cursor-default">
-                                    Sign Up
+                                    Crear cuenta
                                 </h2>
                                 <p className="text-gray-700 text-sm font-medium italic">Unite a la red de precisión.</p>
                             </div>
 
-                            <div className="flex bg-gray-50 p-1 rounded-xl mb-6 border border-gray-200 shadow-inner">
-                                <button type="button" onClick={() => setTipoUsuario("FISICA")} className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${tipoUsuario === "FISICA" ? "bg-white text-[#2D6A4F] shadow-sm border border-gray-100" : "text-gray-400"}`}>Individual</button>
-                                <button type="button" onClick={() => setTipoUsuario("JURIDICA")} className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase transition-all ${tipoUsuario === "JURIDICA" ? "bg-white text-[#2D6A4F] shadow-sm border border-gray-100" : "text-gray-400"}`}>Empresa</button>
+                            <div className="flex bg-white/25 p-1 rounded-[14px] mb-6 border border-white/50 backdrop-blur-md shadow-inner">
+                                <button type="button" onClick={() => setTipoUsuario("FISICA")} className={`flex-1 py-2.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${tipoUsuario === "FISICA" ? "bg-white text-[#2D6A4F] shadow-sm border border-white/70" : "text-slate-500 hover:text-slate-700"}`}>Individual</button>
+                                <button type="button" onClick={() => setTipoUsuario("JURIDICA")} className={`flex-1 py-2.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${tipoUsuario === "JURIDICA" ? "bg-white text-[#2D6A4F] shadow-sm border border-white/70" : "text-slate-500 hover:text-slate-700"}`}>Empresa</button>
                             </div>
 
                             <form className="space-y-4" onSubmit={handleAuth}>
@@ -162,11 +178,11 @@ export default function AuthPage() {
                                             <input type="text" required value={cuit} onChange={(e) => setCuit(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-5 py-3.5 text-sm font-bold text-gray-900 focus:bg-white focus:border-[#2D6A4F] outline-none transition-all placeholder:text-gray-500 hover:border-green-300" placeholder="CUIT" />
                                         </>
                                     )}
-                                    <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-5 py-3.5 text-sm font-bold text-gray-900 focus:bg-white focus:border-[#2D6A4F] outline-none transition-all placeholder:text-gray-500 hover:border-green-300" placeholder="Email Address" />
-                                    <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-5 py-3.5 text-sm font-bold text-gray-900 focus:bg-white focus:border-[#2D6A4F] outline-none transition-all placeholder:text-gray-500 hover:border-green-300" placeholder="Password" />
+                                    <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-5 py-3.5 text-sm font-bold text-gray-900 focus:bg-white focus:border-[#2D6A4F] outline-none transition-all placeholder:text-gray-500 hover:border-green-300" placeholder="Email" />
+                                    <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-5 py-3.5 text-sm font-bold text-gray-900 focus:bg-white focus:border-[#2D6A4F] outline-none transition-all placeholder:text-gray-500 hover:border-green-300" placeholder="Contraseña" />
                                 </div>
-                                <button type="submit" className="w-full bg-[#2D6A4F] text-white py-4.5 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:shadow-green-900/20 transition-all mt-4">
-                                    Register Account
+                                <button type="submit" className="w-full bg-[#2D6A4F] text-white py-4.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all -mt-1">
+                                    Registrar cuenta
                                 </button>
                             </form>
                         </div>
