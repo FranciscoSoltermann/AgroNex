@@ -9,21 +9,22 @@ import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "lote")
 @SQLDelete(sql = "UPDATE lote SET eliminado_en = CURRENT_TIMESTAMP WHERE id_lote = ?")
 @SQLRestriction("eliminado_en IS NULL")
 @Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @SuperBuilder
 public class Lote extends Auditable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "lote_seq")
-    @SequenceGenerator(name = "lote_seq", sequenceName = "lote_id_lote_seq", allocationSize = 1)
+    @GeneratedValue
     @Column(name = "id_lote")
-    private Long idLote;
+    private UUID idLote;  // 🔹 Cambiado de Long a UUID
 
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;

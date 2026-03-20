@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "actividad")
@@ -18,7 +19,7 @@ public class Actividad {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "actividad_seq")
     @SequenceGenerator(name = "actividad_seq", sequenceName = "actividad_id_actividad_seq", allocationSize = 1)
     @Column(name = "id_actividad")
-    private Long idActividad;
+    private UUID idActividad;
 
     @Column(name = "tipo_actv", nullable = false, length = 100)
     private String tipoActv;

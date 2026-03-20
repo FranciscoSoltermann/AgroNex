@@ -3,7 +3,6 @@ package org.agronex.backend.mapper;
 import org.agronex.backend.dto.request.PersonaJuridicaRequest;
 import org.agronex.backend.dto.response.PersonaJuridicaResponse;
 import org.agronex.backend.entity.PersonaJuridica;
-import org.agronex.backend.enums.TipoPersona;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -11,19 +10,19 @@ import java.util.UUID;
 @Component
 public class PersonaJuridicaMapper {
 
-    public PersonaJuridica toEntity(PersonaJuridicaRequest request, UUID supabaseUuid) {
+    public PersonaJuridica toEntity(PersonaJuridicaRequest request, UUID idUsuario) {
         if (request == null) return null;
         return PersonaJuridica.builder()
-                .idUsuario(supabaseUuid)
-                .email(request.getEmail())
+                .idUsuario(idUsuario) // Asigna el UUID de Supabase aquí
                 .razonSocial(request.getRazonSocial())
                 .cuit(request.getCuit())
-                .tipoPersona(TipoPersona.JURIDICA)
+                .email(request.getEmail())
                 .build();
     }
 
     public PersonaJuridicaResponse toResponse(PersonaJuridica empresa) {
         if (empresa == null) return null;
+
         return PersonaJuridicaResponse.builder()
                 .idUsuario(empresa.getIdUsuario())
                 .email(empresa.getEmail())

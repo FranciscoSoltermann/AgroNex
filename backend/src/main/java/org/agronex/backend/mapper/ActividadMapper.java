@@ -22,11 +22,15 @@ public class ActividadMapper {
     public ActividadResponse toResponse(Actividad actividad) {
         if (actividad == null) return null;
         return ActividadResponse.builder()
-                .idActividad(actividad.getIdActividad())
+                .idActividad(actividad.getIdActividad())  // 🔹 UUID
                 .tipoActv(actividad.getTipoActv())
                 .costoServicio(actividad.getCostoServicio())
                 .fecha(actividad.getFecha())
-                .idCampania(actividad.getCampania() != null ? actividad.getCampania().getIdCampania() : null)
+                .idCampania(
+                        actividad.getCampania() != null
+                                ? actividad.getCampania().getIdCampania()  // 🔹 UUID
+                                : null
+                )
                 .build();
     }
 }

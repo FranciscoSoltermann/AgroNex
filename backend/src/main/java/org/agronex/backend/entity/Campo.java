@@ -9,6 +9,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "campo")
@@ -20,10 +21,9 @@ import java.util.List;
 public class Campo extends Auditable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "campo_seq")
-    @SequenceGenerator(name = "campo_seq", sequenceName = "campo_id_campo_seq", allocationSize = 1)
+    @GeneratedValue
     @Column(name = "id_campo")
-    private Long idCampo;
+    private UUID idCampo;  // 🔹 Cambiado de Long a UUID
 
     @Column(name = "nombre", nullable = false, length = 100)
     private String nombre;

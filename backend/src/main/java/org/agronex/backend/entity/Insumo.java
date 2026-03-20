@@ -5,6 +5,7 @@ import lombok.*;
 import org.agronex.backend.enums.UnidadMedida;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Entity
 @Table(name = "insumo")
@@ -17,7 +18,7 @@ public class Insumo {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "insumo_seq")
     @SequenceGenerator(name = "insumo_seq", sequenceName = "insumo_id_insumo_seq", allocationSize = 1)
     @Column(name = "id_insumo")
-    private Long idInsumo;
+    private UUID idInsumo;
 
     @Column(name = "nombre", nullable = false, length = 150)
     private String nombre;

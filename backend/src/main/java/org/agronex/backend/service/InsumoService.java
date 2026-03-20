@@ -43,7 +43,7 @@ public class InsumoService {
 
     // Método adicional útil para el flujo de ActividadInsumo
     @Transactional(readOnly = true)
-    public InsumoResponse buscarPorId(Long id) {
+    public InsumoResponse buscarPorId(UUID id) { // 🔹 Cambiado de Long a UUID
         return insumoRepository.findById(id)
                 .map(insumoMapper::toResponse)
                 .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en el catálogo"));

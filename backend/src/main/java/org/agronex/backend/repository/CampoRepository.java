@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface CampoRepository extends JpaRepository<Campo, Long> {
-    // Filtra campos por el ID del usuario (Seguridad)
+public interface CampoRepository extends JpaRepository<Campo, UUID> { // 🔹 Cambiar Long por UUID
     List<Campo> findByUsuarioIdUsuario(UUID idUsuario);
 }

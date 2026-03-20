@@ -14,34 +14,25 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/public/auth") // Ruta pública (configurada en SecurityConfig)
+@RequestMapping("/api/public/auth") // Coincide con tu frontend
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * Endpoint para registrar una persona física.
-     * El 'idUsuario' debe ser el UUID que devolvió Supabase al crear la cuenta.
-     */
-    @PostMapping("/registro/fisica/{idUsuario}")
-    public ResponseEntity<PersonaFisicaResponse> registrarFisica(
-            @PathVariable UUID idUsuario,
+    @PostMapping("/registro/fisica/{supabaseId}")
+    public ResponseEntity<PersonaFisicaResponse> registrarPersonaFisica(
+            @PathVariable UUID supabaseId,
             @Valid @RequestBody PersonaFisicaRequest request) {
 
-        PersonaFisicaResponse response = authService.registrarPersonaFisica(request, idUsuario);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return new ResponseEntity<>(authService.registrarPersonaFisica(request, supabaseId), HttpStatus.CREATED);
     }
 
-    /**
-     * Endpoint para registrar una persona jurídica (Empresa).
-     */
-    @PostMapping("/registro/juridica/{idUsuario}")
-    public ResponseEntity<PersonaJuridicaResponse> registrarJuridica(
-            @PathVariable UUID idUsuario,
+    @PostMapping("/registro/juridica/{supabaseId}")
+    public ResponseEntity<PersonaJuridicaResponse> registrarPersonaJuridica(
+            @PathVariable UUID supabaseId,
             @Valid @RequestBody PersonaJuridicaRequest request) {
 
-        PersonaJuridicaResponse response = authService.registrarPersonaJuridica(request, idUsuario);
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return new ResponseEntity<>(authService.registrarPersonaJuridica(request, supabaseId), HttpStatus.CREATED);
     }
 }

@@ -6,13 +6,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.agronex.backend.enums.UnidadMedida;
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class InsumoResponse {
-    private Long idInsumo;
+    private UUID idInsumo;
     private String nombre;
     private BigDecimal precioUnitario;
     private UnidadMedida unidad;

@@ -3,6 +3,7 @@ package org.agronex.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
+import java.util.UUID; // 1. Importar UUID
 
 @Entity
 @Table(name = "actividad_insumo")
@@ -12,10 +13,9 @@ import java.math.BigDecimal;
 public class ActividadInsumo {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "actividad_insumo_seq")
-    @SequenceGenerator(name = "actividad_insumo_seq", sequenceName = "actividad_insumo_id_actividad_insumo_seq", allocationSize = 1)
+    @GeneratedValue // 2. Dejarlo simple o usar estrategia UUID
     @Column(name = "id_actividad_insumo")
-    private Long idActividadInsumo;
+    private UUID idActividadInsumo; // 3. CAMBIAR DE Long A UUID
 
     @Column(name = "dosis_ha", nullable = false, precision = 10, scale = 2)
     private BigDecimal dosisHa;

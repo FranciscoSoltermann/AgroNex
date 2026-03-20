@@ -4,6 +4,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: agronex-backend
+    env_file:
+      - ./backend/.env
     ports:
       - "8080:8080"
     volumes:
@@ -23,7 +25,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8080
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api
     networks:
       - agronex-net
     depends_on:

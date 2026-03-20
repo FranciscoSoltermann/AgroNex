@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -18,8 +19,8 @@ public class ActividadInsumoRequest {
     private BigDecimal dosisHa;
 
     @NotNull(message = "El ID de la actividad es obligatorio")
-    private Long idActividad;
+    private UUID idActividad; // 🔹 Cambiar de Long a UUID
 
     @NotNull(message = "El ID del insumo es obligatorio")
-    private Long idInsumo;
+    private UUID idInsumo;    // 🔹 Cambiar de Long a UUID
 }

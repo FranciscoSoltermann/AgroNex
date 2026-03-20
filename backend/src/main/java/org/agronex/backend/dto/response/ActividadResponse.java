@@ -1,20 +1,20 @@
 package org.agronex.backend.dto.response;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
+
 import java.time.LocalDate;
+import java.util.UUID;
+
 
 @Data
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class ActividadResponse {
-    private Long idActividad;
+    private UUID idActividad;
     private String tipoActv;
     private BigDecimal costoServicio;
-    private LocalDate fecha;
-    private Long idCampania;
+    private LocalDate fecha; // 🔹 Cambiar de OffsetDateTime a LocalDate
+    private UUID idCampania;
 }

@@ -6,15 +6,17 @@ import lombok.experimental.SuperBuilder;
 
 @Entity
 @Table(name = "persona_juridica")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@DiscriminatorValue("JURIDICA")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @SuperBuilder
-@PrimaryKeyJoinColumn(name = "id_juridica", referencedColumnName = "id_usuario")
 public class PersonaJuridica extends Usuario {
 
-    @Column(name = "razon_social", nullable = false, length = 200)
+    @Column(nullable = false)
     private String razonSocial;
 
-    @Column(name = "cuit", nullable = false, unique = true, length = 30)
+    @Column(nullable = false, unique = true)
     private String cuit;
 }

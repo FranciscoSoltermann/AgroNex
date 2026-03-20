@@ -23,11 +23,8 @@ public class CampoController {
     private final CampoService campoService;
 
     @PostMapping
-    public ResponseEntity<CampoResponse> crear(
-            @Valid @RequestBody CampoRequest request,
-            @AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
-        return new ResponseEntity<>(campoService.crearCampo(request, idUsuario), HttpStatus.CREATED);
+    public ResponseEntity<?> crearCampo(@RequestBody CampoRequest request, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(campoService.crearCampo(request, jwt));
     }
 
     @GetMapping
@@ -42,4 +39,5 @@ public class CampoController {
         UUID idUsuario = UUID.fromString(jwt.getSubject());
         return ResponseEntity.ok(campoService.obtenerEstadisticas(idUsuario));
     }
+
 }
