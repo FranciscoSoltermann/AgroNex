@@ -27,6 +27,8 @@ public class CampaniaMapper {
                 .fechaInicio(campania.getFechaInicio() != null ? campania.getFechaInicio().atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null)
                 .fechaFin(campania.getFechaFin() != null ? campania.getFechaFin().atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null)
                 .idLote(campania.getLote() != null ? campania.getLote().getIdLote() : null)
+                .nombreLote(campania.getLote() != null ? campania.getLote().getNombre() : "General")
+                .nombreCampo(campania.getLote() != null && campania.getLote().getCampo() != null ? campania.getLote().getCampo().getNombre() : "Estancia Base")
                 .build();
     }
 }

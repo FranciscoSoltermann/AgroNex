@@ -1,5 +1,6 @@
 package org.agronex.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -15,7 +16,7 @@ import java.util.UUID;
 public class Campania {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_campania")
     private UUID idCampania;
 
@@ -33,6 +34,7 @@ public class Campania {
     private Lote lote;
 
     @Builder.Default
+    @JsonIgnore
     @OneToMany(mappedBy = "campania", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Actividad> actividades = new ArrayList<>();
 

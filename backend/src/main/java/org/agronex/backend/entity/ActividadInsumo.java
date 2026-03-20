@@ -13,7 +13,7 @@ import java.util.UUID; // 1. Importar UUID
 public class ActividadInsumo {
 
     @Id
-    @GeneratedValue // 2. Dejarlo simple o usar estrategia UUID
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_actividad_insumo")
     private UUID idActividadInsumo; // 3. CAMBIAR DE Long A UUID
 

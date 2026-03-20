@@ -32,14 +32,15 @@ export default function CamposPage() {
     // Modal nuevo lote
     const [showModalLote, setShowModalLote] = useState(false);
     const [campoSeleccionado, setCampoSeleccionado] = useState(null);
-    const [formLote, setFormLote] = useState({ nombre: "", superficie: "" });
+    const [formLote, setFormLote] = useState({ nombre: "", superficie: "1" });
 
     const fetchData = useCallback(async (uid) => {
         try {
             setError(null);
+            const timestamp = new Date().getTime();
             const [camposRes, statsRes] = await Promise.all([
-                apiClient.get("/campos"),
-                apiClient.get("/campos/stats"),
+                apiClient.get(`/campos?t=${timestamp}`),
+                apiClient.get(`/campos/stats?t=${timestamp}`),
             ]);
             setCampos(camposRes.data || []);
             const s = statsRes.data || {};
@@ -83,12 +84,13 @@ export default function CamposPage() {
         setSubmitLoading(true);
         setSubmitError(null);
         try {
-            await apiClient.post("/campos", {
+            const res = await apiClient.post("/campos", {
                 nombre: formCampo.nombre,
                 ubicacion: formCampo.ubicacion,
                 superficieTotal: parseFloat(formCampo.superficieTotal)
             });
             setSubmitSuccess("¡Campo creado con éxito!");
+            setCampos(prev => res.data && res.data.idCampo ? [res.data, ...prev] : prev);
             setFormCampo({ nombre: "", ubicacion: "", superficieTotal: "" });
             await fetchData(userId);
             setTimeout(() => { setShowModalCampo(false); setSubmitSuccess(null); }, 1500);
@@ -115,7 +117,7 @@ export default function CamposPage() {
                 idCampo: campoSeleccionado.idCampo,
             });
             setSubmitSuccess("¡Lote creado con éxito!");
-            setFormLote({ nombre: "", superficie: "" });
+            setFormLote({ nombre: "", superficie: "1" });
             await fetchData(userId);
             setTimeout(() => { setShowModalLote(false); setSubmitSuccess(null); }, 1500);
         } catch (err) {
@@ -213,7 +215,7 @@ export default function CamposPage() {
                                     setShowModalLote(true);
                                     setSubmitError(null);
                                     setSubmitSuccess(null);
-                                    setFormLote({ nombre: "", superficie: "" });
+                                    setFormLote({ nombre: "", superficie: "1" });
                                 }}
                             />
                         ))}
@@ -271,7 +273,7 @@ export default function CamposPage() {
                         </FormField>
                         <FormField label="Superficie (Ha)" required>
                             <div className="relative">
-                                <input type="number" step="0.01" min="0.01" required value={formLote.superficie} onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="0.00" />
+                                <input type="number" step="0.01" min="0.01" max={campoSeleccionado?.superficieTotal} required value={formLote.superficie} onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="1.00" />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
                             </div>
                         </FormField>

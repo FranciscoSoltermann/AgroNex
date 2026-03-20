@@ -8,6 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
-    // Spring crea automáticamente la consulta por el nombre del método
     Optional<Usuario> findByEmail(String email);
 }

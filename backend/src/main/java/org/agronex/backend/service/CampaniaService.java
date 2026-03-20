@@ -13,7 +13,9 @@ import org.agronex.backend.repository.LoteRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,5 +44,13 @@ public class CampaniaService {
 
         // 5. MAPPER: Transformamos Entity -> Response
         return campaniaMapper.toResponse(guardada);
+    }
+    @Transactional(readOnly = true)
+    public List<CampaniaResponse> listarMisCampanias(UUID idUsuarioToken) {
+        // List<Campania> findByLoteCampoUsuarioIdUsuario(UUID idUsuario);
+        return campaniaRepository.findByLoteCampoUsuarioIdUsuario(idUsuarioToken)
+                .stream()
+                .map(campaniaMapper::toResponse)
+                .collect(Collectors.toList());
     }
 }

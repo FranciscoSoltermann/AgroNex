@@ -56,4 +56,12 @@ public class GastoFijoService {
         // 6. MAPPER: Transformamos la Entidad guardada a Response
         return gastoFijoMapper.toResponse(guardado);
     }
+
+    @Transactional(readOnly = true)
+    public java.util.List<GastoFijoResponse> listarGastosPersonales(UUID idUsuarioToken) {
+        return gastoFijoRepository.findByCampoUsuarioIdUsuario(idUsuarioToken)
+                .stream()
+                .map(gastoFijoMapper::toResponse)
+                .collect(java.util.stream.Collectors.toList());
+    }
 }

@@ -24,19 +24,24 @@ public class CampoService {
     private final UsuarioService usuarioService;
 
     @Transactional
-    public CampoResponse crearCampo(CampoRequest request, Jwt jwt) { // 👈 Cambiamos el retorno a CampoResponse
-
+    public CampoResponse crearCampo(CampoRequest request, Jwt jwt) {
+        // 1. Nos aseguramos de tener el usuario persistido y gestionado por JPA
+        // IMPORTANTE: Este método debe devolver el usuario recuperado de la DB
         Usuario usuario = usuarioService.obtenerOCrearUsuario(jwt);
 
-        Campo campo = new Campo();
-        campo.setNombre(request.getNombre());
-        campo.setUbicacion(request.getUbicacion());
-        campo.setSuperficieTotal(request.getSuperficieTotal());
-        campo.setUsuario(usuario);
+        // 2. Construimos el campo usando el Builder (ya que lo tenés en la entidad)
+        // Es más limpio que los setters manuales
+        Campo campo = Campo.builder()
+                .nombre(request.getNombre())
+                .ubicacion(request.getUbicacion())
+                .superficieTotal(request.getSuperficieTotal())
+                .usuario(usuario) // Aquí le pasamos la entidad gestionada
+                .build();
 
+        // 3. Al guardar el campo, Hibernate ya sabe que el usuario existe
+        // y solo va a insertar el ID en la columna id_usuario
         Campo guardado = campoRepository.save(campo);
 
-        // 🔹 Usamos el mapper para devolver un objeto seguro para JSON
         return campoMapper.toResponse(guardado);
     }
 

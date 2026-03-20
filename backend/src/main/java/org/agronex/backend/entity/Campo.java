@@ -1,5 +1,6 @@
 package org.agronex.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -21,7 +22,7 @@ import java.util.UUID;
 public class Campo extends Auditable {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_campo")
     private UUID idCampo;  // 🔹 Cambiado de Long a UUID
 
@@ -39,6 +40,7 @@ public class Campo extends Auditable {
     private Usuario usuario;
 
     @Builder.Default
+    @JsonIgnore
     @OneToMany(mappedBy = "campo", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Lote> lotes = new ArrayList<>();
 
