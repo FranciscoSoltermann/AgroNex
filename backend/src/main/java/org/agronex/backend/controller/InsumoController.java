@@ -7,6 +7,8 @@ import org.agronex.backend.dto.response.InsumoResponse;
 import org.agronex.backend.service.InsumoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,8 +23,11 @@ public class InsumoController {
 
     // Obtener todo el catálogo de semillas, químicos, etc.
     @GetMapping
-    public ResponseEntity<List<InsumoResponse>> listarInsumos() {
-        return ResponseEntity.ok(insumoService.listarTodos());
+    public ResponseEntity<List<InsumoResponse>> listarInsumos(
+            @AuthenticationPrincipal Jwt jwt, 
+            @RequestParam(required = false) UUID idCampo) {
+        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        return ResponseEntity.ok(insumoService.listarTodos(idUsuario, idCampo));
     }
 
     // Obtener un insumo específico (útil para ver detalles)

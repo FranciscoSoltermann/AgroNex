@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.agronex.backend.enums.UnidadMedida;
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -24,4 +25,11 @@ public class InsumoRequest {
 
     @NotNull(message = "La unidad de medida es obligatoria")
     private UnidadMedida unidad;
+
+    @NotNull(message = "La cantidad es obligatoria")
+    @PositiveOrZero(message = "La cantidad no puede ser negativa")
+    private BigDecimal cantidad;
+
+    @NotNull(message = "El campo es obligatorio")
+    private UUID idCampo;
 }

@@ -118,18 +118,7 @@ export default function DashboardLayout({ children }) {
 
             {/* CONTENIDO PRINCIPAL */}
             <div className="flex-1 flex flex-col overflow-hidden">
-                {/* Header superior */}
-                <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6 flex-shrink-0">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Buscar operaciones, campos o ciclos..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-4 py-2 text-[12px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-[#2D6A4F] transition-colors"
-                        />
-                    </div>
+                <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-end px-6 flex-shrink-0">
                     <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold text-gray-700">
                             Bienvenido, {userName}

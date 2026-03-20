@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -19,6 +20,12 @@ import java.util.UUID;
 public class CosechaController {
 
     private final CosechaService cosechaService;
+
+    @GetMapping
+    public ResponseEntity<List<CosechaResponse>> listarTodas(@AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        return ResponseEntity.ok(cosechaService.listarTodas(idUsuario));
+    }
 
     @PostMapping
     public ResponseEntity<CosechaResponse> registrarCosecha(
