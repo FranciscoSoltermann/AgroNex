@@ -28,4 +28,10 @@ public class GastoFijoController {
         UUID idUsuario = UUID.fromString(jwt.getSubject());
         return new ResponseEntity<>(gastoFijoService.registrarGasto(request, idUsuario), HttpStatus.CREATED);
     }
+
+    @GetMapping
+    public ResponseEntity<java.util.List<GastoFijoResponse>> listMisGastos(@AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        return ResponseEntity.ok(gastoFijoService.listarGastosPersonales(idUsuario));
+    }
 }

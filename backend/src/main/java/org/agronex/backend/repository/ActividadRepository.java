@@ -9,4 +9,5 @@ import java.util.UUID;
 @Repository // Cambiar Long por UUID y el parámetro del método
 public interface ActividadRepository extends JpaRepository<Actividad, UUID> {
     List<Actividad> findByCampaniaIdCampania(UUID idCampania);
+    List<Actividad> findByCampaniaLoteCampoUsuarioIdUsuario(UUID idUsuario);
 }

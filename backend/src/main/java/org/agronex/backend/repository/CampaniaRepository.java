@@ -9,4 +9,5 @@ import java.util.UUID;
 @Repository // Cambiar Long por UUID y el parámetro del método
 public interface CampaniaRepository extends JpaRepository<Campania, UUID> {
     List<Campania> findByLoteIdLote(UUID idLote);
+    List<Campania> findByLoteCampoUsuarioIdUsuario(UUID idUsuario);
 }

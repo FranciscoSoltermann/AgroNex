@@ -9,4 +9,5 @@ import java.util.UUID;
 @Repository
 public interface CosechaRepository extends JpaRepository<Cosecha, UUID> {
     List<Cosecha> findByCampaniaIdCampania(UUID idCampania);
+    List<Cosecha> findByCampaniaLoteCampoUsuarioIdUsuario(UUID idUsuario);
 }

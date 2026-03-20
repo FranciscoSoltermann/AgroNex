@@ -13,4 +13,6 @@ public class CampaniaResponse {
     private OffsetDateTime fechaInicio;
     private OffsetDateTime fechaFin;
     private UUID idLote;       // 🔹 UUID
+    private String nombreLote;
+    private String nombreCampo;
 }

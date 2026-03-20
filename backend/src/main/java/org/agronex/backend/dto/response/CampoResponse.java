@@ -12,4 +12,5 @@ public class CampoResponse {
     private String nombre;
     private String ubicacion;
     private BigDecimal superficieTotal;
+    private Integer cantidadLotes;
 }

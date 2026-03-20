@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -28,5 +29,10 @@ public class LoteController {
         UUID idUsuario = UUID.fromString(jwt.getSubject());
         LoteResponse response = loteService.crearLote(request, idUsuario);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+    @GetMapping
+    public ResponseEntity<List<LoteResponse>> listarMisLotes(@AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        return ResponseEntity.ok(loteService.listarMisLotes(idUsuario));
     }
 }

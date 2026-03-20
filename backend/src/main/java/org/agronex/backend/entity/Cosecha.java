@@ -20,8 +20,7 @@ import java.util.UUID;
 public class Cosecha extends Auditable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "cosecha_seq")
-    @SequenceGenerator(name = "cosecha_seq", sequenceName = "cosecha_id_cosecha_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id_cosecha")
     private UUID idCosecha;
 

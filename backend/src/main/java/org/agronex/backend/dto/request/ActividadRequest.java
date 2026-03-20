@@ -1,5 +1,6 @@
 package org.agronex.backend.dto.request;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -9,7 +10,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID; // <--- 1. Importante agregar el import
+import java.util.List; // <-- Importar List
+import java.util.UUID;
 
 @Data
 @Builder
@@ -26,5 +28,9 @@ public class ActividadRequest {
     private LocalDate fecha;
 
     @NotNull(message = "El ID de la campaña es obligatorio")
-    private UUID idCampania; // <--- 2. Cambiado de Long a UUID
+    private UUID idCampania;
+
+    // 👇 NUEVO: La lista de insumos que se usaron (el @Valid valida cada elemento de la lista)
+    @Valid
+    private List<DetalleInsumoRequest> insumos;
 }

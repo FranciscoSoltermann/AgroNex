@@ -18,15 +18,17 @@ const CHART_DATA = [
 ];
 const MAX_VAL = 100;
 
-const ACTIVIDADES_MOCK = [
-    { icon: <Sprout size={15} className="text-green-600" />, bg: "bg-green-50", titulo: "Siembra de Soja", sub: "Campo La Pampa - Sección B", tiempo: "Hace 2h" },
-    { icon: <FlameKindling size={15} className="text-amber-600" />, bg: "bg-amber-50", titulo: "Fertilización", sub: "Aplicó NPK en Maíz Bloque 64", tiempo: "Ayer" },
-    { icon: <Droplets size={15} className="text-blue-600" />, bg: "bg-blue-50", titulo: "Sistema de Riego", sub: "Pivote activado en Campo 12", tiempo: "Oct 12" },
-    { icon: <Receipt size={15} className="text-purple-600" />, bg: "bg-purple-50", titulo: "Gasto Registrado", sub: "Compra de combustible para Cosechadora #3", tiempo: "Oct 10" },
-];
+const getActividadConfig = (tipo) => {
+    const t = tipo?.toLowerCase() || "";
+    if (t.includes("siembra")) return { icon: <Sprout size={15} className="text-green-600" />, bg: "bg-green-50" };
+    if (t.includes("fertili")) return { icon: <FlameKindling size={15} className="text-amber-600" />, bg: "bg-amber-50" };
+    if (t.includes("riego") || t.includes("pulve")) return { icon: <Droplets size={15} className="text-blue-600" />, bg: "bg-blue-50" };
+    return { icon: <Receipt size={15} className="text-purple-600" />, bg: "bg-purple-50" };
+};
 
 export default function DashboardHome() {
     const [stats, setStats] = useState({ camposActivos: 0, hectareasTotales: 0, gastosAcumulados: 0, ciclosActivos: 0 });
+    const [actividades, setActividades] = useState([]);
     const [loading, setLoading] = useState(true);
     const [chartMode, setChartMode] = useState("Mensual");
     const [userName, setUserName] = useState("Productor");
@@ -39,14 +41,18 @@ export default function DashboardHome() {
                     const nombre = session.user.user_metadata?.nombre || "Productor";
                     setUserName(nombre);
                     try {
-                        const res = await apiClient.get("/campos/stats");
-                        const d = res.data || {};
+                        const [resStats, resActs] = await Promise.all([
+                            apiClient.get("/campos/stats"),
+                            apiClient.get("/actividades")
+                        ]);
+                        const d = resStats.data || {};
                         setStats({
                             camposActivos: d.camposActivos ?? 0,
                             hectareasTotales: d.hectareasTotales ?? 0,
                             gastosAcumulados: d.gastosAcumulados ?? 0,
                             ciclosActivos: d.ciclosActivos ?? 0,
                         });
+                        setActividades(resActs.data || []);
                     } catch (_) { /* backend stats opcional */ }
                 }
             } catch (e) {
@@ -124,20 +130,27 @@ export default function DashboardHome() {
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
                     <h3 className="text-[14px] font-bold text-gray-900 mb-4">Actividades Recientes</h3>
                     <div className="flex-1 space-y-3">
-                        {ACTIVIDADES_MOCK.map((act, i) => (
-                            <div key={i} className="flex items-start gap-3">
-                                <div className={`w-8 h-8 rounded-lg ${act.bg} flex items-center justify-center flex-shrink-0`}>{act.icon}</div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[12px] font-bold text-gray-900 truncate">{act.titulo}</p>
-                                    <p className="text-[10px] text-gray-400 truncate">{act.sub}</p>
+                        {actividades.length === 0 ? (
+                            <p className="text-gray-400 text-xs text-center py-4">No hay actividades recientes.</p>
+                        ) : actividades.slice(0, 5).map((act, i) => {
+                            const config = getActividadConfig(act.tipoActv);
+                            return (
+                                <div key={act.idActividad || i} className="flex items-start gap-3">
+                                    <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>{config.icon}</div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[12px] font-bold text-gray-900 truncate">{act.tipoActv}</p>
+                                        <p className="text-[10px] text-gray-400 truncate">
+                                            {act.campania ? `${act.campania.cultivo} (${act.campania.nombreLote || 'General'})` : 'Sin campaña vinculada'}
+                                        </p>
+                                    </div>
+                                    <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">{act.fecha}</span>
                                 </div>
-                                <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">{act.tiempo}</span>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
-                    <button className="mt-4 w-full flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 text-[11px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all">
+                    <a href="/dashboard/lotes" className="mt-4 w-full flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 text-[11px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all text-center">
                         Ver Historial Completo <ChevronRight size={12} />
-                    </button>
+                    </a>
                 </div>
             </div>
 
