@@ -1,3 +1,4 @@
+import Link from 'next/link';
 export const Hero = () => {
     return (
         <section className="relative min-h-[85vh] flex flex-col items-center justify-center text-center px-4 bg-green-50 overflow-hidden">
@@ -18,16 +19,15 @@ export const Hero = () => {
                     Gestión agropecuaria profesional para el productor moderno.
                     Precisión basada en datos, rentabilidad clara y control total desde el lote hasta la cosecha.
                 </p>
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button className="bg-green-800 hover:bg-green-900 text-white px-8 py-4 rounded-xl font-bold transition-all transform hover:scale-105 w-full sm:w-auto shadow-xl hover:shadow-green-900/20">
-                        Crear mi cuenta
-                    </button>
-                    <button className="flex items-center justify-center gap-2 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:text-gray-900 font-bold px-8 py-4 rounded-xl transition-all w-full sm:w-auto shadow-sm">
-                        Ver Demo Interactiva
-                    </button>
-                </div>
-            </div>
+        {/* Sección de botones */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+  
+        {/* CAMBIO AQUÍ: Usamos <Link> en lugar de <button> */}
+            <Link href="/login" className="bg-green-800 hover:bg-green-900 text-white px-8 py-4 rounded-xl font-bold transition-all transform hover:scale-105 w-full sm:w-auto text-center inline-block">
+                Iniciar sesión
+              </Link>
+           </div>
+        </div>
         </section>
     );
 };

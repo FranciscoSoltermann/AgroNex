@@ -1,5 +1,6 @@
 "use client";
 
+import { Sprout, Wind, FlaskConical, BugOff, Droplets, Tractor, Microscope, Layers, ClipboardList, Wheat, ShieldCheck, Zap} from 'lucide-react';
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
@@ -148,7 +149,7 @@ export default function CiclosPage() {
                 <div className="flex items-start justify-between">
                     <div>
                         <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-                            Vista de <span className="text-[#2D6A4F] italic">Precisión</span> de Cosecha
+                            Vista de Precisión de Cosecha
                         </h1>
                         <p className="text-[13px] text-gray-500 mt-1 max-w-xl">
                             Seguimiento en tiempo real de preparación de suelo, siembra y aplicaciones químicas en todos los lotes.
@@ -186,7 +187,7 @@ export default function CiclosPage() {
                 <div className="relative">
                     <div className="flex gap-1 h-10 rounded-xl overflow-hidden">
                         {FASES.map((fase, i) => (
-                            <div key={fase} className={`flex-1 flex items-center justify-center transition-all ${i < faseActual ? "bg-[#2D6A4F]" : i === faseActual ? "bg-green-400" : "bg-gray-100"}`}>
+                            <div key={fase} className={`flex-1 flex items-center justify-center transition-all ${i < faseActual ? "bg-[#2D6A4F]" : i === faseActual ? "bg-[#2D6A4F]" : "bg-gray-100"}`}>
                                 {i === faseActual && <RefreshCw size={14} className="text-white animate-spin" style={{ animationDuration: "3s" }} />}
                             </div>
                         ))}
@@ -325,13 +326,15 @@ export default function CiclosPage() {
 
 function ActividadCard({ actividad }) {
     const colorMap = {
-        "Siembra": { bg: "bg-green-50", icon: "🌱", text: "text-green-700" },
-        "Pulverización": { bg: "bg-amber-50", icon: "💧", text: "text-amber-700" },
-        "Fertilización": { bg: "bg-orange-50", icon: "🔥", text: "text-orange-700" },
-        "Riego": { bg: "bg-blue-50", icon: "💧", text: "text-blue-700" },
-        "Labranza": { bg: "bg-gray-50", icon: "⚙️", text: "text-gray-700" },
+        "Siembra": { bg: "bg-[#2D6A4F]", icon: <Sprout size={16} />, text: "text-green-700" },
+        "Pulverización": { bg: "bg-[#2D6A4F]", icon: <BugOff size={16} />, text: "text-amber-700" },
+        "Fertilización": { bg: "bg-[#2D6A4F]", icon: <FlaskConical size={16} />, text: "text-orange-700" },
+        "Riego": { bg: "bg-[#2D6A4F]", icon: <Droplets size={16} />, text: "text-blue-700" },
+        "Labranza": { bg: "bg-[#2D6A4F]", icon: <Tractor size={16} />, text: "text-gray-700" },
+        "Cosecha": { bg: "bg-[#2D6A4F]", icon: <Wheat size={16} />, text: "text-gray-700" },
+        "Control sanitario": { bg: "bg-[#2D6A4F]", icon: <Microscope size={16} />, text: "text-gray-700" },
     };
-    const c = colorMap[actividad.tipoActv] || { bg: "bg-gray-50", icon: "📋", text: "text-gray-700" };
+    const c = colorMap[actividad.tipoActv] || { bg: "bg-[#2D6A4F]", icon: <Layers size={16} />, text: "text-gray-700" };
 
     return (
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow">

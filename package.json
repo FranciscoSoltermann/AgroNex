@@ -2,6 +2,7 @@
   "dependencies": {
     "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/supabase-js": "^2.99.3",
-    "axios": "^1.13.6"
+    "axios": "^1.13.6",
+    "swiper": "^12.1.2"
   }
 }
