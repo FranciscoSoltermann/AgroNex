@@ -1,5 +1,6 @@
 "use client";
 
+import { Sprout, Clover, Box } from 'lucide-react';
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -26,6 +27,7 @@ export default function DashboardLayout({ children }) {
                 const fullName = meta.full_name?.trim();
                 const name = meta.name?.trim();
 
+                
                 const displayName =
                     razonSocial ||
                     [nombre, apellido].filter(Boolean).join(" ") ||
@@ -51,8 +53,8 @@ export default function DashboardLayout({ children }) {
         { name: "Campos/Lotes", path: "/dashboard/campos", icon: <Map size={18} /> },
         { name: "Ciclos de Producción", path: "/dashboard/lotes", icon: <RefreshCw size={18} /> },
         { name: "Costos", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} /> },
-        { name: "Cosechas", path: "/dashboard/actividades", icon: <Wheat size={18} /> },
-        { name: "Inventario", path: "/dashboard/inventario", icon: <Bell size={18} /> },
+        { name: "Cosechas", path: "/dashboard/actividades", icon: <Sprout size={18} /> },
+        { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} /> },
         { name: "Configuración", path: "/dashboard/settings", icon: <Settings size={18} /> },
     ];
 
@@ -67,11 +69,11 @@ export default function DashboardLayout({ children }) {
                 <div className="px-6 pt-6 pb-5">
                     <div className="flex items-center gap-2">
                         <div className="w-7 h-7 bg-[#2D6A4F] rounded-lg flex items-center justify-center">
-                            <Leaf size={14} className="text-white" />
+                            <Wheat size={14} className="text-white" />
                         </div>
                         <div>
                             <p className="text-[13px] font-black text-gray-900 leading-none tracking-tight uppercase">Agronex</p>
-                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Digital Cultivator</p>
+                            <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Cultivador Digital</p>
                         </div>
                     </div>
                 </div>

@@ -1,12 +1,12 @@
 "use client";
-
+import ClimaCarrusel from "@/components/ClimaCarousel";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import {
     Loader2, TrendingUp, Grid2x2, DollarSign, RefreshCw,
     Sprout, Droplets, FlameKindling, Receipt, ChevronRight,
-    Plus, Wifi
+    Plus, Wifi, FlaskConical, BugOff, Wheat
 } from "lucide-react";
 
 const CHART_DATA = [
@@ -17,14 +17,41 @@ const CHART_DATA = [
     { mes: "JUL", costos: 88, cosecha: 80 },
 ];
 const MAX_VAL = 100;
-
 const getActividadConfig = (tipo) => {
     const t = tipo?.toLowerCase() || "";
-    if (t.includes("siembra")) return { icon: <Sprout size={15} className="text-green-600" />, bg: "bg-green-50" };
-    if (t.includes("fertili")) return { icon: <FlameKindling size={15} className="text-amber-600" />, bg: "bg-amber-50" };
-    if (t.includes("riego") || t.includes("pulve")) return { icon: <Droplets size={15} className="text-blue-600" />, bg: "bg-blue-50" };
-    return { icon: <Receipt size={15} className="text-purple-600" />, bg: "bg-purple-50" };
+    
+    // Configuramos el estilo único (Verde AgroNex y blanco)
+    const style = {
+      bg: "bg-[#2D6A4F]", // El verde sólido de tu foto
+      color: "text-white", // Icono en blanco para que resalte
+      size: 15
+    };
+  
+    if (t.includes("siembra")) 
+      return { icon: <Sprout size={style.size} className={style.color} />, bg: style.bg };
+  
+    if (t.includes("pulve")) 
+      return { icon: <BugOff size={style.size} className={style.color} />, bg: style.bg };
+  
+    if (t.includes("fertili")) 
+      return { icon: <FlaskConical size={style.size} className={style.color} />, bg: style.bg };
+  
+    if (t.includes("riego")) 
+      return { icon: <Droplets size={style.size} className={style.color} />, bg: style.bg };
+  
+    if (t.includes("cosecha")) 
+      return { icon: <Wheat size={style.size} className={style.color} />, bg: style.bg };
+  
+    if (t.includes("labranza") || t.includes("laboreo")) 
+      return { icon: <Tractor size={style.size} className={style.color} />, bg: style.bg };
+  
+    if (t.includes("sanit") || t.includes("control")) 
+      return { icon: <Microscope size={style.size} className={style.color} />, bg: style.bg };
+  
+    // Caso para "Otra"
+    return { icon: <Layers size={style.size} className={style.color} />, bg: style.bg };
 };
+
 
 export default function DashboardHome() {
     const [stats, setStats] = useState({ camposActivos: 0, hectareasTotales: 0, gastosAcumulados: 0, ciclosActivos: 0 });
@@ -235,8 +262,45 @@ export default function DashboardHome() {
                     </a>
                 </div>
             </div>
+            {/* --- SECCIÓN PRINCIPAL: CLIMA (IZQ) Y ACTIVIDAD (DER) --- */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                            
+                {/* PANEL IZQUIERDO: EL CARRUSEL (Ocupa 2 columnas) */}
+                <div className="lg:col-span-2 relative rounded-3xl overflow-hidden min-h-[350px] shadow-sm border border-gray-100">
+                    <ClimaCarrusel />
+                </div>
 
-            {/* Índice de Salud de Campo + Región Activa */}
+                {/* PANEL DERECHO: INFO DEL LOTE (Ocupa 1 columna) */}
+                <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Región Activa</p>
+                            <h3 className="text-[18px] font-black text-gray-900 tracking-tight">Sector Sur – Bloque A</h3>
+                        </div>
+                        <button className="w-9 h-9 bg-[#2D6A4F] rounded-xl flex items-center justify-center text-white hover:bg-[#1B4332] transition-colors shadow-lg shadow-green-900/20">
+                            <Plus size={16} />
+                        </button>
+                    </div>
+                    
+                    <div className="w-full h-24 rounded-xl mt-4 mb-4" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=400&auto=format&fit=crop')", backgroundSize: "cover", backgroundPosition: "center" }} />
+                    
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                            <span className="text-[12px] font-semibold text-gray-700">85% Sembrado</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
+                            <span className="text-[12px] font-semibold text-gray-700">12% Cosechado</span>
+                        </div>
+                    </div>
+                    
+                    <button className="mt-3 flex items-center gap-1 text-[11px] font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors">
+                        Abrir Mapa de Precisión <ChevronRight size={12} />
+                    </button>
+                </div>
+            </div>
+            {/* Índice de Salud de Campo + Región Activa
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="relative rounded-2xl overflow-hidden min-h-[180px] flex flex-col justify-between p-6" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=800&auto=format&fit=crop')", backgroundSize: "cover", backgroundPosition: "center" }}>
                     <div className="absolute inset-0 bg-gradient-to-br from-[#1B4332]/90 to-[#2D6A4F]/80" />
@@ -280,7 +344,7 @@ export default function DashboardHome() {
                         Abrir Mapa de Precisión <ChevronRight size={12} />
                     </button>
                 </div>
-            </div>
+            </div> */}
         </div>
     );
 }
