@@ -35,7 +35,9 @@ public class CampoService {
                 .nombre(request.getNombre())
                 .ubicacion(request.getUbicacion())
                 .superficieTotal(request.getSuperficieTotal())
-                .usuario(usuario) // Aquí le pasamos la entidad gestionada
+                .usuario(usuario)
+                .latitud(request.getLatitud())
+                .longitud(request.getLongitud()) // Aquí le pasamos la entidad gestionada
                 .build();
 
         // 3. Al guardar el campo, Hibernate ya sabe que el usuario existe

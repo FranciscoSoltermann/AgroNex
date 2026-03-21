@@ -1,5 +1,5 @@
 "use client";
-
+import SelectorUbicacion from "@/components/SelectorUbicacion";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
@@ -24,7 +24,7 @@ export default function CamposPage() {
 
     // Modal nuevo campo
     const [showModalCampo, setShowModalCampo] = useState(false);
-    const [formCampo, setFormCampo] = useState({ nombre: "", ubicacion: "", superficieTotal: "" });
+    const [formCampo, setFormCampo] = useState({ nombre: "", ubicacion: "", superficieTotal: "", latitud: null, longitud: null });
     const [submitLoading, setSubmitLoading] = useState(false);
     const [submitError, setSubmitError] = useState(null);
     const [submitSuccess, setSubmitSuccess] = useState(null);
@@ -87,26 +87,32 @@ export default function CamposPage() {
 
     const handleCrearCampo = async (e) => {
         e.preventDefault();
+        
+        // Validación de seguridad: si no hay coordenadas, avisamos
+        if (!formCampo.latitud || !formCampo.longitud) {
+            setSubmitError("Por favor, seleccioná una ubicación válida de la lista.");
+            return;
+        }
+    
         setSubmitLoading(true);
-        setSubmitError(null);
         try {
             const res = await apiClient.post("/campos", {
                 nombre: formCampo.nombre,
                 ubicacion: formCampo.ubicacion,
-                superficieTotal: parseFloat(formCampo.superficieTotal)
+                superficieTotal: parseFloat(formCampo.superficieTotal),
+                latitud: formCampo.latitud,   // Se envía automáticamente
+                longitud: formCampo.longitud  // Se envía automáticamente
             });
-            setSubmitSuccess("¡Campo creado con éxito!");
-            setCampos(prev => res.data && res.data.idCampo ? [res.data, ...prev] : prev);
-            setFormCampo({ nombre: "", ubicacion: "", superficieTotal: "" });
+    
+            setSubmitSuccess("¡Campo registrado con éxito!");
+            
+            // Limpiamos todo
+            setFormCampo({ nombre: "", ubicacion: "", superficieTotal: "", latitud: null, longitud: null });
             await fetchData(userId);
-            setTimeout(() => { setShowModalCampo(false); setSubmitSuccess(null); }, 1500);
+            setTimeout(() => setShowModalCampo(false), 1500);
+    
         } catch (err) {
-            const status = err?.response?.status;
-            if (status === 401 || status === 403) {
-                setSubmitError("Tu sesión venció o no es válida. Volvé a iniciar sesión.");
-            } else {
-                setSubmitError(err.response?.data?.message || "Error al crear el campo.");
-            }
+            setSubmitError("Error al conectar con el servidor.");
         } finally {
             setSubmitLoading(false);
         }
@@ -253,7 +259,30 @@ export default function CamposPage() {
                             <input type="text" required value={formCampo.nombre} onChange={e => setFormCampo(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Sunset Ridge" />
                         </FormField>
                         <FormField label="Referencia de ubicación">
-                            <input type="text" value={formCampo.ubicacion} onChange={e => setFormCampo(p => ({ ...p, ubicacion: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Seleccionar región..." />
+                            <SelectorUbicacion 
+                                onSelect={(data) => {
+                                    setFormCampo(p => ({ 
+                                        ...p, 
+                                        ubicacion: data.nombre, 
+                                        latitud: data.lat, 
+                                        longitud: data.lon 
+                                    }));
+                                }} 
+                            />
+                            {/* Un pequeño indicador visual (opcional) para dar confianza */}
+                                {formCampo.latitud && (
+                                    <p className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                        UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
+                                    </p>
+                                )}
+                            {/* Feedback visual para el usuario */}
+                            {formCampo.latitud && (
+                                <div className="flex items-center gap-1 mt-1 text-green-600 animate-in fade-in slide-in-from-top-1">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
+                                </div>
+                            )}
                         </FormField>
                         <FormField label="Superficie total (Ha)" required>
                             <div className="relative">

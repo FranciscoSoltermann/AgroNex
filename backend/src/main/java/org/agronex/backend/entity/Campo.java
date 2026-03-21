@@ -32,6 +32,12 @@ public class Campo extends Auditable {
     @Column(name = "ubicacion", length = 255)
     private String ubicacion;
 
+    @Column(name = "latitud")
+    private Double latitud;
+
+    @Column(name = "longitud")
+    private Double longitud;
+
     @Column(name = "superficie_total", precision = 12, scale = 2)
     private BigDecimal superficieTotal;
 
@@ -54,4 +60,5 @@ public class Campo extends Auditable {
         lotes.remove(lote);
         lote.setCampo(null);
     }
+
 }

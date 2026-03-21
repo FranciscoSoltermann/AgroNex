@@ -63,6 +63,8 @@ export default function DashboardHome() {
     const [dynChartData, setDynChartData] = useState([{ mes: "MAR", costos: 0, cosecha: 0 }]);
     const [dynMaxVal, setDynMaxVal] = useState(100);
 
+    const [campos, setCampos] = useState([]); // Asegurate de tener este estado declarado
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -72,12 +74,14 @@ export default function DashboardHome() {
                     setUserName(nombre);
                     try {
                         const t = new Date().getTime();
-                        const [resStats, resActs, resCampanias, resGastos, resCosechas] = await Promise.all([
+                        // 1. Añadimos resCampos a la carga masiva
+                        const [resStats, resActs, resCampanias, resGastos, resCosechas, resCampos] = await Promise.all([
                             apiClient.get(`/campos/stats?t=${t}`).catch(() => ({ data: {} })),
                             apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/campanias?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/gastos?t=${t}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] }))
+                            apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] })),
+                            apiClient.get(`/campos?t=${t}`).catch(() => ({ data: [] })) // <--- NUEVA LLAMADA
                         ]);
                         
                         const actos = resActs.data || [];
@@ -85,6 +89,7 @@ export default function DashboardHome() {
                         const camps = resCampanias.data || [];
                         const coses = resCosechas.data || [];
                         const d = resStats.data || {};
+                        const listaCampos = resCampos.data || []; // <--- DATOS DE TUS CAMPOS
 
                         const totalCostosActs = actos.reduce((sum, a) => sum + (a.costoServicio || 0), 0);
                         const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
@@ -95,9 +100,11 @@ export default function DashboardHome() {
                             gastosAcumulados: totalCostosActs + totalGastosFijos,
                             ciclosActivos: camps.length,
                         });
+                        
                         setActividades(actos);
+                        setCampos(listaCampos); // <--- GUARDAMOS LOS CAMPOS REALES
 
-                        // Lógica de Gráfico
+                        // Lógica de Gráfico (Se mantiene igual)
                         const finalChartData = [];
                         let maxChartVal = 100;
 
@@ -127,7 +134,6 @@ export default function DashboardHome() {
                                 if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
                             }
                         } else {
-                            // Semanal (últimas 5 semanas)
                             const getWeekNumber = (d) => {
                                 d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
                                 d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -172,6 +178,7 @@ export default function DashboardHome() {
         };
         fetchData();
     }, [chartMode]);
+    
 
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 
@@ -265,10 +272,11 @@ export default function DashboardHome() {
             {/* --- SECCIÓN PRINCIPAL: CLIMA (IZQ) Y ACTIVIDAD (DER) --- */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             
-                {/* PANEL IZQUIERDO: EL CARRUSEL (Ocupa 2 columnas) */}
-                <div className="lg:col-span-2 relative rounded-3xl overflow-hidden min-h-[350px] shadow-sm border border-gray-100">
-                    <ClimaCarrusel />
-                </div>
+            {/* PANEL IZQUIERDO: EL CARRUSEL */}
+            <div className="lg:col-span-2 relative rounded-3xl overflow-hidden min-h-[350px] shadow-sm border border-gray-100">
+                {/* PASAMOS LOS CAMPOS AQUÍ: */}
+                <ClimaCarrusel campos={campos} /> 
+            </div>
 
                 {/* PANEL DERECHO: INFO DEL LOTE (Ocupa 1 columna) */}
                 <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
@@ -300,51 +308,6 @@ export default function DashboardHome() {
                     </button>
                 </div>
             </div>
-            {/* Índice de Salud de Campo + Región Activa
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="relative rounded-2xl overflow-hidden min-h-[180px] flex flex-col justify-between p-6" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=800&auto=format&fit=crop')", backgroundSize: "cover", backgroundPosition: "center" }}>
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#1B4332]/90 to-[#2D6A4F]/80" />
-                    <div className="relative z-10 flex items-start justify-between">
-                        <div>
-                            <h3 className="text-white font-black text-[16px] tracking-tight">Índice de Salud del Campo</h3>
-                            <p className="text-green-200/80 text-[11px] font-medium mt-0.5">Condiciones óptimas de crecimiento detectadas</p>
-                        </div>
-                        <span className="flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-full px-3 py-1 text-[9px] font-black text-white uppercase tracking-widest">
-                            <Wifi size={9} className="text-green-300" /> NDVI en Vivo
-                        </span>
-                    </div>
-                    <div className="relative z-10 flex gap-10 mt-4">
-                        <div>
-                            <p className="text-white font-black text-4xl leading-none">94.2</p>
-                            <p className="text-green-200/70 text-[9px] font-bold uppercase tracking-widest mt-1">Puntuación de Vegetación</p>
-                        </div>
-                        <div>
-                            <p className="text-white font-black text-4xl leading-none flex items-start gap-1">22<span className="text-xl mt-1">°C</span></p>
-                            <p className="text-green-200/70 text-[9px] font-bold uppercase tracking-widest mt-1">Temp. Promedio</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Región Activa</p>
-                            <h3 className="text-[18px] font-black text-gray-900 tracking-tight">Sector Sur – Bloque A</h3>
-                        </div>
-                        <button className="w-9 h-9 bg-[#2D6A4F] rounded-xl flex items-center justify-center text-white hover:bg-[#1B4332] transition-colors shadow-lg shadow-green-900/20">
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                    <div className="w-full h-20 rounded-xl mt-4 mb-4" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=400&auto=format&fit=crop')", backgroundSize: "cover", backgroundPosition: "center" }} />
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" /><span className="text-[12px] font-semibold text-gray-700">85% Sembrado</span></div>
-                        <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" /><span className="text-[12px] font-semibold text-gray-700">12% Cosechado</span></div>
-                    </div>
-                    <button className="mt-3 flex items-center gap-1 text-[11px] font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors">
-                        Abrir Mapa de Precisión <ChevronRight size={12} />
-                    </button>
-                </div>
-            </div> */}
         </div>
     );
 }

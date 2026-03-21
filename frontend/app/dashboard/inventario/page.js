@@ -5,7 +5,9 @@ import apiClient from "@/lib/api-client";
 import {
     Plus, Search, Filter, Download, MoreVertical,
     AlertTriangle, TrendingUp, MapPin, Package,
-    Leaf, Droplets, Shield, Tractor, Loader2, X
+    Leaf, Droplets, Shield, Tractor, Loader2, X,
+    Wheat,
+    BugOff
 } from "lucide-react";
 
 export default function InventarioPage() {
@@ -209,9 +211,9 @@ export default function InventarioPage() {
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-700 shrink-0">
-                                                        {item.nombre.toLowerCase().includes("semilla") ? <Leaf size={18} /> :
+                                                        {item.nombre.toLowerCase().includes("semilla") ? <Wheat size={18} /> :
                                                             item.nombre.toLowerCase().includes("ferti") ? <Droplets size={18} /> :
-                                                                item.nombre.toLowerCase().includes("herbici") ? <Shield size={18} /> : <Tractor size={18} />}
+                                                                item.nombre.toLowerCase().includes("herbici") ? <BugOff size={18} /> : <Tractor size={18} />}
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-gray-900 text-sm">{item.nombre}</p>
@@ -242,6 +244,7 @@ export default function InventarioPage() {
                     </div>
                 </>
             )}
+            
 
             {showModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
