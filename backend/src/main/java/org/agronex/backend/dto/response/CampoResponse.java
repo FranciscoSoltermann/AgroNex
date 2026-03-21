@@ -13,4 +13,6 @@ public class CampoResponse {
     private String ubicacion;
     private BigDecimal superficieTotal;
     private Integer cantidadLotes;
+    private Double latitud;
+    private Double longitud;
 }

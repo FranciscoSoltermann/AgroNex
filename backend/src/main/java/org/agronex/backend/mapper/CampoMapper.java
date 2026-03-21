@@ -16,6 +16,8 @@ public class CampoMapper {
                 .ubicacion(campo.getUbicacion())
                 .superficieTotal(campo.getSuperficieTotal())
                 .cantidadLotes(campo.getLotes() != null ? campo.getLotes().size() : 0)
+                .latitud(campo.getLatitud())
+                .longitud(campo.getLongitud())
                 .build();
     }
 }

@@ -18,4 +18,7 @@ public class CampoRequest {
     @NotNull(message = "La superficie es obligatoria")
     @Positive(message = "La superficie debe ser mayor a 0")
     private BigDecimal superficieTotal;
+
+    private Double latitud;
+    private Double longitud;
 }
