@@ -30,7 +30,12 @@ public class ActividadRequest {
     @NotNull(message = "El ID de la campaña es obligatorio")
     private UUID idCampania;
 
-    // 👇 NUEVO: La lista de insumos que se usaron (el @Valid valida cada elemento de la lista)
+    /** Ha tratadas en esta aplicación; si se omite, los costos de insumo usan la superficie total del lote. */
+    @PositiveOrZero(message = "Las hectáreas tratadas no pueden ser negativas")
+    private BigDecimal hectareasTratadas;
+
+    private String notas;
+
     @Valid
     private List<DetalleInsumoRequest> insumos;
 }

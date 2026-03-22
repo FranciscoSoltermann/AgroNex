@@ -9,7 +9,7 @@ import java.util.UUID; // 1. Importa UUID
 @Data
 @Builder
 public class GastoFijoResponse {
-    private Long idGasto; // El ID propio del gasto puede seguir siendo Long si así lo definiste
+    private UUID idGasto;
     private LocalDate fecha;
     private String categoria;
     private String descripcion;

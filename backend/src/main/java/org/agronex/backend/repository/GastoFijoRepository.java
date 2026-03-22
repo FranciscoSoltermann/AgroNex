@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface GastoFijoRepository extends JpaRepository<GastoFijo, UUID> {
     List<GastoFijo> findByCampoIdCampo(UUID idCampo);
     List<GastoFijo> findByCampoUsuarioIdUsuario(UUID idUsuario);
+    List<GastoFijo> findByCampania_IdCampania(UUID idCampania);
 }

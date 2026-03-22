@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.CampoRequest;
 import org.agronex.backend.dto.response.CampoResponse;
+import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.CampoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,19 +25,19 @@ public class CampoController {
 
     @PostMapping
     public ResponseEntity<?> crearCampo(@RequestBody CampoRequest request, @AuthenticationPrincipal Jwt jwt) {
+        SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(campoService.crearCampo(request, jwt));
     }
 
     @GetMapping
     public ResponseEntity<List<CampoResponse>> listar(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(campoService.listarMisCampos(idUsuario));
     }
 
-    // ESTE MÉTODO TIENE QUE ESTAR ACÁ ADENTRO
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getStats(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(campoService.obtenerEstadisticas(idUsuario));
     }
 

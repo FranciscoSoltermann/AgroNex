@@ -18,6 +18,7 @@ import org.agronex.backend.repository.InsumoRepository; // <-- Nuevo
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -42,6 +43,16 @@ public class ActividadService {
         // SEGURIDAD en cascada
         if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
             throw new AccessDeniedException("No tienes permiso para agregar actividades a esta campaña");
+        }
+
+        if (request.getHectareasTratadas() != null) {
+            BigDecimal sup = campania.getLote().getSuperficie();
+            if (request.getHectareasTratadas().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Las hectáreas tratadas deben ser mayores a cero");
+            }
+            if (sup != null && request.getHectareasTratadas().compareTo(sup) > 0) {
+                throw new IllegalArgumentException("Las hectáreas tratadas no pueden superar la superficie del lote (" + sup + " Ha)");
+            }
         }
 
         // 1. Guardar la Actividad Principal

@@ -37,14 +37,16 @@ public class GastoFijoService {
             throw new AccessDeniedException("No tienes permiso sobre este campo");
         }
 
-        // 3. LÓGICA: Si viene un ID de campaña, la buscamos y validamos su existencia
         Campania campania = null;
         if (request.getIdCampania() != null) {
             campania = campaniaRepository.findById(request.getIdCampania())
                     .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
-
-            // Opcional: Podrías validar también que la campaña pertenezca al campo/usuario
-            // para evitar que vinculen un gasto a una campaña de otro lote.
+            if (!campania.getLote().getCampo().getIdCampo().equals(campo.getIdCampo())) {
+                throw new AccessDeniedException("La campaña no corresponde al campo indicado");
+            }
+            if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+                throw new AccessDeniedException("No tenés permiso sobre esta campaña");
+            }
         }
 
         // 4. MAPPER: Transformamos el Request a Entidad

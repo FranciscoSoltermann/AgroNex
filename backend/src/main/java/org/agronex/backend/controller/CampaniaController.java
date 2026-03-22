@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.CampaniaRequest;
 import org.agronex.backend.dto.response.CampaniaResponse;
+import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.CampaniaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,13 +27,22 @@ public class CampaniaController {
             @Valid @RequestBody CampaniaRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         CampaniaResponse response = campaniaService.crearCampania(request, idUsuario);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
+
     @GetMapping
     public ResponseEntity<List<CampaniaResponse>> listarMisCampanias(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(campaniaService.listarMisCampanias(idUsuario));
+    }
+
+    @PostMapping("/{idCampania}/cerrar")
+    public ResponseEntity<CampaniaResponse> cerrarCampania(
+            @PathVariable UUID idCampania,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(campaniaService.cerrarCampania(idCampania, idUsuario));
     }
 }

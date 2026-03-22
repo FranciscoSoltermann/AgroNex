@@ -2,8 +2,10 @@ package org.agronex.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Entity
 @Table(name = "gasto_fijo")
@@ -13,10 +15,9 @@ import java.time.LocalDate;
 public class GastoFijo {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "gasto_fijo_seq")
-    @SequenceGenerator(name = "gasto_fijo_seq", sequenceName = "gasto_fijo_id_gasto_seq", allocationSize = 1)
-    @Column(name = "id_gasto")
-    private Long idGasto;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id_gasto", columnDefinition = "uuid")
+    private UUID idGasto;
 
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;

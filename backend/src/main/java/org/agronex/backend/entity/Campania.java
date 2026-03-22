@@ -29,6 +29,11 @@ public class Campania {
     @Column(name = "fecha_fin")
     private LocalDate fechaFin;
 
+    /** ABIERTA | CERRADA */
+    @Column(name = "estado", length = 20)
+    @Builder.Default
+    private String estado = "ABIERTA";
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_lote")
     private Lote lote;

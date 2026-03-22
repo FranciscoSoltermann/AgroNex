@@ -6,6 +6,7 @@ import org.agronex.backend.dto.request.ActividadRequest;
 import org.agronex.backend.dto.request.ActividadInsumoRequest;
 import org.agronex.backend.dto.response.ActividadResponse;
 import org.agronex.backend.dto.response.ActividadInsumoResponse;
+import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.ActividadService;
 import org.agronex.backend.service.ActividadInsumoService;
 import org.springframework.http.HttpStatus;
@@ -30,7 +31,7 @@ public class ActividadController {
             @Valid @RequestBody ActividadRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return new ResponseEntity<>(actividadService.registrarActividad(request, idUsuario), HttpStatus.CREATED);
     }
 
@@ -39,12 +40,12 @@ public class ActividadController {
             @Valid @RequestBody ActividadInsumoRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return new ResponseEntity<>(actividadInsumoService.agregarInsumo(request, idUsuario), HttpStatus.CREATED);
     }
     @GetMapping
     public ResponseEntity<List<ActividadResponse>> listarMisActividades(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(actividadService.listarMisActividades(idUsuario));
     }
 }

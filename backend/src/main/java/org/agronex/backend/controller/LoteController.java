@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.LoteRequest;
 import org.agronex.backend.dto.response.LoteResponse;
+import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.LoteService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,7 +33,7 @@ public class LoteController {
     }
     @GetMapping
     public ResponseEntity<List<LoteResponse>> listarMisLotes(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(loteService.listarMisLotes(idUsuario));
     }
 }
