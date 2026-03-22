@@ -15,6 +15,7 @@ public class CampaniaMapper {
                 .cultivo(request.getCultivo())
                 .fechaInicio(request.getFechaInicio())
                 .fechaFin(request.getFechaFin())
+                .estado("ABIERTA")
                 .lote(lote)
                 .build();
     }
@@ -27,8 +28,12 @@ public class CampaniaMapper {
                 .fechaInicio(campania.getFechaInicio() != null ? campania.getFechaInicio().atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null)
                 .fechaFin(campania.getFechaFin() != null ? campania.getFechaFin().atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null)
                 .idLote(campania.getLote() != null ? campania.getLote().getIdLote() : null)
+                .idCampo(campania.getLote() != null && campania.getLote().getCampo() != null
+                        ? campania.getLote().getCampo().getIdCampo() : null)
                 .nombreLote(campania.getLote() != null ? campania.getLote().getNombre() : "General")
                 .nombreCampo(campania.getLote() != null && campania.getLote().getCampo() != null ? campania.getLote().getCampo().getNombre() : "Estancia Base")
+                .superficieLoteHa(campania.getLote() != null ? campania.getLote().getSuperficie() : null)
+                .estado(campania.getEstado() != null ? campania.getEstado() : "ABIERTA")
                 .build();
     }
 }

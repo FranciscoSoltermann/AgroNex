@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.CosechaRequest;
 import org.agronex.backend.dto.response.CosechaResponse;
+import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.CosechaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ public class CosechaController {
 
     @GetMapping
     public ResponseEntity<List<CosechaResponse>> listarTodas(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(cosechaService.listarTodas(idUsuario));
     }
 
@@ -32,7 +33,7 @@ public class CosechaController {
             @Valid @RequestBody CosechaRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         CosechaResponse response = cosechaService.registrarCosecha(request, idUsuario);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }

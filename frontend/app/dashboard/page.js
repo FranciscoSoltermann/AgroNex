@@ -273,7 +273,7 @@ export default function DashboardHome() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                             
             {/* PANEL IZQUIERDO: EL CARRUSEL */}
-            <div className="lg:col-span-2 relative rounded-3xl overflow-hidden min-h-[350px] shadow-sm border border-gray-100">
+            <div className="lg:col-span-2 relative min-h-[400px]">
                 {/* PASAMOS LOS CAMPOS AQUÍ: */}
                 <ClimaCarrusel campos={campos} /> 
             </div>

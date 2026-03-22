@@ -271,10 +271,10 @@ export default function CamposPage() {
                             />
                             {/* Un pequeño indicador visual (opcional) para dar confianza */}
                                 {formCampo.latitud && (
-                                    <p className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    <div className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden />
                                         UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
-                                    </p>
+                                    </div>
                                 )}
                             {/* Feedback visual para el usuario */}
                             {formCampo.latitud && (

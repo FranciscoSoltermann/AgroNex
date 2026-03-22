@@ -10,9 +10,12 @@ import org.agronex.backend.entity.Lote;
 import org.agronex.backend.mapper.CampaniaMapper;
 import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.LoteRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -47,10 +50,26 @@ public class CampaniaService {
     }
     @Transactional(readOnly = true)
     public List<CampaniaResponse> listarMisCampanias(UUID idUsuarioToken) {
-        // List<Campania> findByLoteCampoUsuarioIdUsuario(UUID idUsuario);
         return campaniaRepository.findByLoteCampoUsuarioIdUsuario(idUsuarioToken)
                 .stream()
                 .map(campaniaMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public CampaniaResponse cerrarCampania(UUID idCampania, UUID idUsuarioToken) {
+        Campania campania = campaniaRepository.findById(idCampania)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Campaña no encontrada"));
+        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new org.springframework.security.access.AccessDeniedException("Acceso denegado");
+        }
+        if ("CERRADA".equalsIgnoreCase(campania.getEstado())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La campaña ya está cerrada");
+        }
+        campania.setEstado("CERRADA");
+        if (campania.getFechaFin() == null) {
+            campania.setFechaFin(LocalDate.now());
+        }
+        return campaniaMapper.toResponse(campaniaRepository.save(campania));
     }
 }

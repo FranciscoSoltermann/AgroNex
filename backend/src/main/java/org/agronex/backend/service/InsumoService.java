@@ -1,7 +1,8 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException; // <-- Import para consistencia
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.agronex.backend.dto.request.InsumoRequest;
 import org.agronex.backend.dto.response.InsumoResponse;
 import org.agronex.backend.entity.Campo;
@@ -25,9 +26,12 @@ public class InsumoService {
     private final InsumoMapper insumoMapper;
 
     @Transactional
-    public InsumoResponse crearInsumo(InsumoRequest request) {
+    public InsumoResponse crearInsumo(InsumoRequest request, UUID idUsuarioToken) {
         Campo campo = campoRepository.findById(request.getIdCampo())
                 .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
+        if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("No tenés permiso para cargar insumos en este campo");
+        }
 
         Insumo nuevoInsumo = insumoMapper.toEntity(request);
         nuevoInsumo.setCampo(campo);
@@ -40,6 +44,11 @@ public class InsumoService {
     public List<InsumoResponse> listarTodos(UUID idUsuario, UUID idCampo) {
         List<Insumo> list;
         if (idCampo != null) {
+            Campo campo = campoRepository.findById(idCampo)
+                    .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
+            if (!campo.getUsuario().getIdUsuario().equals(idUsuario)) {
+                throw new AccessDeniedException("No tenés acceso a este campo");
+            }
             list = insumoRepository.findByCampoIdCampo(idCampo);
         } else {
             list = insumoRepository.findByCampoUsuarioIdUsuario(idUsuario);
@@ -52,9 +61,12 @@ public class InsumoService {
 
     // Método adicional útil para el flujo de ActividadInsumo
     @Transactional(readOnly = true)
-    public InsumoResponse buscarPorId(UUID id) { // 🔹 Cambiado de Long a UUID
-        return insumoRepository.findById(id)
-                .map(insumoMapper::toResponse)
+    public InsumoResponse buscarPorId(UUID id, UUID idUsuarioToken) {
+        Insumo insumo = insumoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en el catálogo"));
+        if (insumo.getCampo() == null || !insumo.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("No tenés acceso a este insumo");
+        }
+        return insumoMapper.toResponse(insumo);
     }
 }

@@ -17,29 +17,36 @@ export default function DashboardLayout({ children }) {
     const [search, setSearch] = useState("");
 
     useEffect(() => {
-        const getUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                const meta = session.user.user_metadata || {};
-                const razonSocial = meta.razonSocial?.trim();
-                const nombre = meta.nombre?.trim();
-                const apellido = meta.apellido?.trim();
-                const fullName = meta.full_name?.trim();
-                const name = meta.name?.trim();
-
-                
-                const displayName =
-                    razonSocial ||
-                    [nombre, apellido].filter(Boolean).join(" ") ||
-                    fullName ||
-                    name ||
-                    session.user.email?.split("@")[0] ||
-                    "Usuario";
-
-                setUserName(displayName);
-            }
+        const displayNameFromUser = (user) => {
+            if (!user) return "Usuario";
+            const meta = user.user_metadata || {};
+            const razonSocial = meta.razonSocial?.trim();
+            const nombre = meta.nombre?.trim();
+            const apellido = meta.apellido?.trim();
+            const fullName = meta.full_name?.trim();
+            const name = meta.name?.trim();
+            return (
+                razonSocial ||
+                [nombre, apellido].filter(Boolean).join(" ") ||
+                fullName ||
+                name ||
+                user.email?.split("@")[0] ||
+                "Usuario"
+            );
         };
-        getUser();
+
+        const syncUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setUserName(displayNameFromUser(user));
+        };
+
+        syncUser();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUserName(displayNameFromUser(session?.user ?? null));
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
     const handleLogout = async () => {

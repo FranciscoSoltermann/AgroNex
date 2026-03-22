@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
 import {
-    Plus, Loader2, AlertCircle, CheckCircle2,
-    BarChart2, Tractor, Droplets, TrendingUp
+    Loader2, CheckCircle2,
+    BarChart2, Tractor, TrendingUp, PieChart, Lock
 } from "lucide-react";
 
 export default function FinanzasPage() {
@@ -16,18 +16,28 @@ export default function FinanzasPage() {
     const [error, setError] = useState(null);
     const [filtroCampoId, setFiltroCampoId] = useState("");
 
+    const [idCampaniaEconomia, setIdCampaniaEconomia] = useState("");
+    const [resumenCampania, setResumenCampania] = useState(null);
+    const [resumenCampLoading, setResumenCampLoading] = useState(false);
+    const [cerrarLoading, setCerrarLoading] = useState(false);
+
     const gastosFiltrados = filtroCampoId ? gastos.filter(g => g.idCampo === filtroCampoId) : gastos;
 
-    // Form gasto fijo
     const [formGasto, setFormGasto] = useState({
         fecha: new Date().toISOString().split("T")[0],
         categoria: "Sueldos",
         descripcion: "",
         montoTotal: "",
         idCampo: "",
+        idCampania: "",
     });
     const [gastoLoading, setGastoLoading] = useState(false);
     const [gastoSuccess, setGastoSuccess] = useState(null);
+
+    const campaniasParaGasto = useMemo(() => {
+        if (!formGasto.idCampo) return campanias;
+        return campanias.filter((c) => c.idCampo === formGasto.idCampo);
+    }, [formGasto.idCampo, campanias]);
 
     // Form cosecha
     const [formCosecha, setFormCosecha] = useState({
@@ -61,21 +71,52 @@ export default function FinanzasPage() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
+    const fetchResumenCampania = useCallback(async (idCampania) => {
+        if (!idCampania) {
+            setResumenCampania(null);
+            return;
+        }
+        setResumenCampLoading(true);
+        try {
+            const t = new Date().getTime();
+            const res = await apiClient.get(`/finanzas/campania/${idCampania}/resumen?t=${t}`);
+            setResumenCampania(res.data);
+        } catch {
+            setResumenCampania(null);
+        } finally {
+            setResumenCampLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (idCampaniaEconomia) fetchResumenCampania(idCampaniaEconomia);
+        else setResumenCampania(null);
+    }, [idCampaniaEconomia, fetchResumenCampania]);
+
+    useEffect(() => {
+        if (campanias.length && !idCampaniaEconomia) {
+            setIdCampaniaEconomia(campanias[0].idCampania);
+        }
+    }, [campanias, idCampaniaEconomia]);
+
     const handleRegistrarGasto = async (e) => {
         e.preventDefault();
         setGastoLoading(true);
         try {
-            await apiClient.post("/gastos", {
+            const body = {
                 fecha: formGasto.fecha,
                 categoria: formGasto.categoria,
                 descripcion: formGasto.descripcion,
                 montoTotal: parseFloat(formGasto.montoTotal),
                 moneda: "ARS",
-                idCampo: formGasto.idCampo
-            });
+                idCampo: formGasto.idCampo,
+            };
+            if (formGasto.idCampania) body.idCampania = formGasto.idCampania;
+            await apiClient.post("/gastos", body);
             setGastoSuccess("¡Gasto registrado con éxito!");
-            setFormGasto(p => ({ ...p, descripcion: "", montoTotal: "" }));
-            fetchData();
+            setFormGasto(p => ({ ...p, descripcion: "", montoTotal: "", idCampania: "" }));
+            await fetchData();
+            if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
             setTimeout(() => setGastoSuccess(null), 3000);
         } catch (err) {
             alert("Error al registrar el gasto.");
@@ -96,7 +137,8 @@ export default function FinanzasPage() {
             });
             setCosechaSuccess("¡Cosecha registrada con éxito!");
             setFormCosecha(p => ({ ...p, rendimientoTotalQq: "", precioVentaUnitarioUsd: "", idCampania: "" }));
-            fetchData();
+            await fetchData();
+            if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
             setTimeout(() => setCosechaSuccess(null), 3000);
         } catch (err) {
             alert("Error al registrar la cosecha.");
@@ -108,12 +150,143 @@ export default function FinanzasPage() {
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 
     const formatCurrency = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0);
+    const formatNum = (val, dec = 2) =>
+        val != null && !Number.isNaN(Number(val)) ? Number(val).toLocaleString("es-AR", { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "—";
+
+    const handleCerrarCampania = async () => {
+        if (!idCampaniaEconomia || !resumenCampania || resumenCampania.estado === "CERRADA") return;
+        if (!confirm("¿Cerrar esta campaña? Se fijará la fecha de fin si no estaba definida.")) return;
+        setCerrarLoading(true);
+        try {
+            await apiClient.post(`/campanias/${idCampaniaEconomia}/cerrar`);
+            await fetchData();
+            await fetchResumenCampania(idCampaniaEconomia);
+        } catch {
+            alert("No se pudo cerrar la campaña.");
+        } finally {
+            setCerrarLoading(false);
+        }
+    };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
             <div>
                 <h1 className="text-2xl font-black text-gray-900 tracking-tight">Finanzas y Rendimiento</h1>
-                <p className="text-[13px] text-gray-500 mt-1">Ingresos, costos y rentabilidad (ROI) por campo.</p>
+                <p className="text-[13px] text-gray-500 mt-1">Costos por hectárea, cosecha y margen al cerrar cada campaña.</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] rounded-2xl p-6 text-white shadow-lg border border-white/10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                    <div className="flex items-center gap-2">
+                        <PieChart size={22} className="opacity-90" />
+                        <div>
+                            <h2 className="text-[16px] font-black tracking-tight">Resultado económico por campaña</h2>
+                            <p className="text-[11px] text-white/70 mt-0.5">
+                                Gastos totales / Ha, ingresos / Ha, quintales / Ha y margen bruto al cierre.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <select
+                            className="bg-white/15 border border-white/25 rounded-xl px-3 py-2 text-[12px] font-bold text-white min-w-[220px]"
+                            value={idCampaniaEconomia}
+                            onChange={(e) => setIdCampaniaEconomia(e.target.value)}
+                        >
+                            {campanias.map((c) => (
+                                <option key={c.idCampania} value={c.idCampania} className="text-gray-900">
+                                    {c.cultivo} · {c.nombreLote} ({c.nombreCampo})
+                                </option>
+                            ))}
+                        </select>
+                        {resumenCampania?.estado === "ABIERTA" && (
+                            <button
+                                type="button"
+                                onClick={handleCerrarCampania}
+                                disabled={cerrarLoading}
+                                className="inline-flex items-center gap-1.5 bg-white text-[#1B4332] px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-green-50 disabled:opacity-60"
+                            >
+                                {cerrarLoading ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
+                                Cerrar campaña
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {resumenCampLoading ? (
+                    <div className="flex justify-center py-12">
+                        <Loader2 className="animate-spin text-white/80" size={36} />
+                    </div>
+                ) : !resumenCampania ? (
+                    <p className="text-center text-white/60 text-sm py-8">Seleccioná una campaña con datos.</p>
+                ) : (
+                    <>
+                        <div className="flex flex-wrap gap-2 mb-5">
+                            <span className="text-[10px] font-black uppercase bg-white/15 px-2.5 py-1 rounded-lg">
+                                {resumenCampania.estado === "CERRADA" ? "Cerrada" : "En curso"}
+                            </span>
+                            <span className="text-[10px] font-bold text-white/80">
+                                {resumenCampania.nombreLote} · {resumenCampania.superficieLoteHa != null ? `${formatNum(resumenCampania.superficieLoteHa, 2)} Ha` : "—"}
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <MetricBox label="Costo total / Ha" value={`${formatCurrency(resumenCampania.costoPorHa)}`} sub="Incluye servicios, insumos y gastos fijos a la campaña" />
+                            <MetricBox label="Ingresos / Ha" value={`${formatCurrency(resumenCampania.ingresosPorHa)}`} sub="Cosechas registradas" />
+                            <MetricBox label="Quintales / Ha" value={`${formatNum(resumenCampania.quintalesPorHa, 3)} qq`} sub="Producción por hectárea" />
+                            <MetricBox
+                                label="Margen bruto / Ha"
+                                value={`${formatCurrency(resumenCampania.margenBrutoPorHa)}`}
+                                sub="Ingresos − costos totales"
+                                highlight={Number(resumenCampania.margenBrutoPorHa) >= 0}
+                            />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/15">
+                            <div className="bg-black/15 rounded-xl p-4 border border-white/10">
+                                <p className="text-[9px] font-black uppercase text-white/50 mb-2">Desglose de costos</p>
+                                <ul className="text-[12px] space-y-1.5 font-semibold">
+                                    <li className="flex justify-between">
+                                        <span className="text-white/75">Servicios (actividades)</span>
+                                        <span>{formatCurrency(resumenCampania.costoServiciosTotal)}</span>
+                                    </li>
+                                    <li className="flex justify-between">
+                                        <span className="text-white/75">Insumos (dosis × Ha)</span>
+                                        <span>{formatCurrency(resumenCampania.costoInsumosTotal)}</span>
+                                    </li>
+                                    <li className="flex justify-between">
+                                        <span className="text-white/75">Gastos fijos imputados</span>
+                                        <span>{formatCurrency(resumenCampania.gastosFijosAsignados)}</span>
+                                    </li>
+                                    <li className="flex justify-between pt-2 border-t border-white/10 font-black text-[13px]">
+                                        <span>Total</span>
+                                        <span>{formatCurrency(resumenCampania.costoTotal)}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div className="bg-black/15 rounded-xl p-4 border border-white/10">
+                                <p className="text-[9px] font-black uppercase text-white/50 mb-2">Ingresos y rentabilidad</p>
+                                <ul className="text-[12px] space-y-1.5 font-semibold">
+                                    <li className="flex justify-between">
+                                        <span className="text-white/75">Ingresos (cosechas)</span>
+                                        <span>{formatCurrency(resumenCampania.ingresosTotales)}</span>
+                                    </li>
+                                    <li className="flex justify-between">
+                                        <span className="text-white/75">Quintales totales</span>
+                                        <span>{formatNum(resumenCampania.quintalesTotales, 2)} qq</span>
+                                    </li>
+                                    <li className="flex justify-between">
+                                        <span className="text-white/75">Margen bruto total</span>
+                                        <span>{formatCurrency(resumenCampania.margenBruto)}</span>
+                                    </li>
+                                    <li className="flex justify-between pt-2 border-t border-white/10 font-black text-[13px]">
+                                        <span>ROI sobre costos</span>
+                                        <span className={Number(resumenCampania.roiPorcentaje) >= 0 ? "text-green-300" : "text-red-300"}>
+                                            {formatNum(resumenCampania.roiPorcentaje, 2)}%
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Resumen Económico */}
@@ -181,7 +354,7 @@ export default function FinanzasPage() {
                     <form onSubmit={handleRegistrarGasto} className="space-y-4">
                         <div className="grid grid-cols-2 gap-3">
                             <FormField label="Campo">
-                                <select required value={formGasto.idCampo} onChange={e => setFormGasto(p => ({ ...p, idCampo: e.target.value }))} className={INPUT_CLASS}>
+                                <select required value={formGasto.idCampo} onChange={e => setFormGasto(p => ({ ...p, idCampo: e.target.value, idCampania: "" }))} className={INPUT_CLASS}>
                                     <option value="" disabled>Elegir Campo</option>
                                     {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
                                 </select>
@@ -200,6 +373,22 @@ export default function FinanzasPage() {
                         </FormField>
                         <FormField label="Descripción">
                             <input type="text" value={formGasto.descripcion} onChange={e => setFormGasto(p => ({ ...p, descripcion: e.target.value }))} className={INPUT_CLASS} />
+                        </FormField>
+                        <FormField label="Imputar a campaña (opcional)">
+                            <select
+                                value={formGasto.idCampania}
+                                onChange={(e) => setFormGasto((p) => ({ ...p, idCampania: e.target.value }))}
+                                className={INPUT_CLASS}
+                                disabled={!formGasto.idCampo}
+                            >
+                                <option value="">Solo al campo (sin campaña)</option>
+                                {campaniasParaGasto.map((c) => (
+                                    <option key={c.idCampania} value={c.idCampania}>
+                                        {c.cultivo} — {c.nombreLote}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-[9px] text-gray-400 mt-1">Solo campañas de lotes de este campo.</p>
                         </FormField>
                         {gastoSuccess && <div className="text-green-600 text-[12px] font-bold">{gastoSuccess}</div>}
                         <button type="submit" disabled={gastoLoading || campos.length === 0} className="w-full bg-[#1B4332] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#2D6A4F] transition-all flex items-center justify-center gap-2">
@@ -276,6 +465,17 @@ export default function FinanzasPage() {
                     </table>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function MetricBox({ label, value, sub, highlight }) {
+    const bad = highlight === false;
+    return (
+        <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+            <p className="text-[9px] font-black uppercase text-white/50 mb-1">{label}</p>
+            <p className={`text-[14px] font-black leading-tight ${bad ? "text-red-200" : "text-white"}`}>{value}</p>
+            {sub && <p className="text-[9px] text-white/55 mt-1 leading-snug">{sub}</p>}
         </div>
     );
 }

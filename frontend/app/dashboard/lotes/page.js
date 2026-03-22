@@ -1,62 +1,73 @@
 "use client";
 
-import { Sprout, Wind, FlaskConical, BugOff, Droplets, Tractor, Microscope, Layers, ClipboardList, Wheat, ShieldCheck, Zap} from 'lucide-react';
-import { useState, useEffect, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
-import apiClient from "@/lib/api-client";
 import {
-    Plus, Loader2, AlertCircle, CheckCircle2, X, RefreshCw, Leaf
+    Sprout, Wind, FlaskConical, BugOff, Droplets, Tractor, Microscope, Layers, Wheat,
+    MapPin, ClipboardList, Plus, Loader2, AlertCircle, CheckCircle2, X, RefreshCw, Leaf
 } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import apiClient from "@/lib/api-client";
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
+
+const emptyInsumoRow = () => ({ idInsumo: "", dosisHa: "" });
 
 export default function CiclosPage() {
     const [campanias, setCampanias] = useState([]);
     const [actividades, setActividades] = useState([]);
     const [lotes, setLotes] = useState([]);
     const [insumos, setInsumos] = useState([]);
+    const [idLoteSeleccionado, setIdLoteSeleccionado] = useState("");
     const [idCampaniaActiva, setIdCampaniaActiva] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Formulario Actividad
     const [formAct, setFormAct] = useState({
-        tipoActv: "Siembra",
+        tipoActv: "Fertilización",
         fecha: new Date().toISOString().split("T")[0],
         costoServicio: "",
         idCampania: "",
+        hectareasTratadas: "",
+        notas: "",
+        insumos: [emptyInsumoRow()],
     });
     const [submitLoading, setSubmitLoading] = useState(false);
     const [submitError, setSubmitError] = useState(null);
     const [submitSuccess, setSubmitSuccess] = useState(null);
 
-    // Modal Nueva Campaña
     const [showModalCampania, setShowModalCampania] = useState(false);
     const [formCampania, setFormCampania] = useState({ cultivo: "", fechaInicio: "", fechaFin: "", idLote: "" });
     const [campLoading, setCampLoading] = useState(false);
     const [campError, setCampError] = useState(null);
     const [campSuccess, setCampSuccess] = useState(null);
 
+    const campaniasDelLote = useMemo(() => {
+        if (!idLoteSeleccionado) return campanias;
+        return campanias.filter((c) => c.idLote === idLoteSeleccionado);
+    }, [campanias, idLoteSeleccionado]);
+
+    const loteActual = useMemo(
+        () => lotes.find((l) => l.idLote === idLoteSeleccionado),
+        [lotes, idLoteSeleccionado]
+    );
+
+    const campaniaActual = useMemo(
+        () => campanias.find((c) => c.idCampania === idCampaniaActiva),
+        [campanias, idCampaniaActiva]
+    );
+
     const fetchData = useCallback(async () => {
         try {
             setError(null);
             const timestamp = new Date().getTime();
-            const [lotesRes, insumosRes, campRes, actRes] = await Promise.all([
+            const [lotesRes, campRes, actRes] = await Promise.all([
                 apiClient.get(`/lotes?t=${timestamp}`).catch(() => ({ data: [] })),
-                apiClient.get(`/insumos?t=${timestamp}`).catch(() => ({ data: [] })),
                 apiClient.get(`/campanias?t=${timestamp}`).catch(() => ({ data: [] })),
-                apiClient.get(`/actividades?t=${timestamp}`).catch(() => ({ data: [] }))
+                apiClient.get(`/actividades?t=${timestamp}`).catch(() => ({ data: [] })),
             ]);
             setLotes(lotesRes.data || []);
-            setInsumos(insumosRes.data || []);
             setCampanias(campRes.data || []);
             setActividades(actRes.data || []);
-            
-            if (campRes.data?.length > 0) {
-                 setIdCampaniaActiva(campRes.data[0].idCampania);
-                 setFormAct(p => ({ ...p, idCampania: campRes.data[0].idCampania }));
-            }
         } catch (err) {
             setError("Error al cargar datos del servidor.");
         } finally {
@@ -64,28 +75,92 @@ export default function CiclosPage() {
         }
     }, []);
 
+    const fetchInsumosCampo = useCallback(async (idCampo) => {
+        if (!idCampo) {
+            setInsumos([]);
+            return;
+        }
+        const t = new Date().getTime();
+        try {
+            const res = await apiClient.get(`/insumos?t=${t}&idCampo=${idCampo}`);
+            setInsumos(res.data || []);
+        } catch {
+            setInsumos([]);
+        }
+    }, []);
+
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        if (lotes.length && !idLoteSeleccionado) {
+            setIdLoteSeleccionado(lotes[0].idLote);
+        }
+    }, [lotes, idLoteSeleccionado]);
+
+    useEffect(() => {
+        const list = idLoteSeleccionado
+            ? campanias.filter((c) => c.idLote === idLoteSeleccionado)
+            : campanias;
+        if (!list.length) {
+            setIdCampaniaActiva("");
+            setFormAct((p) => ({ ...p, idCampania: "" }));
+            return;
+        }
+        setIdCampaniaActiva((prev) => (list.some((c) => c.idCampania === prev) ? prev : list[0].idCampania));
+        setFormAct((p) => ({
+            ...p,
+            idCampania: list.some((c) => c.idCampania === p.idCampania) ? p.idCampania : list[0].idCampania,
+        }));
+    }, [idLoteSeleccionado, campanias]);
+
+    useEffect(() => {
+        const idCampo = loteActual?.idCampo;
+        fetchInsumosCampo(idCampo);
+    }, [loteActual?.idCampo, fetchInsumosCampo]);
 
     const handleRegistrarActividad = async (e) => {
         e.preventDefault();
         setSubmitLoading(true);
         setSubmitError(null);
         try {
-            const res = await apiClient.post("/actividades", {
+            const insumosPayload = formAct.insumos
+                .filter((row) => row.idInsumo && row.dosisHa !== "" && !Number.isNaN(parseFloat(row.dosisHa)))
+                .map((row) => ({
+                    idInsumo: row.idInsumo,
+                    dosisHa: parseFloat(row.dosisHa),
+                }));
+
+            const haVal = formAct.hectareasTratadas === "" ? null : parseFloat(formAct.hectareasTratadas);
+            const payload = {
                 tipoActv: formAct.tipoActv,
                 fecha: formAct.fecha,
-                costoServicio: formAct.costoServicio ? parseFloat(formAct.costoServicio) : 0,
-                idCampania: formAct.idCampania,
-            });
-            const nueva = res.data;
-            setActividades(prev => [nueva, ...prev]);
-            setSubmitSuccess("¡Actividad registrada con éxito!");
-            setFormAct(p => ({ ...p, costoServicio: "" }));
-            setTimeout(() => setSubmitSuccess(null), 3000);
+                costoServicio: formAct.costoServicio === "" ? 0 : parseFloat(formAct.costoServicio),
+                idCampania: formAct.idCampania || idCampaniaActiva,
+                notas: formAct.notas?.trim() || null,
+                hectareasTratadas: haVal != null && !Number.isNaN(haVal) ? haVal : null,
+                insumos: insumosPayload.length ? insumosPayload : undefined,
+            };
+
+            const res = await apiClient.post("/actividades", payload);
+            setActividades((prev) => [res.data, ...prev]);
+            setSubmitSuccess("Aplicación registrada correctamente.");
+            setFormAct((p) => ({
+                ...p,
+                costoServicio: "",
+                hectareasTratadas: "",
+                notas: "",
+                insumos: [emptyInsumoRow()],
+            }));
+            setTimeout(() => setSubmitSuccess(null), 3500);
         } catch (err) {
-            setSubmitError(err.response?.data?.message || "Error al registrar la actividad. Verificá los datos.");
+            const d = err.response?.data;
+            const msg =
+                typeof d === "string"
+                    ? d
+                    : d?.error || d?.message || (d && Object.values(d).join(" ")) || err.message;
+            setSubmitError(msg || "Error al registrar la actividad.");
         } finally {
             setSubmitLoading(false);
         }
@@ -102,33 +177,38 @@ export default function CiclosPage() {
                 fechaFin: formCampania.fechaFin || null,
                 idLote: formCampania.idLote,
             });
-            setCampanias(prev => [res.data, ...prev]);
-            setCampSuccess("¡Campaña creada con éxito!");
-            if (!idCampaniaActiva) setIdCampaniaActiva(res.data.idCampania);
+            setCampanias((prev) => [res.data, ...prev]);
+            setIdLoteSeleccionado(formCampania.idLote);
+            setIdCampaniaActiva(res.data.idCampania);
+            setFormAct((p) => ({ ...p, idCampania: res.data.idCampania }));
+            setCampSuccess("Campaña creada.");
             setFormCampania({ cultivo: "", fechaInicio: "", fechaFin: "", idLote: "" });
-            setTimeout(() => { setShowModalCampania(false); setCampSuccess(null); }, 1500);
+            setTimeout(() => {
+                setShowModalCampania(false);
+                setCampSuccess(null);
+            }, 1200);
         } catch (err) {
-            setCampError(err.response?.data?.message || "Error al crear la campaña.");
+            const d = err.response?.data;
+            setCampError(d?.error || d?.message || "Error al crear la campaña.");
         } finally {
             setCampLoading(false);
         }
     };
 
-    // Filtros dinámicos basados en la campaña seleccionada
-    const actividadesCampaniaActiva = actividades.filter(a => a.idCampania === idCampaniaActiva || (a.campania && a.campania.idCampania === idCampaniaActiva)); // En caso de que el DTO devuelva un array diferente o nested
-    
-    // Cálculo Dinámico de Fase
+    const actividadesFiltradas = actividades.filter(
+        (a) => a.idCampania === idCampaniaActiva || (a.campania && a.campania.idCampania === idCampaniaActiva)
+    );
+
     const getFaseActual = () => {
-        const misActs = actividades.filter(a => {
-            // Maneja ambas posibles formas en que la API devuelve la relación
-            return a.idCampania === idCampaniaActiva || (a.campania && a.campania.idCampania === idCampaniaActiva);
-        });
+        const misActs = actividades.filter(
+            (a) => a.idCampania === idCampaniaActiva || (a.campania && a.campania.idCampania === idCampaniaActiva)
+        );
         if (misActs.length === 0) return 0;
-        const hasSiembra = misActs.some(a => a.tipoActv?.toLowerCase().includes("siembra"));
-        const hasCosecha = misActs.some(a => a.tipoActv?.toLowerCase().includes("cosecha"));
+        const hasSiembra = misActs.some((a) => a.tipoActv?.toLowerCase().includes("siembra"));
+        const hasCosecha = misActs.some((a) => a.tipoActv?.toLowerCase().includes("cosecha"));
         if (hasCosecha) return 4;
         if (hasSiembra) {
-            const siembra = misActs.find(a => a.tipoActv?.toLowerCase().includes("siembra"));
+            const siembra = misActs.find((a) => a.tipoActv?.toLowerCase().includes("siembra"));
             const daysSince = Math.floor((new Date() - new Date(siembra.fecha)) / (1000 * 60 * 60 * 24));
             if (daysSince < 30) return 1;
             if (daysSince < 80) return 2;
@@ -136,185 +216,420 @@ export default function CiclosPage() {
         }
         return 0;
     };
-    
+
     const faseActual = getFaseActual();
 
-    if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
+    const addInsumoRow = () =>
+        setFormAct((p) => ({ ...p, insumos: [...p.insumos, emptyInsumoRow()] }));
+    const removeInsumoRow = (idx) =>
+        setFormAct((p) => ({
+            ...p,
+            insumos: p.insumos.length > 1 ? p.insumos.filter((_, i) => i !== idx) : p.insumos,
+        }));
+    const setInsumoRow = (idx, field, value) =>
+        setFormAct((p) => ({
+            ...p,
+            insumos: p.insumos.map((row, i) => (i === idx ? { ...row, [field]: value } : row)),
+        }));
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" />
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Header omitido por brevedad en visualización, ES EL MISMO QUE TENÍAS */}
+        <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
             <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Estancia Principal / Ciclos</p>
-                <div className="flex items-start justify-between">
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ciclos de producción</p>
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-                            Vista de Precisión de Cosecha
-                        </h1>
-                        <p className="text-[13px] text-gray-500 mt-1 max-w-xl">
-                            Seguimiento en tiempo real de preparación de suelo, siembra y aplicaciones químicas en todos los lotes.
+                        <h1 className="text-2xl font-black text-gray-900 tracking-tight">Aplicaciones y campañas por lote</h1>
+                        <p className="text-[13px] text-gray-500 mt-1 max-w-2xl">
+                            Elegí el <strong>lote</strong> y la <strong>campaña</strong>. Registrá cada aplicación con{" "}
+                            <strong>hectáreas tratadas</strong> (parcial o total), dosis de insumos por hectárea y costo de
+                            servicio. Queda vinculado al lote vía la campaña.
                         </p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Campaña Activa</p>
-                        <select 
-                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 shadow-sm text-[12px] font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]/20 cursor-pointer"
-                            value={idCampaniaActiva}
-                            onChange={(e) => setIdCampaniaActiva(e.target.value)}
-                        >
-                            {campanias.length === 0 ? <option value="">Sin campañas registradas</option> : null}
-                            {campanias.map(c => (
-                                <option key={c.idCampania} value={c.idCampania}>
-                                    {c.cultivo} - {c.fechaInicio?.slice(0, 4)} ({c.nombreLote} - {c.nombreCampo})
-                                </option>
-                            ))}
-                        </select>
                     </div>
                 </div>
             </div>
 
-            {error && <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm"><AlertCircle size={16} />{error}</div>}
+            {error && (
+                <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+                    <AlertCircle size={16} />
+                    {error}
+                </div>
+            )}
 
-            {/* Progreso del Ciclo (Mismo de antes) */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
+                <div className="flex-1 min-w-[200px]">
+                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
+                        <MapPin size={10} className="inline mr-1" />
+                        Lote
+                    </label>
+                    <select
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
+                        value={idLoteSeleccionado}
+                        onChange={(e) => setIdLoteSeleccionado(e.target.value)}
+                    >
+                        {lotes.length === 0 ? (
+                            <option value="">Sin lotes</option>
+                        ) : (
+                            lotes.map((l) => (
+                                <option key={l.idLote} value={l.idLote}>
+                                    {l.nombre} — {l.superficie} Ha · {l.nombreCampo}
+                                </option>
+                            ))
+                        )}
+                    </select>
+                </div>
+                <div className="flex-1 min-w-[220px]">
+                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
+                        Campaña en este lote
+                    </label>
+                    <select
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
+                        value={idCampaniaActiva}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            setIdCampaniaActiva(v);
+                            setFormAct((p) => ({ ...p, idCampania: v }));
+                        }}
+                    >
+                        {campaniasDelLote.length === 0 ? (
+                            <option value="">Sin campañas en este lote</option>
+                        ) : (
+                            campaniasDelLote.map((c) => (
+                                <option key={c.idCampania} value={c.idCampania}>
+                                    {c.cultivo}
+                                    {c.estado === "CERRADA" ? " (cerrada)" : ""} ·{" "}
+                                    {c.fechaInicio?.slice?.(0, 10) || c.fechaInicio}
+                                </option>
+                            ))
+                        )}
+                    </select>
+                </div>
+                {loteActual && (
+                    <div className="text-[12px] text-gray-600 bg-[#EBF3EF] rounded-xl px-4 py-2.5 border border-[#2D6A4F]/15">
+                        <span className="font-black text-[#2D6A4F]">{loteActual.superficie} Ha</span> superficie del lote
+                        {campaniaActual?.superficieLoteHa != null && (
+                            <span className="block text-[10px] text-gray-500 mt-0.5">
+                                Referencia económica: misma superficie para costeos si no indicás Ha en la aplicación.
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
+
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-[14px] font-bold text-gray-900">Progreso del Ciclo de Campaña</h2>
-                    <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest">
-                        <span className="flex items-center gap-1.5 text-gray-400"><span className="w-2 h-2 rounded-full bg-[#2D6A4F] inline-block" />Completado</span>
-                        <span className="flex items-center gap-1.5 text-gray-400"><span className="w-2 h-2 rounded-full bg-green-300 inline-block" />Actual</span>
-                    </div>
+                    <h2 className="text-[14px] font-bold text-gray-900">Progreso del ciclo</h2>
+                    <button
+                        type="button"
+                        onClick={() => setShowModalCampania(true)}
+                        className="text-[11px] font-bold text-[#2D6A4F] hover:underline flex items-center gap-1"
+                    >
+                        <Plus size={14} /> Nueva campaña
+                    </button>
                 </div>
                 <div className="relative">
                     <div className="flex gap-1 h-10 rounded-xl overflow-hidden">
                         {FASES.map((fase, i) => (
-                            <div key={fase} className={`flex-1 flex items-center justify-center transition-all ${i < faseActual ? "bg-[#2D6A4F]" : i === faseActual ? "bg-[#2D6A4F]" : "bg-gray-100"}`}>
-                                {i === faseActual && <RefreshCw size={14} className="text-white animate-spin" style={{ animationDuration: "3s" }} />}
+                            <div
+                                key={fase}
+                                className={`flex-1 flex items-center justify-center transition-all ${
+                                    i <= faseActual ? "bg-[#2D6A4F]" : "bg-gray-100"
+                                }`}
+                            >
+                                {i === faseActual && (
+                                    <RefreshCw size={14} className="text-white animate-spin" style={{ animationDuration: "3s" }} />
+                                )}
                             </div>
                         ))}
                     </div>
                     <div className="flex mt-2">
                         {FASES.map((fase) => (
-                            <div key={fase} className="flex-1 text-center"><p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{fase}</p></div>
+                            <div key={fase} className="flex-1 text-center">
+                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{fase}</p>
+                            </div>
                         ))}
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+            <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
                 <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-[14px] font-bold text-gray-900">Actividades de Campo (Campaña Seleccionada)</h2>
-                        <button onClick={() => setShowModalCampania(true)} className="text-[11px] font-bold text-[#2D6A4F] hover:underline flex items-center gap-1">
-                            + Nueva Campaña
-                        </button>
-                    </div>
-
-                    {actividades.filter(a => a.idCampania === idCampaniaActiva || (a.campania && a.campania.idCampania === idCampaniaActiva)).length === 0 ? (
+                    <h2 className="text-[14px] font-bold text-gray-900">Actividades de la campaña seleccionada</h2>
+                    {actividadesFiltradas.length === 0 ? (
                         <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm shadow-sm">
                             <Leaf size={28} className="mx-auto mb-2 text-gray-300" />
                             No hay actividades para esta campaña.
                         </div>
                     ) : (
-                        actividades.filter(a => a.idCampania === idCampaniaActiva || (a.campania && a.campania.idCampania === idCampaniaActiva)).map((act) => <ActividadCard key={act.idActividad} actividad={act} />)
+                        actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} />)
                     )}
                 </div>
 
-                <div className="space-y-4">
-                    {/* FORMULARIO REGISTRAR ACTIVIDAD MODIFICADO CON SELECT */}
-                    <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg">
-                        <h3 className="font-black text-[14px] mb-4">Registrar Actividad</h3>
-                        <form onSubmit={handleRegistrarActividad} className="space-y-3">
+                <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg h-fit xl:sticky xl:top-4">
+                    <h3 className="font-black text-[15px] mb-1">Registrar aplicación</h3>
+                    <p className="text-[10px] text-green-100/90 mb-4 leading-relaxed">
+                        Dosis en unidad del insumo por hectárea. Si no cargás Ha tratadas, se asume todo el lote para el costo
+                        de insumos.
+                    </p>
+                    <form onSubmit={handleRegistrarActividad} className="space-y-3">
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
+                                Tipo
+                            </label>
+                            <select
+                                value={formAct.tipoActv}
+                                onChange={(e) => setFormAct((p) => ({ ...p, tipoActv: e.target.value }))}
+                                className={SELECT_GREEN}
+                            >
+                                {TIPO_ACTIVIDAD.map((t) => (
+                                    <option key={t} value={t}>
+                                        {t}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
+                                Campaña
+                            </label>
+                            <select
+                                required
+                                value={formAct.idCampania || idCampaniaActiva}
+                                onChange={(e) => {
+                                    const v = e.target.value;
+                                    setFormAct((p) => ({ ...p, idCampania: v }));
+                                    setIdCampaniaActiva(v);
+                                }}
+                                className={SELECT_GREEN}
+                            >
+                                <option value="" disabled>
+                                    Seleccionar
+                                </option>
+                                {campaniasDelLote.map((camp) => (
+                                    <option key={camp.idCampania} value={camp.idCampania}>
+                                        {camp.cultivo} ({camp.fechaInicio?.slice?.(0, 4) || ""})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
                             <div>
-                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1.5">Tipo de Actividad</label>
-                                <select value={formAct.tipoActv} onChange={e => setFormAct(p => ({ ...p, tipoActv: e.target.value }))} className={SELECT_GREEN}>
-                                    {TIPO_ACTIVIDAD.map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                            </div>
-
-                            {/* NUEVO SELECT PARA CAMPAÑA */}
-                            <div>
-                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1.5">Campaña de Destino</label>
-                                <select
+                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
+                                    Fecha
+                                </label>
+                                <input
+                                    type="date"
                                     required
-                                    value={formAct.idCampania}
-                                    onChange={e => setFormAct(p => ({ ...p, idCampania: e.target.value }))}
-                                    className={SELECT_GREEN}
-                                >
-                                    <option value="" disabled>-- Seleccionar campaña --</option>
-                                    {campanias.map(camp => (
-                                        <option key={camp.idCampania} value={camp.idCampania}>
-                                            {camp.cultivo} ({camp.fechaInicio?.split('-')[0]})
-                                        </option>
-                                    ))}
-                                </select>
+                                    value={formAct.fecha}
+                                    onChange={(e) => setFormAct((p) => ({ ...p, fecha: e.target.value }))}
+                                    className={INPUT_GREEN}
+                                />
                             </div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1.5">Fecha</label>
-                                    <input type="date" required value={formAct.fecha} onChange={e => setFormAct(p => ({ ...p, fecha: e.target.value }))} className={INPUT_GREEN} />
-                                </div>
-                                <div>
-                                    <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1.5">Costo ($)</label>
-                                    <input type="number" step="0.01" min="0" value={formAct.costoServicio} onChange={e => setFormAct(p => ({ ...p, costoServicio: e.target.value }))} className={INPUT_GREEN} placeholder="0.00" />
-                                </div>
+                            <div>
+                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
+                                    Costo servicio ($)
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={formAct.costoServicio}
+                                    onChange={(e) => setFormAct((p) => ({ ...p, costoServicio: e.target.value }))}
+                                    className={INPUT_GREEN}
+                                    placeholder="0"
+                                />
                             </div>
-
-                            {submitError && <div className="text-[10px] bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg p-2">{submitError}</div>}
-                            {submitSuccess && <div className="text-[10px] bg-green-500/20 border border-green-400/30 text-green-100 rounded-lg p-2 flex items-center gap-1"><CheckCircle2 size={11} />{submitSuccess}</div>}
-                            <button type="submit" disabled={submitLoading || campanias.length === 0} className="w-full bg-white text-[#2D6A4F] py-2.5 rounded-xl font-black text-[12px] hover:bg-green-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60 mt-1">
-                                {submitLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                Confirmar Actividad
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
+                                Ha tratadas (opcional)
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max={loteActual?.superficie != null ? loteActual.superficie : undefined}
+                                value={formAct.hectareasTratadas}
+                                onChange={(e) => setFormAct((p) => ({ ...p, hectareasTratadas: e.target.value }))}
+                                className={INPUT_GREEN}
+                                placeholder={`Máx. ${loteActual?.superficie ?? "—"} Ha`}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
+                                Insumos / dosis (por Ha)
+                            </label>
+                            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                                {formAct.insumos.map((row, idx) => (
+                                    <div key={idx} className="flex gap-1.5 items-center">
+                                        <select
+                                            value={row.idInsumo}
+                                            onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)}
+                                            className={`${SELECT_GREEN} flex-1 min-w-0 text-[11px]`}
+                                        >
+                                            <option value="">Insumo…</option>
+                                            {insumos.map((ins) => (
+                                                <option key={ins.idInsumo} value={ins.idInsumo}>
+                                                    {ins.nombre}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            type="number"
+                                            step="0.0001"
+                                            min="0"
+                                            placeholder="Dosis/Ha"
+                                            value={row.dosisHa}
+                                            onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)}
+                                            className={`${INPUT_GREEN} w-[88px] text-[11px] px-2`}
+                                        />
+                                        {formAct.insumos.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeInsumoRow(idx)}
+                                                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20"
+                                                aria-label="Quitar fila"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={addInsumoRow}
+                                className="mt-2 text-[10px] font-bold text-green-100 hover:text-white flex items-center gap-1"
+                            >
+                                <Plus size={12} /> Añadir insumo
                             </button>
-                            {campanias.length === 0 && <p className="text-[10px] text-green-200 text-center mt-2">Debes crear una campaña primero.</p>}
-                        </form>
-                    </div>
+                            {insumos.length === 0 && loteActual && (
+                                <p className="text-[9px] text-amber-200/90 mt-1">
+                                    No hay insumos en el catálogo de este campo. Cargalos en Inventario.
+                                </p>
+                            )}
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
+                                Notas
+                            </label>
+                            <textarea
+                                rows={2}
+                                value={formAct.notas}
+                                onChange={(e) => setFormAct((p) => ({ ...p, notas: e.target.value }))}
+                                className={`${INPUT_GREEN} resize-none`}
+                                placeholder="Producto, lote comercial, condiciones, etc."
+                            />
+                        </div>
+                        {submitError && (
+                            <div className="text-[10px] bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg p-2">
+                                {submitError}
+                            </div>
+                        )}
+                        {submitSuccess && (
+                            <div className="text-[10px] bg-green-500/20 border border-green-400/30 text-green-100 rounded-lg p-2 flex items-center gap-1">
+                                <CheckCircle2 size={11} />
+                                {submitSuccess}
+                            </div>
+                        )}
+                        <button
+                            type="submit"
+                            disabled={submitLoading || campaniasDelLote.length === 0}
+                            className="w-full bg-white text-[#2D6A4F] py-2.5 rounded-xl font-black text-[12px] hover:bg-green-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+                        >
+                            {submitLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                            Guardar aplicación
+                        </button>
+                    </form>
                 </div>
             </div>
 
-            {/* MODAL NUEVA CAMPAÑA CON SELECT */}
             {showModalCampania && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="font-black text-[16px] text-gray-900">Nueva Campaña</h3>
-                            <button onClick={() => setShowModalCampania(false)} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400"><X size={16} /></button>
+                            <h3 className="font-black text-[16px] text-gray-900">Nueva campaña</h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowModalCampania(false)}
+                                className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400"
+                            >
+                                <X size={16} />
+                            </button>
                         </div>
                         <form onSubmit={handleCrearCampania} className="space-y-4">
                             <FormField label="Cultivo" required>
-                                <input type="text" required value={formCampania.cultivo} onChange={e => setFormCampania(p => ({ ...p, cultivo: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Soja, Maíz, Trigo..." />
+                                <input
+                                    type="text"
+                                    required
+                                    value={formCampania.cultivo}
+                                    onChange={(e) => setFormCampania((p) => ({ ...p, cultivo: e.target.value }))}
+                                    className={INPUT_CLASS}
+                                    placeholder="ej. Soja, Maíz…"
+                                />
                             </FormField>
-
-                            {/* NUEVO SELECT PARA LOTE */}
-                            <FormField label="Lote de Destino" required>
+                            <FormField label="Lote" required>
                                 <select
                                     required
                                     value={formCampania.idLote}
-                                    onChange={e => setFormCampania(p => ({ ...p, idLote: e.target.value }))}
+                                    onChange={(e) => setFormCampania((p) => ({ ...p, idLote: e.target.value }))}
                                     className={INPUT_CLASS}
                                 >
-                                    <option value="" disabled>-- Elegí un lote --</option>
-                                    {lotes.map(lote => (
+                                    <option value="" disabled>
+                                        Elegí un lote
+                                    </option>
+                                    {lotes.map((lote) => (
                                         <option key={lote.idLote} value={lote.idLote}>
-                                            {lote.nombre} ({lote.superficie} Ha) - {lote.nombreCampo}
+                                            {lote.nombre} ({lote.superficie} Ha) — {lote.nombreCampo}
                                         </option>
                                     ))}
                                 </select>
                             </FormField>
-
                             <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Fecha de inicio" required>
-                                    <input type="date" required value={formCampania.fechaInicio} onChange={e => setFormCampania(p => ({ ...p, fechaInicio: e.target.value }))} className={INPUT_CLASS} />
+                                <FormField label="Inicio" required>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={formCampania.fechaInicio}
+                                        onChange={(e) => setFormCampania((p) => ({ ...p, fechaInicio: e.target.value }))}
+                                        className={INPUT_CLASS}
+                                    />
                                 </FormField>
-                                <FormField label="Fecha de fin">
-                                    <input type="date" value={formCampania.fechaFin} onChange={e => setFormCampania(p => ({ ...p, fechaFin: e.target.value }))} className={INPUT_CLASS} />
+                                <FormField label="Fin (opc.)">
+                                    <input
+                                        type="date"
+                                        value={formCampania.fechaFin}
+                                        onChange={(e) => setFormCampania((p) => ({ ...p, fechaFin: e.target.value }))}
+                                        className={INPUT_CLASS}
+                                    />
                                 </FormField>
                             </div>
-                            {campError && <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-[12px] font-semibold"><AlertCircle size={14} />{campError}</div>}
-                            {campSuccess && <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl p-3 text-green-700 text-[12px] font-semibold"><CheckCircle2 size={14} />{campSuccess}</div>}
-                            <button type="submit" disabled={campLoading} className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#1B4332] transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-green-900/20 mt-2">
+                            {campError && (
+                                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-[12px] font-semibold">
+                                    <AlertCircle size={14} />
+                                    {campError}
+                                </div>
+                            )}
+                            {campSuccess && (
+                                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl p-3 text-green-700 text-[12px] font-semibold">
+                                    <CheckCircle2 size={14} />
+                                    {campSuccess}
+                                </div>
+                            )}
+                            <button
+                                type="submit"
+                                disabled={campLoading}
+                                className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#1B4332] transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg"
+                            >
                                 {campLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                                Confirmar Campaña
+                                Crear campaña
                             </button>
                         </form>
                     </div>
@@ -326,42 +641,86 @@ export default function CiclosPage() {
 
 function ActividadCard({ actividad }) {
     const colorMap = {
-        "Siembra": { bg: "bg-[#2D6A4F]", icon: <Sprout size={16} />, text: "text-green-700" },
-        "Pulverización": { bg: "bg-[#2D6A4F]", icon: <BugOff size={16} />, text: "text-amber-700" },
-        "Fertilización": { bg: "bg-[#2D6A4F]", icon: <FlaskConical size={16} />, text: "text-orange-700" },
-        "Riego": { bg: "bg-[#2D6A4F]", icon: <Droplets size={16} />, text: "text-blue-700" },
-        "Labranza": { bg: "bg-[#2D6A4F]", icon: <Tractor size={16} />, text: "text-gray-700" },
-        "Cosecha": { bg: "bg-[#2D6A4F]", icon: <Wheat size={16} />, text: "text-gray-700" },
-        "Control sanitario": { bg: "bg-[#2D6A4F]", icon: <Microscope size={16} />, text: "text-gray-700" },
+        Siembra: { icon: <Sprout size={16} /> },
+        Pulverización: { icon: <BugOff size={16} /> },
+        Fertilización: { icon: <FlaskConical size={16} /> },
+        Riego: { icon: <Droplets size={16} /> },
+        Labranza: { icon: <Tractor size={16} /> },
+        Cosecha: { icon: <Wheat size={16} /> },
+        "Control sanitario": { icon: <Microscope size={16} /> },
     };
-    const c = colorMap[actividad.tipoActv] || { bg: "bg-[#2D6A4F]", icon: <Layers size={16} />, text: "text-gray-700" };
+    const c = colorMap[actividad.tipoActv] || { icon: <Layers size={16} /> };
+    const insumos = actividad.insumos || [];
 
     return (
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-3 hover:shadow-md transition-shadow">
-            <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center text-lg flex-shrink-0`}>{c.icon}</div>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[9px] text-gray-400">{actividad.fecha}</span>
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white flex-shrink-0">
+                    {c.icon}
                 </div>
-                <p className="font-bold text-gray-900 text-[13px]">{actividad.tipoActv}</p>
-            </div>
-            {actividad.costoServicio > 0 && (
+                <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                        <span className="text-[9px] text-gray-400">{actividad.fecha}</span>
+                        {actividad.nombreLote && (
+                            <span className="text-[9px] font-bold text-[#2D6A4F] bg-[#EBF3EF] px-2 py-0.5 rounded-md">
+                                {actividad.nombreLote}
+                            </span>
+                        )}
+                    </div>
+                    <p className="font-bold text-gray-900 text-[13px]">{actividad.tipoActv}</p>
+                    <div className="flex flex-wrap gap-2 mt-1.5 text-[10px] text-gray-600">
+                        {actividad.hectareasTratadas != null && (
+                            <span className="font-semibold">
+                                Ha tratadas: <strong className="text-gray-900">{actividad.hectareasTratadas}</strong>
+                            </span>
+                        )}
+                        {actividad.superficieLoteHa != null && (
+                            <span>
+                                Lote: <strong>{actividad.superficieLoteHa}</strong> Ha
+                            </span>
+                        )}
+                    </div>
+                    {insumos.length > 0 && (
+                        <ul className="mt-2 space-y-1 text-[11px] text-gray-700 border-t border-gray-100 pt-2">
+                            {insumos.map((ins) => (
+                                <li key={ins.idActividadInsumo || `${ins.idInsumo}-${ins.dosisHa}`} className="flex justify-between gap-2">
+                                    <span className="truncate">{ins.nombreInsumo || "Insumo"}</span>
+                                    <span className="font-mono font-bold shrink-0">{ins.dosisHa} / Ha</span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                    {actividad.notas && (
+                        <p className="mt-2 text-[10px] text-gray-500 italic border-l-2 border-[#2D6A4F]/30 pl-2">{actividad.notas}</p>
+                    )}
+                </div>
                 <div className="text-right flex-shrink-0">
-                    <p className="text-[11px] font-black text-gray-900">${Number(actividad.costoServicio).toLocaleString("es-AR")}</p>
+                    {actividad.costoServicio > 0 && (
+                        <p className="text-[11px] font-black text-gray-900">
+                            ${Number(actividad.costoServicio).toLocaleString("es-AR")}
+                        </p>
+                    )}
+                    <p className="text-[9px] text-gray-400 mt-0.5">servicio</p>
                 </div>
-            )}
+            </div>
         </div>
     );
 }
 
-const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white transition-colors placeholder:text-gray-400";
-const INPUT_GREEN = "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white focus:outline-none focus:bg-white/20 transition-colors placeholder:text-green-200/50";
-const SELECT_GREEN = "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white focus:outline-none focus:bg-white/20 transition-colors [&>option]:text-gray-900";
+const INPUT_CLASS =
+    "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white transition-colors placeholder:text-gray-400";
+const INPUT_GREEN =
+    "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white placeholder:text-green-200/50 focus:outline-none focus:bg-white/20 transition-colors";
+const SELECT_GREEN =
+    "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white focus:outline-none focus:bg-white/20 transition-colors [&>option]:text-gray-900";
 
 function FormField({ label, required, children }) {
     return (
         <div>
-            <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-1.5">{label}{required && <span className="text-red-400 ml-0.5">*</span>}</label>
+            <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-1.5">
+                {label}
+                {required && <span className="text-red-400 ml-0.5">*</span>}
+            </label>
             {children}
         </div>
     );

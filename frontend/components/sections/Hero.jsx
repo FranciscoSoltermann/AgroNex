@@ -24,7 +24,7 @@ export const Hero = () => {
   
         {/* CAMBIO AQUÍ: Usamos <Link> en lugar de <button> */}
             <Link href="/login" className="bg-green-800 hover:bg-green-900 text-white px-8 py-4 rounded-xl font-bold transition-all transform hover:scale-105 w-full sm:w-auto text-center inline-block">
-                Iniciar sesión
+                Comenzar
               </Link>
            </div>
         </div>

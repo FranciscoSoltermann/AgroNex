@@ -29,6 +29,13 @@ public class Actividad {
     @Column(name = "fecha")
     private LocalDate fecha;
 
+    /** Superficie efectivamente tratada en esta aplicación (Ha). Si es null, se usa la superficie total del lote en costeos. */
+    @Column(name = "hectareas_tratadas", precision = 12, scale = 4)
+    private BigDecimal hectareasTratadas;
+
+    @Column(name = "notas", columnDefinition = "TEXT")
+    private String notas;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_campania")
     private Campania campania;

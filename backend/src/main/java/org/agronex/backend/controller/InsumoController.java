@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.InsumoRequest;
 import org.agronex.backend.dto.response.InsumoResponse;
+import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.InsumoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,19 +27,23 @@ public class InsumoController {
     public ResponseEntity<List<InsumoResponse>> listarInsumos(
             @AuthenticationPrincipal Jwt jwt, 
             @RequestParam(required = false) UUID idCampo) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(insumoService.listarTodos(idUsuario, idCampo));
     }
 
-    // Obtener un insumo específico (útil para ver detalles)
     @GetMapping("/{id}")
-    public ResponseEntity<InsumoResponse> obtenerPorId(@PathVariable UUID id) { // 🔹 Cambiado de Long a UUID
-        return ResponseEntity.ok(insumoService.buscarPorId(id));
+    public ResponseEntity<InsumoResponse> obtenerPorId(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(insumoService.buscarPorId(id, idUsuario));
     }
 
-    // Cargar un nuevo insumo al catálogo
     @PostMapping
-    public ResponseEntity<InsumoResponse> crearInsumo(@Valid @RequestBody InsumoRequest request) {
-        return new ResponseEntity<>(insumoService.crearInsumo(request), HttpStatus.CREATED);
+    public ResponseEntity<InsumoResponse> crearInsumo(
+            @Valid @RequestBody InsumoRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        return new ResponseEntity<>(insumoService.crearInsumo(request, idUsuario), HttpStatus.CREATED);
     }
 }

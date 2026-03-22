@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.GastoFijoRequest;
 import org.agronex.backend.dto.response.GastoFijoResponse;
+import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.GastoFijoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,13 +26,13 @@ public class GastoFijoController {
             @Valid @RequestBody GastoFijoRequest request,
             @AuthenticationPrincipal Jwt jwt) {
 
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return new ResponseEntity<>(gastoFijoService.registrarGasto(request, idUsuario), HttpStatus.CREATED);
     }
 
     @GetMapping
     public ResponseEntity<java.util.List<GastoFijoResponse>> listMisGastos(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(gastoFijoService.listarGastosPersonales(idUsuario));
     }
 }

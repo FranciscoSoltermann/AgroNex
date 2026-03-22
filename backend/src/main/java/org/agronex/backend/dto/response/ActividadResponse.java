@@ -6,6 +6,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 
@@ -15,9 +16,14 @@ public class ActividadResponse {
     private UUID idActividad;
     private String tipoActv;
     private BigDecimal costoServicio;
-    private LocalDate fecha; // 🔹 Cambiar de OffsetDateTime a LocalDate
+    private LocalDate fecha;
     private UUID idCampania;
     private String nombreCultivo;
     private String nombreLote;
     private String nombreCampo;
+    /** Superficie del lote (referencia para la campaña). */
+    private BigDecimal superficieLoteHa;
+    private BigDecimal hectareasTratadas;
+    private String notas;
+    private List<ActividadInsumoResponse> insumos;
 }
