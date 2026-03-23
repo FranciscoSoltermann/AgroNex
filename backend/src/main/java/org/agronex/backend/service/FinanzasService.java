@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.agronex.backend.dto.response.FinanzasCampoResponse;
 import org.agronex.backend.dto.response.ResumenCampaniaResponse;
+import org.agronex.backend.dto.response.DetalleInsumoGasto;
 import org.agronex.backend.entity.*;
 import org.agronex.backend.repository.*;
 import org.springframework.stereotype.Service;
@@ -117,6 +118,8 @@ public class FinanzasService {
         List<Actividad> actividades = actividadRepository.findByCampaniaIdCampania(idCampania);
         BigDecimal costoServicios = BigDecimal.ZERO;
         BigDecimal costoInsumos = BigDecimal.ZERO;
+        Map<UUID, DetalleInsumoGasto> detalleMap = new HashMap<>();
+
         for (Actividad a : actividades) {
             costoServicios = costoServicios.add(nz(a.getCostoServicio()));
             BigDecimal ha = hectareasParaCosteoInsumos(a);
@@ -124,9 +127,28 @@ public class FinanzasService {
                 BigDecimal dosis = nz(ai.getDosisHa());
                 BigDecimal precio = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
                         ? ai.getInsumo().getPrecioUnitario() : BigDecimal.ZERO;
-                costoInsumos = costoInsumos.add(dosis.multiply(precio).multiply(ha));
+                BigDecimal costo = dosis.multiply(precio).multiply(ha);
+                BigDecimal cantidad = dosis.multiply(ha);
+                costoInsumos = costoInsumos.add(costo);
+
+                if (ai.getInsumo() != null) {
+                    UUID idIns = ai.getInsumo().getIdInsumo();
+                    if (!detalleMap.containsKey(idIns)) {
+                        detalleMap.put(idIns, DetalleInsumoGasto.builder()
+                                .idInsumo(idIns)
+                                .nombreInsumo(ai.getInsumo().getNombre())
+                                .cantidadTotalUsada(BigDecimal.ZERO)
+                                .precioUnitario(ai.getInsumo().getPrecioUnitario())
+                                .costoTotal(BigDecimal.ZERO)
+                                .build());
+                    }
+                    DetalleInsumoGasto di = detalleMap.get(idIns);
+                    di.setCantidadTotalUsada(di.getCantidadTotalUsada().add(cantidad));
+                    di.setCostoTotal(di.getCostoTotal().add(costo));
+                }
             }
         }
+        List<DetalleInsumoGasto> listaDetalles = new ArrayList<>(detalleMap.values());
 
         List<GastoFijo> gastosCamp = gastoFijoRepository.findByCampania_IdCampania(idCampania);
         BigDecimal gastosFijos = BigDecimal.ZERO;
@@ -177,6 +199,7 @@ public class FinanzasService {
                 .costoInsumosTotal(costoInsumos)
                 .gastosFijosAsignados(gastosFijos)
                 .costoTotal(costoTotal)
+                .detallesInsumos(listaDetalles)
                 .ingresosTotales(ingresos)
                 .quintalesTotales(qqTot)
                 .margenBruto(margen)

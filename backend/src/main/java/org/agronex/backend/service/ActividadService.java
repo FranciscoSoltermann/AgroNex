@@ -90,4 +90,16 @@ public class ActividadService {
                 .map(actividadMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Transactional
+    public void eliminarActividad(UUID idActividad, UUID idUsuarioToken) {
+        Actividad actividad = actividadRepository.findById(idActividad)
+                .orElseThrow(() -> new EntityNotFoundException("Actividad no encontrada"));
+
+        if (!actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("No tenés permiso para eliminar esta actividad");
+        }
+
+        actividadRepository.delete(actividad);
+    }
 }

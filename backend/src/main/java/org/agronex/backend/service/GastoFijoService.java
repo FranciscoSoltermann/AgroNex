@@ -66,4 +66,16 @@ public class GastoFijoService {
                 .map(gastoFijoMapper::toResponse)
                 .collect(java.util.stream.Collectors.toList());
     }
+
+    @Transactional
+    public void eliminarGasto(UUID idGasto, UUID idUsuarioToken) {
+        GastoFijo gastoFijo = gastoFijoRepository.findById(idGasto)
+                .orElseThrow(() -> new EntityNotFoundException("Gasto no encontrado"));
+
+        if (!gastoFijo.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("No tenés permiso para eliminar este gasto");
+        }
+
+        gastoFijoRepository.delete(gastoFijo);
+    }
 }

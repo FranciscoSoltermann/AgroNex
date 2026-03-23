@@ -76,4 +76,15 @@ public class CampoService {
         return stats;
     }
 
+    @Transactional
+    public void eliminarCampo(UUID idCampo, UUID idUsuarioToken) {
+        Campo campo = campoRepository.findById(idCampo)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Campo no encontrado"));
+                
+        if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new org.springframework.security.access.AccessDeniedException("No tenés permiso para eliminar este campo");
+        }
+        
+        campoRepository.delete(campo);
+    }
 }

@@ -24,6 +24,7 @@ public class LoteService {
     private final LoteRepository loteRepository;
     private final CampoRepository campoRepository;
     private final LoteMapper loteMapper;
+    private final AgromonitoringService agromonitoringService;
 
     @Transactional
     public LoteResponse crearLote(LoteRequest request, UUID idUsuarioToken) {
@@ -49,6 +50,14 @@ public class LoteService {
         // 3. MAPPER: Request -> Entity
         Lote nuevoLote = loteMapper.toEntity(request, campo);
 
+        // Si mandaron coordenadas, registramos en la API externa
+        if (request.getCoordenadasGeoJson() != null && !request.getCoordenadasGeoJson().isBlank()) {
+            String polyId = agromonitoringService.registrarPoligono(nuevoLote.getNombre(), request.getCoordenadasGeoJson());
+            if (polyId != null) {
+                nuevoLote.setIdPoligonoAgro(polyId);
+            }
+        }
+
         // 4. GUARDAR
         Lote guardado = loteRepository.save(nuevoLote);
 
@@ -63,5 +72,17 @@ public class LoteService {
                 .stream()
                 .map(loteMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void eliminarLote(UUID idLote, UUID idUsuarioToken) {
+        Lote lote = loteRepository.findById(idLote)
+                .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
+
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("No tenés permiso para eliminar este lote");
+        }
+
+        loteRepository.delete(lote);
     }
 }

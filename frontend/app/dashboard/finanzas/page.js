@@ -147,6 +147,17 @@ export default function FinanzasPage() {
         }
     };
 
+    const handleEliminarGasto = async (idGasto) => {
+        if (!window.confirm("¿Estás seguro que querés eliminar este gasto fijo?")) return;
+        try {
+            await apiClient.delete(`/gastos/${idGasto}`);
+            await fetchData();
+            if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
+        } catch (err) {
+            alert(err.response?.data?.message || "Error al eliminar gasto.");
+        }
+    };
+
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 
     const formatCurrency = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0);
@@ -247,9 +258,21 @@ export default function FinanzasPage() {
                                         <span className="text-white/75">Servicios (actividades)</span>
                                         <span>{formatCurrency(resumenCampania.costoServiciosTotal)}</span>
                                     </li>
-                                    <li className="flex justify-between">
-                                        <span className="text-white/75">Insumos (dosis × Ha)</span>
-                                        <span>{formatCurrency(resumenCampania.costoInsumosTotal)}</span>
+                                    <li className="flex flex-col gap-1.5">
+                                        <div className="flex justify-between">
+                                            <span className="text-white/75">Insumos (dosis × Ha)</span>
+                                            <span>{formatCurrency(resumenCampania.costoInsumosTotal)}</span>
+                                        </div>
+                                        {resumenCampania.detallesInsumos && resumenCampania.detallesInsumos.length > 0 && (
+                                            <div className="pl-3 border-l-2 border-white/10 mt-1 space-y-1">
+                                                {resumenCampania.detallesInsumos.map(ins => (
+                                                    <div key={ins.idInsumo} className="flex justify-between text-[11px] text-white/50 font-medium">
+                                                        <span>• {ins.nombreInsumo} ({formatNum(ins.cantidadTotalUsada, 2)} und)</span>
+                                                        <span>{formatCurrency(ins.costoTotal)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </li>
                                     <li className="flex justify-between">
                                         <span className="text-white/75">Gastos fijos imputados</span>
@@ -446,19 +469,28 @@ export default function FinanzasPage() {
                                 <th className="pb-3 pr-4">Categoría</th>
                                 <th className="pb-3 pr-4">Descripción</th>
                                 <th className="pb-3 pr-4">Campo Asociado</th>
-                                <th className="pb-3 text-right">Importe ($)</th>
+                                <th className="pb-3 text-right pr-4">Importe ($)</th>
+                                <th className="pb-3 text-right"></th>
                             </tr>
                         </thead>
                         <tbody className="text-[13px] text-gray-800">
                             {gastosFiltrados.length === 0 ? (
-                                <tr><td colSpan="5" className="py-6 text-center text-gray-400">No hay historial de gastos fijos para este filtro.</td></tr>
+                                <tr><td colSpan="6" className="py-6 text-center text-gray-400">No hay historial de gastos fijos para este filtro.</td></tr>
                             ) : gastosFiltrados.sort((a,b) => new Date(b.fecha) - new Date(a.fecha)).map(g => (
-                                <tr key={g.idGasto} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
+                                <tr key={g.idGasto} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors group">
                                     <td className="py-3 pr-4 text-gray-500 font-medium whitespace-nowrap">{g.fecha}</td>
                                     <td className="py-3 pr-4 whitespace-nowrap"><span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md font-bold text-[11px]">{g.categoria}</span></td>
                                     <td className="py-3 pr-4 font-bold max-w-[200px] truncate" title={g.descripcion}>{g.descripcion || '-'}</td>
                                     <td className="py-3 pr-4 text-gray-500">{campos.find(c => c.idCampo === g.idCampo)?.nombre || '-'}</td>
-                                    <td className="py-3 font-black text-orange-500 text-right whitespace-nowrap">{formatCurrency(g.montoTotal)}</td>
+                                    <td className="py-3 pr-4 font-black text-orange-500 text-right whitespace-nowrap">{formatCurrency(g.montoTotal)}</td>
+                                    <td className="py-3 text-right relative">
+                                        <button 
+                                            onClick={() => handleEliminarGasto(g.idGasto)}
+                                            className="text-[10px] font-bold text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                        >
+                                            Eliminar
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

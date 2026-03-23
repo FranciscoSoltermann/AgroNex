@@ -48,4 +48,11 @@ public class ActividadController {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(actividadService.listarMisActividades(idUsuario));
     }
+
+    @DeleteMapping("/{idActividad}")
+    public ResponseEntity<Void> eliminarActividad(@PathVariable UUID idActividad, @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        actividadService.eliminarActividad(idActividad, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
 }

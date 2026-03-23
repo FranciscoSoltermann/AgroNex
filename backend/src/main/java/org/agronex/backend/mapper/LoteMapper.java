@@ -14,6 +14,7 @@ public class LoteMapper {
         return Lote.builder()
                 .nombre(request.getNombre())
                 .superficie(request.getSuperficie())
+                .coordenadasGeoJson(request.getCoordenadasGeoJson())
                 .campo(campo)
                 .build();
     }
@@ -26,6 +27,8 @@ public class LoteMapper {
                 .superficie(lote.getSuperficie())
                 .idCampo(lote.getCampo() != null ? lote.getCampo().getIdCampo() : null)
                 .nombreCampo(lote.getCampo() != null ? lote.getCampo().getNombre() : "General")
+                .idPoligonoAgro(lote.getIdPoligonoAgro())
+                .coordenadasGeoJson(lote.getCoordenadasGeoJson())
                 .build();
     }
 }

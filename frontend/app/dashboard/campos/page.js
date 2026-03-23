@@ -3,6 +3,8 @@ import SelectorUbicacion from "@/components/SelectorUbicacion";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
+import dynamic from "next/dynamic";
+const LoteDrawer = dynamic(() => import('@/components/LoteDrawer'), { ssr: false });
 import {
     Plus, MapPin, Loader2, AlertCircle, MoreVertical,
     LayoutGrid, List, CheckCircle2, AlertTriangle, X
@@ -32,7 +34,7 @@ export default function CamposPage() {
     // Modal nuevo lote
     const [showModalLote, setShowModalLote] = useState(false);
     const [campoSeleccionado, setCampoSeleccionado] = useState(null);
-    const [formLote, setFormLote] = useState({ nombre: "", superficie: "1" });
+    const [formLote, setFormLote] = useState({ nombre: "", superficie: "", coordenadasGeoJson: "" });
 
     const fetchData = useCallback(async (uid) => {
         try {
@@ -120,6 +122,12 @@ export default function CamposPage() {
 
     const handleCrearLote = async (e) => {
         e.preventDefault();
+        
+        if (!formLote.coordenadasGeoJson) {
+            setSubmitError("Debes dibujar el polígono del lote en el mapa.");
+            return;
+        }
+
         setSubmitLoading(true);
         setSubmitError(null);
         try {
@@ -127,9 +135,10 @@ export default function CamposPage() {
                 nombre: formLote.nombre,
                 superficie: parseFloat(formLote.superficie),
                 idCampo: campoSeleccionado.idCampo,
+                coordenadasGeoJson: formLote.coordenadasGeoJson || undefined
             });
             setSubmitSuccess("¡Lote creado con éxito!");
-            setFormLote({ nombre: "", superficie: "1" });
+            setFormLote({ nombre: "", superficie: "1", coordenadasGeoJson: "" });
             await fetchData(userId);
             setTimeout(() => { setShowModalLote(false); setSubmitSuccess(null); }, 1500);
         } catch (err) {
@@ -141,6 +150,16 @@ export default function CamposPage() {
             }
         } finally {
             setSubmitLoading(false);
+        }
+    };
+
+    const handleEliminarCampo = async (campo) => {
+        if (!window.confirm(`¿Estás seguro que querés eliminar el campo "${campo.nombre}"?\nEsto eliminará permanentemente todos sus lotes y el historial de progreso asociado. Esta acción NO se puede deshacer.`)) return;
+        try {
+            await apiClient.delete(`/campos/${campo.idCampo}`);
+            await fetchData(userId);
+        } catch (err) {
+            alert(err.response?.data?.message || "Ocurrió un error al eliminar el campo.");
         }
     };
 
@@ -227,8 +246,9 @@ export default function CamposPage() {
                                     setShowModalLote(true);
                                     setSubmitError(null);
                                     setSubmitSuccess(null);
-                                    setFormLote({ nombre: "", superficie: "1" });
+                                    setFormLote({ nombre: "", superficie: "", coordenadasGeoJson: "" });
                                 }}
+                                onEliminarCampo={handleEliminarCampo}
                             />
                         ))}
 
@@ -306,12 +326,29 @@ export default function CamposPage() {
                         <FormField label="Nombre del lote" required>
                             <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
                         </FormField>
-                        <FormField label="Superficie (Ha)" required>
-                            <div className="relative">
-                                <input type="number" step="0.01" min="0.01" max={campoSeleccionado?.superficieTotal} required value={formLote.superficie} onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="1.00" />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
-                            </div>
+                        <FormField label="Ubicación y Área del Lote (Obligatorio)">
+                            <LoteDrawer 
+                                initialCenter={campoSeleccionado?.latitud && campoSeleccionado?.longitud ? [campoSeleccionado.latitud, campoSeleccionado.longitud] : null}
+                                onDrawComplete={(geoJson, ha) => {
+                                    setFormLote(p => ({
+                                        ...p,
+                                        coordenadasGeoJson: geoJson || "",
+                                        superficie: ha || "1"
+                                    }));
+                                }}
+                            />
                         </FormField>
+
+                        <div className="grid grid-cols-2 gap-3 items-end">
+                            <FormField label="Superficie Calculada" required>
+                                <div className="relative pointer-events-none opacity-80">
+                                    <input type="text" readOnly value={formLote.superficie ? `${formLote.superficie} Ha` : "0.00 Ha"} className={`${INPUT_CLASS} bg-gray-100/50 cursor-not-allowed text-[#2D6A4F] font-black`} />
+                                </div>
+                            </FormField>
+                            <div>
+                                <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight mb-3">La superficie es automática según el área seleccionada.</p>
+                            </div>
+                        </div>
                         {submitError && <ErrorMsg msg={submitError} />}
                         {submitSuccess && <SuccessMsg msg={submitSuccess} />}
                         <SubmitBtn loading={submitLoading} text="Confirmar Lote" />
@@ -322,7 +359,7 @@ export default function CamposPage() {
     );
 }
 
-function CampoCard({ campo, imagen, vista, onAgregarLote }) {
+function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo }) {
     if (vista === "lista") {
         return (
             <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
@@ -363,6 +400,9 @@ function CampoCard({ campo, imagen, vista, onAgregarLote }) {
                     </div>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <button onClick={() => onEliminarCampo && onEliminarCampo(campo)} className="text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
+                        Eliminar
+                    </button>
                     <button onClick={onAgregarLote} className="text-[11px] font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors flex items-center gap-1">
                         Gestionar Lotes →
                     </button>
