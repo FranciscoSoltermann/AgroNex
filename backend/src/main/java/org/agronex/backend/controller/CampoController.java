@@ -41,4 +41,10 @@ public class CampoController {
         return ResponseEntity.ok(campoService.obtenerEstadisticas(idUsuario));
     }
 
+    @DeleteMapping("/{idCampo}")
+    public ResponseEntity<Void> eliminarCampo(@PathVariable UUID idCampo, @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        campoService.eliminarCampo(idCampo, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
 }

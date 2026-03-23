@@ -6,6 +6,9 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
+import dynamic from 'next/dynamic';
+
+const MonitoreoSatelitalViewer = dynamic(() => import('@/components/MonitoreoSatelitalViewer'), { ssr: false });
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
@@ -166,6 +169,28 @@ export default function CiclosPage() {
         }
     };
 
+    const handleEliminarActividad = async (idActividad) => {
+        if (!window.confirm("¿Seguro que querés eliminar esta actividad?")) return;
+        try {
+            await apiClient.delete(`/actividades/${idActividad}`);
+            setActividades((prev) => prev.filter(a => a.idActividad !== idActividad));
+        } catch (err) {
+            alert(err.response?.data?.message || "Error al eliminar actividad.");
+        }
+    };
+
+    const handleEliminarLote = async () => {
+        if (!idLoteSeleccionado) return;
+        if (!window.confirm("¿Estás seguro que querés eliminar este lote y TODAS sus campañas y actividades?")) return;
+        try {
+            await apiClient.delete(`/lotes/${idLoteSeleccionado}`);
+            await fetchData();
+            setIdLoteSeleccionado("");
+        } catch (err) {
+            alert(err.response?.data?.message || "Error al eliminar lote.");
+        }
+    };
+
     const handleCrearCampania = async (e) => {
         e.preventDefault();
         setCampLoading(true);
@@ -263,12 +288,19 @@ export default function CiclosPage() {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end">
+            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end relative">
                 <div className="flex-1 min-w-[200px]">
-                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
-                        <MapPin size={10} className="inline mr-1" />
-                        Lote
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                            <MapPin size={10} className="inline mr-1" />
+                            Lote
+                        </label>
+                        {idLoteSeleccionado && (
+                            <button onClick={handleEliminarLote} className="text-[10px] text-red-400 hover:text-red-500 font-bold flex items-center gap-1">
+                                Eliminar lote
+                            </button>
+                        )}
+                    </div>
                     <select
                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
                         value={idLoteSeleccionado}
@@ -359,6 +391,9 @@ export default function CiclosPage() {
                 </div>
             </div>
 
+            {/* Monitoreo Satelital */}
+            {loteActual && <MonitoreoSatelitalViewer lote={loteActual} />}
+
             <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
                 <div className="space-y-3">
                     <h2 className="text-[14px] font-bold text-gray-900">Actividades de la campaña seleccionada</h2>
@@ -368,7 +403,7 @@ export default function CiclosPage() {
                             No hay actividades para esta campaña.
                         </div>
                     ) : (
-                        actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} />)
+                        actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} onEliminar={handleEliminarActividad} />)
                     )}
                 </div>
 
@@ -466,40 +501,51 @@ export default function CiclosPage() {
                             <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
                                 Insumos / dosis (por Ha)
                             </label>
-                            <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                            <div className="space-y-3 max-h-[280px] overflow-y-auto pr-2">
                                 {formAct.insumos.map((row, idx) => (
-                                    <div key={idx} className="flex gap-1.5 items-center">
-                                        <select
-                                            value={row.idInsumo}
-                                            onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)}
-                                            className={`${SELECT_GREEN} flex-1 min-w-0 text-[11px]`}
-                                        >
-                                            <option value="">Insumo…</option>
-                                            {insumos.map((ins) => (
-                                                <option key={ins.idInsumo} value={ins.idInsumo}>
-                                                    {ins.nombre}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <input
-                                            type="number"
-                                            step="0.0001"
-                                            min="0"
-                                            placeholder="Dosis/Ha"
-                                            value={row.dosisHa}
-                                            onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)}
-                                            className={`${INPUT_GREEN} w-[88px] text-[11px] px-2`}
-                                        />
+                                    <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80">
                                         {formAct.insumos.length > 1 && (
                                             <button
                                                 type="button"
                                                 onClick={() => removeInsumoRow(idx)}
-                                                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20"
-                                                aria-label="Quitar fila"
+                                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100"
+                                                aria-label="Quitar insumo"
                                             >
-                                                <X size={14} />
+                                                <X size={12} strokeWidth={3} />
                                             </button>
                                         )}
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-md bg-[#2D6A4F] flex items-center justify-center text-green-200 shrink-0">
+                                                <FlaskConical size={12} />
+                                            </div>
+                                            <select
+                                                value={row.idInsumo}
+                                                onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)}
+                                                className={`w-full bg-transparent border-none text-[12px] font-black text-white focus:outline-none focus:ring-0 [&>option]:text-gray-900 px-1`}
+                                            >
+                                                <option value="" disabled>Seleccionar insumo...</option>
+                                                {insumos.map((ins) => (
+                                                    <option key={ins.idInsumo} value={ins.idInsumo}>
+                                                        {ins.nombre} {ins.cantidadDisponible != null ? `(Stock: ${ins.cantidadDisponible})` : ''}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="flex items-center justify-between gap-3 pl-8">
+                                            <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
+                                            <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
+                                                <input
+                                                    type="number"
+                                                    step="0.0001"
+                                                    min="0"
+                                                    placeholder="0.00"
+                                                    value={row.dosisHa}
+                                                    onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)}
+                                                    className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20"
+                                                />
+                                                <span className="text-[9px] text-green-200/50 font-bold uppercase">Und</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -639,7 +685,7 @@ export default function CiclosPage() {
     );
 }
 
-function ActividadCard({ actividad }) {
+function ActividadCard({ actividad, onEliminar }) {
     const colorMap = {
         Siembra: { icon: <Sprout size={16} /> },
         Pulverización: { icon: <BugOff size={16} /> },
@@ -653,7 +699,14 @@ function ActividadCard({ actividad }) {
     const insumos = actividad.insumos || [];
 
     return (
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative group">
+            <button 
+                onClick={() => onEliminar && onEliminar(actividad.idActividad)}
+                className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all font-bold text-[10px] flex items-center gap-1 bg-red-50 px-2 py-1 rounded-md"
+                title="Eliminar actividad"
+            >
+                <X size={12} /> Eliminar
+            </button>
             <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white flex-shrink-0">
                     {c.icon}

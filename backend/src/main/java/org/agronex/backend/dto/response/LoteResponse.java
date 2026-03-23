@@ -13,4 +13,6 @@ public class LoteResponse {
     private BigDecimal superficie;
     private UUID idCampo;    // 🔹 UUID
     private String nombreCampo;
+    private String idPoligonoAgro;
+    private String coordenadasGeoJson;
 }

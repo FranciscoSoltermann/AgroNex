@@ -59,6 +59,7 @@ export default function DashboardLayout({ children }) {
         { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
         { name: "Campos/Lotes", path: "/dashboard/campos", icon: <Map size={18} /> },
         { name: "Ciclos de Producción", path: "/dashboard/lotes", icon: <RefreshCw size={18} /> },
+        { name: "Clima y Fenología", path: "/dashboard/clima", icon: <Cloud size={18} /> },
         { name: "Costos", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} /> },
         { name: "Cosechas", path: "/dashboard/actividades", icon: <Sprout size={18} /> },
         { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} /> },

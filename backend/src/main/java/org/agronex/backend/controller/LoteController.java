@@ -36,4 +36,11 @@ public class LoteController {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(loteService.listarMisLotes(idUsuario));
     }
+
+    @DeleteMapping("/{idLote}")
+    public ResponseEntity<Void> eliminarLote(@PathVariable UUID idLote, @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        loteService.eliminarLote(idLote, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -24,6 +25,8 @@ public class ResumenCampaniaResponse {
     private BigDecimal costoInsumosTotal;
     private BigDecimal gastosFijosAsignados;
     private BigDecimal costoTotal;
+
+    private List<DetalleInsumoGasto> detallesInsumos; // NEW FIELD PARA GASTOS DETALLADOS
 
     private BigDecimal ingresosTotales;
     private BigDecimal quintalesTotales;

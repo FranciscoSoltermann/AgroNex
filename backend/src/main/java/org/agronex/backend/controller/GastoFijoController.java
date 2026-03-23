@@ -35,4 +35,11 @@ public class GastoFijoController {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(gastoFijoService.listarGastosPersonales(idUsuario));
     }
+
+    @DeleteMapping("/{idGasto}")
+    public ResponseEntity<Void> eliminarGasto(@PathVariable UUID idGasto, @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        gastoFijoService.eliminarGasto(idGasto, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
 }

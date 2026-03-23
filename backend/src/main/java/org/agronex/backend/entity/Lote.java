@@ -33,6 +33,12 @@ public class Lote extends Auditable {
     @Column(name = "superficie", nullable = false, precision = 12, scale = 2)
     private BigDecimal superficie;
 
+    @Column(name = "id_poligono_agro", length = 100)
+    private String idPoligonoAgro;
+
+    @Column(name = "coordenadas_geo_json", columnDefinition = "TEXT")
+    private String coordenadasGeoJson;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_campo")
     private Campo campo;

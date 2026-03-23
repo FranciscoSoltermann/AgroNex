@@ -23,4 +23,6 @@ public class LoteRequest {
 
     @NotNull(message = "El ID del campo es obligatorio")
     private UUID idCampo;
+
+    private String coordenadasGeoJson;
 }
