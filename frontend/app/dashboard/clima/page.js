@@ -6,6 +6,7 @@ import {
     CloudRain, ThermometerSun, Leaf, Clock, 
     Droplets, Loader2, AlertCircle, RefreshCw 
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 export default function ClimaPage() {
     const [campos, setCampos] = useState([]);
@@ -187,7 +188,107 @@ export default function ClimaPage() {
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl p-16 border-2 border-dashed border-gray-200 text-center">
-                    <p className="text-gray-400 font-medium text-sm">Seleccioná un campo y una campaña para ver el reporte biológico.</p>
+                    <p className="text-gray-400 font-medium text-sm">Seleccioná un campo y una campaña para ver el reporte biológico avanzado de GDD.</p>
+                </div>
+            )}
+
+            {/* Pluviómetro Digital - Visible as long as a field is selected */}
+            {seleccion.campoId && (
+                <ModuloLluvias campoId={seleccion.campoId} />
+            )}
+        </div>
+    );
+}
+
+function ModuloLluvias({ campoId }) {
+    const [historial, setHistorial] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [mmManual, setMmManual] = useState("");
+    const [fechaManual, setFechaManual] = useState(new Date().toISOString().split('T')[0]);
+    const [guardando, setGuardando] = useState(false);
+
+    const cargarHistorial = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await apiClient.get(`/clima/campo/${campoId}`);
+            const data = (res.data || [])
+                .filter(r => r.precipitacionesMm > 0)
+                .map(r => ({
+                    fecha: new Date(r.fecha).toLocaleDateString('es-AR', {day: '2-digit', month: 'short'}),
+                    mm: parseFloat(r.precipitacionesMm) || 0
+                }));
+            setHistorial(data.slice(-30));
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    }, [campoId]);
+
+    useEffect(() => {
+        if (campoId) cargarHistorial();
+    }, [campoId, cargarHistorial]);
+
+    const handleGuardarManual = async (e) => {
+        e.preventDefault();
+        setGuardando(true);
+        try {
+            await apiClient.post("/clima", {
+                idCampo: campoId,
+                fecha: fechaManual,
+                precipitacionesMm: parseFloat(mmManual),
+                tempMin: 15,
+                tempMax: 25
+            });
+            setMmManual("");
+            cargarHistorial();
+        } catch (err) {
+            alert("Error guardando el registro de lluvia.");
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-6 animate-in slide-in-from-bottom-2 duration-500">
+            <div className="flex flex-col lg:flex-row items-center justify-between mb-6 gap-4">
+                <div>
+                    <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                        <Droplets size={20} className="text-blue-500" /> Pluviómetro Digital
+                    </h3>
+                    <p className="text-[12px] text-gray-500">Historial de precipitaciones registradas del campo</p>
+                </div>
+                
+                <form onSubmit={handleGuardarManual} className="flex flex-wrap items-end gap-2 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                    <div>
+                        <label className="block text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Cargar Lluvias (mm)</label>
+                        <input type="number" step="0.1" required value={mmManual} onChange={e => setMmManual(e.target.value)} className="w-full sm:w-28 bg-white border border-blue-200 rounded-lg px-3 py-2 text-[13px] font-bold focus:outline-blue-400 placeholder:text-blue-300" placeholder="Ej: 15.5" />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-blue-800 uppercase tracking-widest mb-1">Fecha</label>
+                        <input type="date" required value={fechaManual} onChange={e => setFechaManual(e.target.value)} className="w-full sm:w-36 bg-white border border-blue-200 rounded-lg px-3 py-2 text-[13px] font-bold focus:outline-blue-400 text-blue-900" />
+                    </div>
+                    <button disabled={guardando} type="submit" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2 font-bold text-[13px] transition-colors shadow-lg shadow-blue-500/20">
+                        {guardando ? <Loader2 size={16} className="animate-spin m-auto" /> : 'Guardar mm'}
+                    </button>
+                </form>
+            </div>
+
+            {loading ? (
+                <div className="flex items-center justify-center p-10"><Loader2 className="animate-spin text-blue-400" /></div>
+            ) : historial.length === 0 ? (
+                <div className="text-center p-10 text-gray-400 text-sm font-medium border-2 border-dashed border-gray-100 rounded-xl">No hay registros de lluvias para este campo todavía.</div>
+            ) : (
+                <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={historial} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EFF6FF" />
+                            <XAxis dataKey="fecha" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} dy={10} />
+                            <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
+                            <Tooltip cursor={{ fill: '#EFF6FF' }} contentStyle={{ borderRadius: '12px', border: 'none', fontWeight: 'bold' }} />
+                            <Bar dataKey="mm" name="Lluvia caída (mm)" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
             )}
         </div>

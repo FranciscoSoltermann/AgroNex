@@ -14,4 +14,8 @@ public interface RegistroClimaRepository extends JpaRepository<RegistroClima, UU
     
     // Obtener la lluvia acumulada entre fechas para un campo específico
     List<RegistroClima> findByCampo_IdCampo(UUID idCampo);
+
+    java.util.Optional<RegistroClima> findByCampo_IdCampoAndFecha(UUID idCampo, LocalDate fecha);
+
+    java.util.Optional<RegistroClima> findTopByCampo_IdCampoAndFechaBeforeOrderByFechaDesc(UUID idCampo, LocalDate fecha);
 }

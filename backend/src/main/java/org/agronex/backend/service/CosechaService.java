@@ -25,7 +25,7 @@ public class CosechaService {
     private final CampaniaRepository campaniaRepository;
     private final CosechaMapper cosechaMapper;
 
-    @Transactional(readOnly = true) // <-- Importante optimización
+    @Transactional(readOnly = true)
     public List<CosechaResponse> listarTodas(UUID idUsuario) {
         return cosechaRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idUsuario)
                 .stream()

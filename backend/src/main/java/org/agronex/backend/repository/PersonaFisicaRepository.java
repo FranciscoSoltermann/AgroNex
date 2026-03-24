@@ -7,4 +7,5 @@ import java.util.UUID;
 
 @Repository
 public interface PersonaFisicaRepository extends JpaRepository<PersonaFisica, UUID> {
+	boolean existsByDni(String dni);
 }

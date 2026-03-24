@@ -29,6 +29,20 @@ public class FinanzasService {
         return v != null ? v : BigDecimal.ZERO;
     }
 
+    private static BigDecimal costoLogistica(Cosecha c) {
+        if (c == null || c.getTipoLogistica() == null) {
+            return BigDecimal.ZERO;
+        }
+        String tipo = c.getTipoLogistica().trim().toUpperCase();
+        if ("TERCERIZADO".equals(tipo)) {
+            return nz(c.getFleteTercerizadoCostoTotal());
+        }
+        if ("PROPIO".equals(tipo)) {
+            return nz(c.getFletePropioLitrosCombustible()).multiply(nz(c.getFletePropioPrecioLitro()));
+        }
+        return BigDecimal.ZERO;
+    }
+
     /** Ha usadas para valorizar insumos de una actividad (tratamiento parcial o lote completo). */
     public static BigDecimal hectareasParaCosteoInsumos(Actividad a) {
         if (a.getHectareasTratadas() != null && a.getHectareasTratadas().compareTo(BigDecimal.ZERO) > 0) {
@@ -68,18 +82,22 @@ public class FinanzasService {
         }
 
         Map<UUID, BigDecimal> ingresosPorCampo = new HashMap<>();
+        Map<UUID, BigDecimal> costosLogisticaPorCampo = new HashMap<>();
         for (Cosecha c : cosechas) {
             UUID campoId = c.getCampania().getLote().getCampo().getIdCampo();
             BigDecimal rendimiento = nz(c.getRendimientoTotalQq());
             BigDecimal precio = nz(c.getPrecioVentaUnitarioUsd());
             ingresosPorCampo.put(campoId, ingresosPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(rendimiento.multiply(precio)));
+            costosLogisticaPorCampo.put(campoId,
+                    costosLogisticaPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(costoLogistica(c)));
         }
 
         List<FinanzasCampoResponse> resumenList = new ArrayList<>();
         for (Campo c : campos) {
             UUID id = c.getIdCampo();
             BigDecimal ingresos = ingresosPorCampo.getOrDefault(id, BigDecimal.ZERO);
-            BigDecimal costosVar = costosActividadesPorCampo.getOrDefault(id, BigDecimal.ZERO);
+                BigDecimal costosVar = costosActividadesPorCampo.getOrDefault(id, BigDecimal.ZERO)
+                    .add(costosLogisticaPorCampo.getOrDefault(id, BigDecimal.ZERO));
             BigDecimal fijos = gastosPorCampo.getOrDefault(id, BigDecimal.ZERO);
             BigDecimal margenBruto = ingresos.subtract(costosVar).subtract(fijos);
 
@@ -159,6 +177,7 @@ public class FinanzasService {
         BigDecimal costoTotal = costoServicios.add(costoInsumos).add(gastosFijos);
 
         List<Cosecha> cosechas = cosechaRepository.findByCampaniaIdCampania(idCampania);
+        BigDecimal costoLogisticaTotal = BigDecimal.ZERO;
         BigDecimal qqTot = BigDecimal.ZERO;
         BigDecimal ingresos = BigDecimal.ZERO;
         for (Cosecha c : cosechas) {
@@ -166,7 +185,10 @@ public class FinanzasService {
             BigDecimal p = nz(c.getPrecioVentaUnitarioUsd());
             qqTot = qqTot.add(r);
             ingresos = ingresos.add(r.multiply(p));
+            costoLogisticaTotal = costoLogisticaTotal.add(costoLogistica(c));
         }
+
+        costoTotal = costoTotal.add(costoLogisticaTotal);
 
         BigDecimal margen = ingresos.subtract(costoTotal);
         BigDecimal roi = BigDecimal.ZERO;
@@ -197,6 +219,7 @@ public class FinanzasService {
                 .fechaFin(campania.getFechaFin())
                 .costoServiciosTotal(costoServicios)
                 .costoInsumosTotal(costoInsumos)
+                .costoLogisticaTotal(costoLogisticaTotal)
                 .gastosFijosAsignados(gastosFijos)
                 .costoTotal(costoTotal)
                 .detallesInsumos(listaDetalles)

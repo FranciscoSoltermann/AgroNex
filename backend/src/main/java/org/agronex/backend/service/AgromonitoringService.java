@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -44,6 +43,7 @@ public class AgromonitoringService {
             String body = String.format("{\"name\": \"%s\", \"geo_json\": %s}", name, geoJson);
             HttpEntity<String> entity = new HttpEntity<>(body, headers);
 
+            @SuppressWarnings("rawtypes")
             ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
@@ -66,6 +66,7 @@ public class AgromonitoringService {
             String url = String.format("%s/image/search?polyid=%s&start=%d&end=%d&appid=%s",
                     BASE_URL, polyId, startUnix, endUnix, apiKey);
 
+            @SuppressWarnings("rawtypes")
             ResponseEntity<List> response = restTemplate.getForEntity(url, List.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {

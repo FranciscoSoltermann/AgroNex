@@ -15,6 +15,7 @@ public class InsumoMapper {
                 .precioUnitario(request.getPrecioUnitario())
                 .unidad(request.getUnidad())
                 .cantidad(request.getCantidad())
+            .cantidadInicial(request.getCantidad())
                 .build();
     }
 
@@ -26,6 +27,8 @@ public class InsumoMapper {
                 .precioUnitario(insumo.getPrecioUnitario())
                 .unidad(insumo.getUnidad())
                 .cantidad(insumo.getCantidad())
+                .cantidadInicial(insumo.getCantidadInicial())
+                .alertaStockBajoEnviada(insumo.getAlertaStockBajoEnviada())
                 .idCampo(insumo.getCampo() != null ? insumo.getCampo().getIdCampo() : null)
                 .nombreCampo(insumo.getCampo() != null ? insumo.getCampo().getNombre() : null)
                 .build();

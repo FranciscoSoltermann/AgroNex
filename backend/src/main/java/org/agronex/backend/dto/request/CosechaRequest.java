@@ -30,6 +30,11 @@ public class CosechaRequest {
 
     private String observaciones;
 
+    private String tipoLogistica;
+    private BigDecimal fleteTercerizadoCostoTotal;
+    private BigDecimal fletePropioLitrosCombustible;
+    private BigDecimal fletePropioPrecioLitro;
+
     @NotNull(message = "El ID de la campaña es obligatorio")
     private UUID idCampania;
 }

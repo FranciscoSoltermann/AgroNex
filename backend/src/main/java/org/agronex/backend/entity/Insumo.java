@@ -33,6 +33,13 @@ public class Insumo {
     @Builder.Default
     private BigDecimal cantidad = BigDecimal.ZERO;
 
+    @Column(name = "cantidad_inicial", precision = 12, scale = 2)
+    private BigDecimal cantidadInicial;
+
+    @Column(name = "alerta_stock_bajo_enviada", nullable = false)
+    @Builder.Default
+    private Boolean alertaStockBajoEnviada = Boolean.FALSE;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_campo")
     private Campo campo;

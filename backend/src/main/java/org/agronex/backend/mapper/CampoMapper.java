@@ -1,6 +1,5 @@
 package org.agronex.backend.mapper;
 
-import org.agronex.backend.dto.request.CampoRequest;
 import org.agronex.backend.dto.response.CampoResponse;
 import org.agronex.backend.entity.Campo;
 import org.springframework.stereotype.Component;

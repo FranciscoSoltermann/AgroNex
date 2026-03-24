@@ -23,6 +23,7 @@ public class ResumenCampaniaResponse {
 
     private BigDecimal costoServiciosTotal;
     private BigDecimal costoInsumosTotal;
+    private BigDecimal costoLogisticaTotal;
     private BigDecimal gastosFijosAsignados;
     private BigDecimal costoTotal;
 

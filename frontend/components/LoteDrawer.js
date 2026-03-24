@@ -36,6 +36,13 @@ export default function LoteDrawer({ initialCenter, onDrawComplete }) {
                 }
             }
             onDrawComplete(JSON.stringify(geojson), areaInHectares.toFixed(2));
+        } else if (layerType === 'marker') {
+            const latlng = layer.getLatLng();
+            if (featureGroupRef.current) {
+                featureGroupRef.current.removeLayer(layer); // Remove the marker, only used for fetching
+            }
+            // Emit a special shape indicating "Marker Placed"
+            onDrawComplete("MARKER", { lat: latlng.lat, lng: latlng.lng });
         }
     };
 
@@ -107,7 +114,7 @@ export default function LoteDrawer({ initialCenter, onDrawComplete }) {
             <div className="absolute bottom-2 left-2 right-12 z-[1000] pointer-events-none">
                 <div className="bg-black/60 backdrop-blur-md rounded-lg p-2 text-white border border-white/20">
                     <p className="text-[10px] font-medium leading-tight text-center">
-                        Toca el botón hexágono ⬟ a la derecha para dibujar los bordes. El área se calculará automáticamente.
+                        Toca el hexágono ⬟ para dibujar manualmente el lote.
                     </p>
                 </div>
             </div>

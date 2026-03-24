@@ -39,6 +39,18 @@ public class Cosecha extends Auditable {
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
 
+    @Column(name = "tipo_logistica", length = 20)
+    private String tipoLogistica;
+
+    @Column(name = "flete_tercerizado_costo_total", precision = 12, scale = 2)
+    private BigDecimal fleteTercerizadoCostoTotal;
+
+    @Column(name = "flete_propio_litros_combustible", precision = 10, scale = 2)
+    private BigDecimal fletePropioLitrosCombustible;
+
+    @Column(name = "flete_propio_precio_litro", precision = 10, scale = 2)
+    private BigDecimal fletePropioPrecioLitro;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_campania")
     private Campania campania;

@@ -20,6 +20,10 @@ public class CosechaResponse {
     private BigDecimal humedadPorcentaje;
     private BigDecimal precioVentaUnitarioUsd;
     private String observaciones;
+    private String tipoLogistica;
+    private BigDecimal fleteTercerizadoCostoTotal;
+    private BigDecimal fletePropioLitrosCombustible;
+    private BigDecimal fletePropioPrecioLitro;
     private OffsetDateTime creadoEn;
     private UUID idCampania;
 }

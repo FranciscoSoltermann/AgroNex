@@ -16,11 +16,8 @@ export const Navbar = () => {
 
             {/* BOTONES DERECHOS */}
             <div className="flex items-center space-x-6">
-                <Link href="#soluciones" className="text-sm font-bold text-green-800 hover:text-green-900 transition-colors">
-                    Soluciones
-                </Link>
                 <Link
-                    href="#suscripciones"
+                    href="/subscriptions"
                     className="bg-green-800 hover:bg-green-900 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md active:scale-95"
                 >
                     Suscripciones

@@ -12,6 +12,8 @@ import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 
+import apiClient from '@/lib/api-client';
+
 function getWeatherInfo(code, iconSize = 70) {
     if (code === 0) return { icon: <Sun size={iconSize} className="text-yellow-300" />, desc: 'Despejado' };
     if ([1, 2, 3].includes(code)) return { icon: <CloudSun size={iconSize} className="text-white/80" />, desc: 'Nublado' };
@@ -44,7 +46,7 @@ function dayLabelEs(isoDate) {
     }
 }
 
-function ClimaSlide({ lat, lon, nombre, mode }) {
+function ClimaSlide({ idCampo, lat, lon, nombre, mode }) {
     const [current, setCurrent] = useState(null);
     const [daily, setDaily] = useState(null);
     const [hourlyProb, setHourlyProb] = useState(null);
@@ -84,6 +86,26 @@ function ClimaSlide({ lat, lon, nombre, mode }) {
                 setDaily(data.daily ?? null);
                 const hp = data.hourly?.precipitation_probability;
                 setHourlyProb(Array.isArray(hp) && hp.length ? hp[0] : null);
+
+                // Guardar/Actualizar el registro del clima en el backend para este campo
+                const fechaDiaria = data.daily?.time?.[0];
+                const tempMin = data.daily?.temperature_2m_min?.[0];
+                const tempMax = data.daily?.temperature_2m_max?.[0];
+                const precipitacion = data.daily?.precipitation_sum?.[0];
+
+                if (idCampo && fechaDiaria && tempMin != null && tempMax != null) {
+                    try {
+                        await apiClient.post("/clima", {
+                            idCampo: idCampo,
+                            fecha: fechaDiaria,
+                            tempMin: tempMin,
+                            tempMax: tempMax,
+                            precipitacionesMm: precipitacion ?? 0
+                        });
+                    } catch {
+                        // Evitamos romper la experiencia visual si falla persistencia de clima.
+                    }
+                }
             } catch (err) {
                 console.error('Error cargando clima de:', nombre, err);
                 setCurrent(null);
@@ -95,7 +117,7 @@ function ClimaSlide({ lat, lon, nombre, mode }) {
         };
         if (lat != null && lon != null) fetchWeather();
         else setLoading(false);
-    }, [lat, lon, nombre]);
+    }, [idCampo, lat, lon, nombre]);
 
     if (loading) {
         return (
@@ -330,6 +352,7 @@ export default function ClimaCarrusel({ campos = [] }) {
                         campos.map((campo) => (
                             <SwiperSlide key={campo.idCampo || campo.id}>
                                 <ClimaSlide
+                                    idCampo={campo.idCampo || campo.id}
                                     lat={campo.latitud}
                                     lon={campo.longitud}
                                     nombre={campo.nombre}

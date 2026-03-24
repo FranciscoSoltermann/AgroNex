@@ -7,4 +7,5 @@ import java.util.UUID;
 
 @Repository
 public interface PersonaJuridicaRepository extends JpaRepository<PersonaJuridica, UUID> {
+	boolean existsByCuit(String cuit);
 }

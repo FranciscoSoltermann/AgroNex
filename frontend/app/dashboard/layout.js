@@ -1,20 +1,22 @@
 "use client";
 
-import { Sprout, Clover, Box } from 'lucide-react';
+import { Box } from 'lucide-react';
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import apiClient from "@/lib/api-client";
 import {
     LayoutDashboard, Map, RefreshCw, CircleDollarSign, Wheat, Settings,
-    LogOut, Leaf, Search, Cloud, Bell, CheckCircle2
+    LogOut, Cloud, Sparkles, Activity
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import NotificationBell from "@/components/notifications/NotificationBell";
+import SiteFooter from "@/components/layout/SiteFooter";
 
 export default function DashboardLayout({ children }) {
     const pathname = usePathname();
     const router = useRouter();
     const [userName, setUserName] = useState("Usuario");
-    const [search, setSearch] = useState("");
 
     useEffect(() => {
         const displayNameFromUser = (user) => {
@@ -37,7 +39,33 @@ export default function DashboardLayout({ children }) {
 
         const syncUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            setUserName(displayNameFromUser(user));
+            if (user) {
+                try {
+                    const { data: { session } } = await supabase.auth.getSession();
+
+                    // Si todavía no hay sesión/token, no intentamos validar contra backend.
+                    if (!session?.access_token) {
+                        setUserName(displayNameFromUser(user));
+                        return;
+                    }
+
+                    // Verificamos si realmente el usuario está registrado en nuestro backend.
+                    const res = await apiClient.get("/usuarios/me/check", { timeout: 4000 });
+                    const data = res?.data;
+                    if (data && data.registrado === false) {
+                        alert("Acceso denegado: este correo de Google no existe en nuestros registros. Por favor, regístrese primero.");
+                        await supabase.auth.signOut();
+                        router.push("/login");
+                        return;
+                    }
+                } catch (err) {
+                    // Backend apagado o red caída: no bloqueamos la UI del dashboard.
+                    if (process.env.NODE_ENV === "development") {
+                        console.warn("No se pudo validar registro contra backend", err?.message || err);
+                    }
+                }
+                setUserName(displayNameFromUser(user));
+            }
         };
 
         syncUser();
@@ -47,7 +75,7 @@ export default function DashboardLayout({ children }) {
         });
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [router]);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -61,8 +89,9 @@ export default function DashboardLayout({ children }) {
         { name: "Ciclos de Producción", path: "/dashboard/lotes", icon: <RefreshCw size={18} /> },
         { name: "Clima y Fenología", path: "/dashboard/clima", icon: <Cloud size={18} /> },
         { name: "Costos", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} /> },
-        { name: "Cosechas", path: "/dashboard/actividades", icon: <Sprout size={18} /> },
         { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} /> },
+        { name: "Analítica Comparativa", path: "/dashboard/analitica", icon: <Activity size={18} /> },
+        { name: "AgroNex AI", path: "/dashboard/ia", icon: <Sparkles size={18} /> },
         { name: "Configuración", path: "/dashboard/settings", icon: <Settings size={18} /> },
     ];
 
@@ -130,6 +159,7 @@ export default function DashboardLayout({ children }) {
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header className="h-14 bg-white border-b border-gray-100 flex items-center justify-end px-6 flex-shrink-0">
                     <div className="flex items-center gap-2">
+                        <NotificationBell />
                         <p className="text-sm font-semibold text-gray-700">
                             Bienvenido, {userName}
                         </p>
@@ -137,8 +167,9 @@ export default function DashboardLayout({ children }) {
                 </header>
 
                 {/* Página */}
-                <main className="flex-1 overflow-y-auto p-6">
-                    {children}
+                <main className="flex-1 overflow-y-auto p-6 flex flex-col">
+                    <div className="flex-1">{children}</div>
+                    <SiteFooter compact />
                 </main>
             </div>
         </div>

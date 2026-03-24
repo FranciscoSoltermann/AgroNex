@@ -45,6 +45,10 @@ export default function FinanzasPage() {
         rendimientoTotalQq: "",
         precioVentaUnitarioUsd: "",
         idCampania: "",
+        tipoLogistica: "NINGUNO",
+        fleteTercerizadoCostoTotal: "",
+        fletePropioLitrosCombustible: "",
+        fletePropioPrecioLitro: "",
     });
     const [cosechaLoading, setCosechaLoading] = useState(false);
     const [cosechaSuccess, setCosechaSuccess] = useState(null);
@@ -129,14 +133,35 @@ export default function FinanzasPage() {
         e.preventDefault();
         setCosechaLoading(true);
         try {
-            await apiClient.post("/cosechas", {
+            const payload = {
                 fecha: formCosecha.fecha,
                 rendimientoTotalQq: parseFloat(formCosecha.rendimientoTotalQq),
                 precioVentaUnitarioUsd: parseFloat(formCosecha.precioVentaUnitarioUsd),
                 idCampania: formCosecha.idCampania,
-            });
+                tipoLogistica: formCosecha.tipoLogistica,
+            };
+
+            if (formCosecha.tipoLogistica === "TERCERIZADO") {
+                payload.fleteTercerizadoCostoTotal = parseFloat(formCosecha.fleteTercerizadoCostoTotal || "0");
+            }
+
+            if (formCosecha.tipoLogistica === "PROPIO") {
+                payload.fletePropioLitrosCombustible = parseFloat(formCosecha.fletePropioLitrosCombustible || "0");
+                payload.fletePropioPrecioLitro = parseFloat(formCosecha.fletePropioPrecioLitro || "0");
+            }
+
+            await apiClient.post("/cosechas", payload);
             setCosechaSuccess("¡Cosecha registrada con éxito!");
-            setFormCosecha(p => ({ ...p, rendimientoTotalQq: "", precioVentaUnitarioUsd: "", idCampania: "" }));
+            setFormCosecha(p => ({
+                ...p,
+                rendimientoTotalQq: "",
+                precioVentaUnitarioUsd: "",
+                idCampania: "",
+                tipoLogistica: "NINGUNO",
+                fleteTercerizadoCostoTotal: "",
+                fletePropioLitrosCombustible: "",
+                fletePropioPrecioLitro: "",
+            }));
             await fetchData();
             if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
             setTimeout(() => setCosechaSuccess(null), 3000);
@@ -240,7 +265,7 @@ export default function FinanzasPage() {
                             </span>
                         </div>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                            <MetricBox label="Costo total / Ha" value={`${formatCurrency(resumenCampania.costoPorHa)}`} sub="Incluye servicios, insumos y gastos fijos a la campaña" />
+                            <MetricBox label="Costo total / Ha" value={`${formatCurrency(resumenCampania.costoPorHa)}`} sub="Incluye servicios, insumos, logística y gastos fijos" />
                             <MetricBox label="Ingresos / Ha" value={`${formatCurrency(resumenCampania.ingresosPorHa)}`} sub="Cosechas registradas" />
                             <MetricBox label="Quintales / Ha" value={`${formatNum(resumenCampania.quintalesPorHa, 3)} qq`} sub="Producción por hectárea" />
                             <MetricBox
@@ -273,6 +298,10 @@ export default function FinanzasPage() {
                                                 ))}
                                             </div>
                                         )}
+                                    </li>
+                                    <li className="flex justify-between">
+                                        <span className="text-white/75">Logística de cosecha</span>
+                                        <span>{formatCurrency(resumenCampania.costoLogisticaTotal)}</span>
                                     </li>
                                     <li className="flex justify-between">
                                         <span className="text-white/75">Gastos fijos imputados</span>
@@ -439,6 +468,32 @@ export default function FinanzasPage() {
                                 <input type="number" step="0.01" max="999999999" required value={formCosecha.precioVentaUnitarioUsd} onChange={e => setFormCosecha(p => ({ ...p, precioVentaUnitarioUsd: e.target.value }))} className={INPUT_CLASS} />
                             </FormField>
                         </div>
+
+                        <FormField label="Tipo de logística">
+                            <select value={formCosecha.tipoLogistica} onChange={e => setFormCosecha(p => ({ ...p, tipoLogistica: e.target.value }))} className={INPUT_CLASS}>
+                                <option value="NINGUNO">Sin costo logístico</option>
+                                <option value="TERCERIZADO">Tercerizado</option>
+                                <option value="PROPIO">Propio</option>
+                            </select>
+                        </FormField>
+
+                        {formCosecha.tipoLogistica === "TERCERIZADO" && (
+                            <FormField label="Costo total flete tercerizado ($)">
+                                <input type="number" step="0.01" max="999999999" required value={formCosecha.fleteTercerizadoCostoTotal} onChange={e => setFormCosecha(p => ({ ...p, fleteTercerizadoCostoTotal: e.target.value }))} className={INPUT_CLASS} />
+                            </FormField>
+                        )}
+
+                        {formCosecha.tipoLogistica === "PROPIO" && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <FormField label="Litros combustible">
+                                    <input type="number" step="0.01" max="999999999" required value={formCosecha.fletePropioLitrosCombustible} onChange={e => setFormCosecha(p => ({ ...p, fletePropioLitrosCombustible: e.target.value }))} className={INPUT_CLASS} />
+                                </FormField>
+                                <FormField label="Precio por litro ($)">
+                                    <input type="number" step="0.01" max="999999999" required value={formCosecha.fletePropioPrecioLitro} onChange={e => setFormCosecha(p => ({ ...p, fletePropioPrecioLitro: e.target.value }))} className={INPUT_CLASS} />
+                                </FormField>
+                            </div>
+                        )}
+
                         {cosechaSuccess && <div className="text-green-600 text-[12px] font-bold">{cosechaSuccess}</div>}
                         <button type="submit" disabled={cosechaLoading || campanias.length === 0} className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#1B4332] transition-all flex items-center justify-center gap-2 mt-4">
                             {cosechaLoading ? <Loader2 size={16} className="animate-spin" /> : <TrendingUp size={16} />}

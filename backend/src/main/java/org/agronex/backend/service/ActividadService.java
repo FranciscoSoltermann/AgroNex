@@ -34,6 +34,7 @@ public class ActividadService {
     private final InsumoRepository insumoRepository;
     private final ActividadInsumoRepository actividadInsumoRepository;
     private final ActividadMapper actividadMapper;
+    private final AlertaUsuarioService alertaUsuarioService;
 
     @Transactional
     public ActividadResponse registrarActividad(ActividadRequest request, UUID idUsuarioToken) {
@@ -62,6 +63,7 @@ public class ActividadService {
         // 2. Procesar los Insumos (si es que enviaron alguno)
         if (request.getInsumos() != null && !request.getInsumos().isEmpty()) {
             List<ActividadInsumo> vinculos = new ArrayList<>();
+            BigDecimal superficieBase = request.getHectareasTratadas() != null ? request.getHectareasTratadas() : campania.getLote().getSuperficie();
 
             for (DetalleInsumoRequest detalle : request.getInsumos()) {
                 Insumo insumo = insumoRepository.findById(detalle.getIdInsumo())
@@ -72,6 +74,38 @@ public class ActividadService {
                 vinculo.setActividad(guardada);
                 vinculo.setInsumo(insumo);
                 vinculo.setDosisHa(detalle.getDosisHa());
+
+                // Descontar inventario real
+                if (insumo.getCantidad() != null && detalle.getDosisHa() != null && superficieBase != null) {
+                    BigDecimal stockAnterior = insumo.getCantidad();
+                    BigDecimal cantidadUsada = detalle.getDosisHa().multiply(superficieBase);
+                    BigDecimal nuevoStock = stockAnterior.subtract(cantidadUsada);
+                    if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) nuevoStock = BigDecimal.ZERO;
+
+                    BigDecimal stockBase = insumo.getCantidadInicial();
+                    if (stockBase == null || stockBase.compareTo(BigDecimal.ZERO) <= 0) {
+                        stockBase = stockAnterior;
+                        insumo.setCantidadInicial(stockBase);
+                    }
+
+                    insumo.setCantidad(nuevoStock);
+                    BigDecimal umbralCritico = stockBase.multiply(new BigDecimal("0.20"));
+                    boolean cruzoUmbral = stockAnterior.compareTo(umbralCritico) > 0 && nuevoStock.compareTo(umbralCritico) <= 0;
+                    boolean alertaYaEnviada = Boolean.TRUE.equals(insumo.getAlertaStockBajoEnviada());
+
+                    if (cruzoUmbral && !alertaYaEnviada) {
+                        alertaUsuarioService.enviarAlertaStockInsumos(
+                                campania.getLote().getCampo().getUsuario(),
+                                "Alerta de Stock Crítico: " + insumo.getNombre(),
+                                "Atención: se registró consumo que dejó el insumo '" + insumo.getNombre() + "' en o por debajo del 20% del stock inicial. "
+                                        + "Stock inicial: " + stockBase + " " + insumo.getUnidad() + ". "
+                                        + "Stock actual: " + nuevoStock + " " + insumo.getUnidad() + "."
+                        );
+                        insumo.setAlertaStockBajoEnviada(Boolean.TRUE);
+                    }
+
+                    insumoRepository.save(insumo);
+                }
 
                 vinculos.add(vinculo);
             }
