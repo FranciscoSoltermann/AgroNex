@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 const LoteDrawer = dynamic(() => import('@/components/LoteDrawer'), { ssr: false });
 import {
     Plus, MapPin, Loader2, AlertCircle, MoreVertical,
-    LayoutGrid, List, CheckCircle2, AlertTriangle, X
+    LayoutGrid, List, CheckCircle2, AlertTriangle, X, Scan
 } from "lucide-react";
 
 const IMAGES = [
@@ -35,7 +35,7 @@ export default function CamposPage() {
     const [showModalLote, setShowModalLote] = useState(false);
     const [campoSeleccionado, setCampoSeleccionado] = useState(null);
     const [formLote, setFormLote] = useState({ nombre: "", superficie: "", coordenadasGeoJson: "" });
-
+    
     const fetchData = useCallback(async (uid) => {
         try {
             const timestamp = new Date().getTime();
@@ -114,7 +114,13 @@ export default function CamposPage() {
             setTimeout(() => setShowModalCampo(false), 1500);
     
         } catch (err) {
-            setSubmitError("Error al conectar con el servidor.");
+            let errMsg = "Error al conectar con el servidor.";
+            const data = err.response?.data;
+            if (typeof data === 'string') errMsg = data;
+            else if (data?.error) errMsg = data.error;
+            else if (data?.message) errMsg = data.message;
+            else if (data && typeof data === 'object') Object.values(data).forEach(v => { if (typeof v === 'string') errMsg = v; });
+            setSubmitError(errMsg);
         } finally {
             setSubmitLoading(false);
         }
@@ -326,18 +332,27 @@ export default function CamposPage() {
                         <FormField label="Nombre del lote" required>
                             <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
                         </FormField>
-                        <FormField label="Ubicación y Área del Lote (Obligatorio)">
-                            <LoteDrawer 
-                                initialCenter={campoSeleccionado?.latitud && campoSeleccionado?.longitud ? [campoSeleccionado.latitud, campoSeleccionado.longitud] : null}
-                                onDrawComplete={(geoJson, ha) => {
-                                    setFormLote(p => ({
-                                        ...p,
-                                        coordenadasGeoJson: geoJson || "",
-                                        superficie: ha || "1"
-                                    }));
-                                }}
-                            />
-                        </FormField>
+
+                        {!formLote.coordenadasGeoJson && (
+                            <FormField label="Dibujar Manualmente">
+                                <LoteDrawer 
+                                    initialCenter={campoSeleccionado?.latitud && campoSeleccionado?.longitud ? [campoSeleccionado.latitud, campoSeleccionado.longitud] : null}
+                                    onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
+                                        setFormLote(p => ({
+                                            ...p,
+                                            coordenadasGeoJson: geoJsonOrMarker || "",
+                                            superficie: haOrCoords || "1"
+                                        }));
+                                    }}
+                                />
+                            </FormField>
+                        )}
+
+                        {formLote.coordenadasGeoJson && (
+                            <div className="bg-green-50 text-green-700 text-xs font-bold p-3 rounded-lg border border-green-200">
+                                ✓ Lote delimitado correctamente en el mapa.
+                            </div>
+                        )}
 
                         <div className="grid grid-cols-2 gap-3 items-end">
                             <FormField label="Superficie Calculada" required>

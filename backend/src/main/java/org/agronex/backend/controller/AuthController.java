@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -19,6 +20,12 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
+
+    @PostMapping("/registro/validar-disponibilidad")
+    public ResponseEntity<Map<String, String>> validarDisponibilidad(@RequestBody Map<String, String> body) {
+        authService.validarDisponibilidadRegistro(body.get("email"), body.get("dni"), body.get("cuit"));
+        return ResponseEntity.ok(Map.of("message", "Disponibilidad validada."));
+    }
 
     @PostMapping("/registro/fisica/{supabaseId}")
     public ResponseEntity<PersonaFisicaResponse> registrarPersonaFisica(

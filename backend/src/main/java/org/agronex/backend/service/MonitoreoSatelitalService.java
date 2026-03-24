@@ -16,6 +16,8 @@ import org.agronex.backend.repository.MonitoreoSatelitalRepository;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +26,7 @@ public class MonitoreoSatelitalService {
     private final MonitoreoSatelitalRepository monitoreoRepository;
     private final LoteRepository loteRepository;
     private final AgromonitoringService agromonitoringService;
+    private final AlertaUsuarioService alertaUsuarioService;
 
     @Transactional
     public MonitoreoSatelitalResponse registrarMonitoreo(MonitoreoSatelitalRequest request, UUID idUsuarioToken) {
@@ -42,6 +45,33 @@ public class MonitoreoSatelitalService {
                 .nubosidad(request.getNubosidad())
                 .tipoSatelite(request.getTipoSatelite())
                 .build();
+
+        List<MonitoreoSatelital> prev = monitoreoRepository.findByLote_IdLoteOrderByFechaImagenDesc(lote.getIdLote());
+        if (!prev.isEmpty()) {
+            MonitoreoSatelital ultimo = prev.get(0);
+            if (ultimo.getValorNdvi() != null && request.getValorNdvi() != null) {
+                BigDecimal ndviAnterior = ultimo.getValorNdvi();
+                BigDecimal ndviActual = request.getValorNdvi();
+                BigDecimal caidaAbsoluta = ndviAnterior.subtract(ndviActual);
+                BigDecimal caidaRelativa = BigDecimal.ZERO;
+                if (ndviAnterior.compareTo(BigDecimal.ZERO) > 0) {
+                    caidaRelativa = caidaAbsoluta.divide(ndviAnterior, 4, RoundingMode.HALF_UP);
+                }
+
+                if (caidaAbsoluta.compareTo(new BigDecimal("0.15")) >= 0
+                        || caidaRelativa.compareTo(new BigDecimal("0.20")) >= 0) {
+                    alertaUsuarioService.enviarAlertaCaidaNdvi(
+                            lote.getCampo().getUsuario(),
+                            "Alerta Crítica: Caída de NDVI en " + lote.getNombre(),
+                            "Se detectó una caída brusca del índice vegetativo (NDVI) en el lote " + lote.getNombre()
+                                    + ": pasó de " + ndviAnterior + " a " + ndviActual
+                                    + " (caída absoluta: " + caidaAbsoluta
+                                    + ", caída relativa: " + caidaRelativa.multiply(new BigDecimal("100")).setScale(1, RoundingMode.HALF_UP) + "%)."
+                                    + " Recomendamos inspección a campo."
+                    );
+                }
+            }
+        }
 
         MonitoreoSatelital guardado = monitoreoRepository.save(ms);
         return mapToResponse(guardado);
@@ -98,8 +128,6 @@ public class MonitoreoSatelitalService {
                 long dt = ((Number) imgData.get("dt")).longValue();
                 java.time.LocalDate fecha = java.time.Instant.ofEpochSecond(dt).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
 
-                @SuppressWarnings("unchecked")
-                java.util.Map<String, Object> statsData = (java.util.Map<String, Object>) imgData.get("stats");
                 String ndviUrl = null;
                 if (imgData.get("image") != null) {
                     @SuppressWarnings("unchecked")

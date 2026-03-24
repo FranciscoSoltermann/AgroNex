@@ -18,6 +18,8 @@ public class InsumoResponse {
     private BigDecimal precioUnitario;
     private UnidadMedida unidad;
     private BigDecimal cantidad;
+    private BigDecimal cantidadInicial;
+    private Boolean alertaStockBajoEnviada;
     private UUID idCampo;
     private String nombreCampo;
 }

@@ -18,6 +18,7 @@ import org.agronex.backend.repository.RegistroClimaRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -29,6 +30,7 @@ public class ClimaService {
     private final RegistroClimaRepository climaRepository;
     private final CampoRepository campoRepository;
     private final CampaniaRepository campaniaRepository;
+    private final AlertaUsuarioService alertaUsuarioService;
 
     @Transactional
     public RegistroClimaResponse registrarClima(RegistroClimaRequest request, UUID idUsuarioToken) {
@@ -39,17 +41,65 @@ public class ClimaService {
             throw new AccessDeniedException("No tenés permiso para registrar clima en este campo.");
         }
 
-        RegistroClima registro = RegistroClima.builder()
-                .campo(campo)
-                .fecha(request.getFecha())
-                .tempMin(request.getTempMin())
-                .tempMax(request.getTempMax())
-                .precipitacionesMm(request.getPrecipitacionesMm())
-                .build();
+        RegistroClima registro = climaRepository.findByCampo_IdCampoAndFecha(campo.getIdCampo(), request.getFecha())
+                .orElse(RegistroClima.builder()
+                        .campo(campo)
+                        .fecha(request.getFecha())
+                        .build());
+
+        registro.setTempMin(request.getTempMin());
+        registro.setTempMax(request.getTempMax());
+        registro.setPrecipitacionesMm(request.getPrecipitacionesMm());
+
+        evaluarAlertaClimaticaInminente(campo, registro);
 
         RegistroClima guardado = climaRepository.save(registro);
 
         return mapToResponse(guardado);
+    }
+
+    private void evaluarAlertaClimaticaInminente(Campo campo, RegistroClima actual) {
+        List<String> motivos = new ArrayList<>();
+
+        if (actual.getPrecipitacionesMm() != null
+                && actual.getPrecipitacionesMm().compareTo(new BigDecimal("40")) >= 0) {
+            motivos.add("precipitaciones intensas (" + actual.getPrecipitacionesMm() + " mm)");
+        }
+
+        if (actual.getTempMax() != null && actual.getTempMax().compareTo(new BigDecimal("38")) >= 0) {
+            motivos.add("temperatura máxima extrema (" + actual.getTempMax() + " C)");
+        }
+
+        if (actual.getTempMin() != null && actual.getTempMin().compareTo(new BigDecimal("2")) <= 0) {
+            motivos.add("riesgo de helada por temperatura mínima (" + actual.getTempMin() + " C)");
+        }
+
+        climaRepository.findTopByCampo_IdCampoAndFechaBeforeOrderByFechaDesc(campo.getIdCampo(), actual.getFecha())
+                .ifPresent(previo -> {
+                    if (previo.getTempMax() != null && actual.getTempMax() != null
+                            && previo.getTempMax().subtract(actual.getTempMax()).abs().compareTo(new BigDecimal("8")) >= 0) {
+                        motivos.add("cambio brusco de temperatura máxima respecto al último registro");
+                    }
+
+                    if (previo.getTempMin() != null && actual.getTempMin() != null
+                            && previo.getTempMin().subtract(actual.getTempMin()).abs().compareTo(new BigDecimal("8")) >= 0) {
+                        motivos.add("cambio brusco de temperatura mínima respecto al último registro");
+                    }
+
+                    if (previo.getPrecipitacionesMm() != null && actual.getPrecipitacionesMm() != null
+                            && actual.getPrecipitacionesMm().subtract(previo.getPrecipitacionesMm()).compareTo(new BigDecimal("20")) >= 0) {
+                        motivos.add("aumento brusco de precipitaciones respecto al último registro");
+                    }
+                });
+
+        if (!motivos.isEmpty()) {
+            alertaUsuarioService.enviarAlertaCambioClimatico(
+                campo.getUsuario(),
+                    "Alerta Climática Inminente en " + campo.getNombre(),
+                    "Se detectó un posible cambio climático inminente para el campo " + campo.getNombre() + " (" + actual.getFecha() + "). "
+                            + "Motivos: " + String.join(", ", motivos) + "."
+            );
+        }
     }
 
     @Transactional(readOnly = true)

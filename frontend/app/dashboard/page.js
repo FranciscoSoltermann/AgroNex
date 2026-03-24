@@ -6,7 +6,7 @@ import apiClient from "@/lib/api-client";
 import {
     Loader2, TrendingUp, Grid2x2, DollarSign, RefreshCw,
     Sprout, Droplets, FlameKindling, Receipt, ChevronRight,
-    Plus, Wifi, FlaskConical, BugOff, Wheat
+    Plus, Wifi, FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers
 } from "lucide-react";
 
 const CHART_DATA = [

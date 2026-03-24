@@ -5,7 +5,7 @@ import { Navbar } from "../../components/layout/Navbar";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight, Chrome } from "lucide-react";
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -24,6 +24,42 @@ export default function AuthPage() {
 
     useEffect(() => { setError(null); }, [isLogin]);
 
+    const resolveAuthError = (err, fallback = "Ocurrió un error inesperado.") => {
+        const data = err?.response?.data;
+
+        if (typeof data === "string" && data.trim()) return data;
+        if (data?.error) return data.error;
+        if (data?.message) return data.message;
+
+        if (data && typeof data === "object") {
+            const firstMessage = Object.values(data).find((value) => typeof value === "string" && value.trim());
+            if (firstMessage) return firstMessage;
+        }
+
+        if (err?.message) return err.message;
+        return fallback;
+    };
+
+    const handleGoogleLogin = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const redirectTo = `${window.location.origin}/dashboard`;
+            const { error: googleError } = await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: { redirectTo },
+            });
+
+            if (googleError) {
+                throw googleError;
+            }
+        } catch (err) {
+            setError(resolveAuthError(err, "No se pudo iniciar sesión con Google."));
+            setLoading(false);
+        }
+    };
+
     const handleAuth = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -34,6 +70,14 @@ export default function AuthPage() {
                 if (loginError) throw new Error("Credenciales incorrectas.");
                 router.push("/dashboard");
             } else {
+                const disponibilidadPayload = tipoUsuario === "FISICA"
+                    ? { email: email.trim(), dni: dni.trim() }
+                    : { email: email.trim(), cuit: cuit.trim() };
+
+                await apiClient.post("/public/auth/registro/validar-disponibilidad", disponibilidadPayload, {
+                    headers: { Authorization: "" }
+                });
+
                 const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim(), password });
                 if (authError) throw new Error(authError.message);
 
@@ -54,7 +98,7 @@ export default function AuthPage() {
                 router.push("/dashboard");
             }
         } catch (err) {
-            setError(err.response?.data?.message || err.message);
+            setError(resolveAuthError(err));
         } finally {
             setLoading(false);
         }
@@ -111,6 +155,19 @@ export default function AuthPage() {
                                 </div>
                                 <button type="submit" disabled={loading} className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white py-4.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 mt-6 flex items-center justify-center gap-2 disabled:opacity-50">
                                     {loading ? "Cargando..." : "Acceder"}<ArrowRight size={14} />
+                                </button>
+                                <div className="flex items-center gap-3 mt-4">
+                                    <div className="h-px flex-1 bg-gray-200"></div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">o</span>
+                                    <div className="h-px flex-1 bg-gray-200"></div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleGoogleLogin}
+                                    disabled={loading}
+                                    className="w-full bg-white border-2 border-gray-200 hover:border-[#2D6A4F] text-gray-800 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 mt-4 flex items-center justify-center gap-2 disabled:opacity-50"
+                                >
+                                    <Chrome size={14} /> Continuar con Google
                                 </button>
                             </form>
                         </div>

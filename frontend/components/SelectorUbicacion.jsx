@@ -21,17 +21,17 @@ export default function SelectorUbicacion({ onSelect }) {
         timerRef.current = setTimeout(async () => {
             setLoading(true);
             try {
-                // Usamos PHOTON (de Komoot), es mucho más rápido y permisivo
-                const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(texto)}&limit=5`;
+                // Usamos Nominatim (OpenStreetMap) debido a bloqueos CORS en Photon
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(texto)}&limit=5`;
                 
                 const res = await fetch(url);
                 const data = await res.json();
 
-                // Photon devuelve un formato GeoJSON, lo mapeamos para que sea fácil de leer
-                const formattedResults = data.features.map(f => ({
-                    nombre: `${f.properties.name || ''} ${f.properties.city || f.properties.state || ''}, ${f.properties.country || ''}`,
-                    lat: f.geometry.coordinates[1],
-                    lon: f.geometry.coordinates[0]
+                // Nominatim devuelve un array de objetos con display_name, lat y lon
+                const formattedResults = data.map(f => ({
+                    nombre: f.display_name,
+                    lat: parseFloat(f.lat),
+                    lon: parseFloat(f.lon)
                 }));
 
                 setResults(formattedResults);

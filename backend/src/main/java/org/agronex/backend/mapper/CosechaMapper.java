@@ -17,6 +17,10 @@ public class CosechaMapper {
                 .humedadPorcentaje(request.getHumedadPorcentaje())
                 .precioVentaUnitarioUsd(request.getPrecioVentaUnitarioUsd())
                 .observaciones(request.getObservaciones())
+                .tipoLogistica(request.getTipoLogistica())
+                .fleteTercerizadoCostoTotal(request.getFleteTercerizadoCostoTotal())
+                .fletePropioLitrosCombustible(request.getFletePropioLitrosCombustible())
+                .fletePropioPrecioLitro(request.getFletePropioPrecioLitro())
                 .campania(campania)
                 .build();
     }
@@ -30,6 +34,10 @@ public class CosechaMapper {
                 .humedadPorcentaje(cosecha.getHumedadPorcentaje())
                 .precioVentaUnitarioUsd(cosecha.getPrecioVentaUnitarioUsd())
                 .observaciones(cosecha.getObservaciones())
+                .tipoLogistica(cosecha.getTipoLogistica())
+                .fleteTercerizadoCostoTotal(cosecha.getFleteTercerizadoCostoTotal())
+                .fletePropioLitrosCombustible(cosecha.getFletePropioLitrosCombustible())
+                .fletePropioPrecioLitro(cosecha.getFletePropioPrecioLitro())
                 .creadoEn(cosecha.getCreadoEn())
                 .idCampania(cosecha.getCampania() != null ? cosecha.getCampania().getIdCampania() : null)
                 .build();

@@ -1,12 +1,10 @@
 package org.agronex.backend.controller;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.CampoRequest;
 import org.agronex.backend.dto.response.CampoResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.CampoService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
