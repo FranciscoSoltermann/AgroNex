@@ -82,7 +82,26 @@ export default function AnaliticaPage() {
 
     const chartData = getChartData();
 
-    if (loading) return <div className="flex items-center justify-center p-20"><Loader2 className="animate-spin text-[#2D6A4F] w-10 h-10" /></div>;
+    if (loading) return (
+        <div className="space-y-6 max-w-6xl mx-auto p-2">
+            <div className="space-y-3">
+                <div className="h-4 w-40 bg-gray-200 rounded-md animate-pulse"></div>
+                <div className="h-8 w-64 bg-gray-200 rounded-md animate-pulse"></div>
+            </div>
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="h-14 bg-gray-100 rounded-xl"></div>
+                    <div className="h-14 bg-gray-100 rounded-xl"></div>
+                    <div className="h-14 bg-gray-100 rounded-xl"></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 max-w-xl mb-6">
+                    <div className="h-24 bg-gray-100 rounded-xl"></div>
+                    <div className="h-24 bg-gray-100 rounded-xl"></div>
+                </div>
+                <div className="h-[300px] w-full bg-gray-50 rounded-xl"></div>
+            </div>
+        </div>
+    );
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -105,7 +124,7 @@ export default function AnaliticaPage() {
                     <div>
                         <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2">Filtro por Campo</label>
                         <select
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:border-[#2D6A4F] focus:outline-none"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/15 transition-all disabled:opacity-50"
                             value={seleccionCampo}
                             onChange={e => { setSeleccionCampo(e.target.value); setSeleccionLote(""); }}
                         >
@@ -117,7 +136,7 @@ export default function AnaliticaPage() {
                     <div>
                         <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2">Filtro por Lote</label>
                         <select
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:border-[#2D6A4F] focus:outline-none disabled:opacity-50"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/15 transition-all disabled:opacity-50"
                             value={seleccionLote}
                             disabled={!seleccionCampo}
                             onChange={e => setSeleccionLote(e.target.value)}
@@ -130,7 +149,7 @@ export default function AnaliticaPage() {
                     <div>
                         <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2">Tipo de Cosecha</label>
                         <select
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:border-[#2D6A4F] focus:outline-none"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/15 transition-all disabled:opacity-50"
                             value={seleccionCultivo}
                             onChange={e => setSeleccionCultivo(e.target.value)}
                         >

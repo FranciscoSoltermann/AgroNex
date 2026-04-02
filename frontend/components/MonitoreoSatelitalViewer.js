@@ -1,10 +1,12 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/lib/api-client';
-import { MapContainer, TileLayer, Polygon, ImageOverlay } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, ImageOverlay, FeatureGroup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import 'leaflet-draw/dist/leaflet.draw.css';
+import { EditControl } from 'react-leaflet-draw';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Loader2, RefreshCw, Satellite } from 'lucide-react';
+import { Loader2, RefreshCw, Satellite, PenTool } from 'lucide-react';
 
 export default function MonitoreoSatelitalViewer({ lote }) {
     const [historial, setHistorial] = useState([]);
@@ -55,6 +57,26 @@ export default function MonitoreoSatelitalViewer({ lote }) {
             alert("No se pudo sincronizar. Validá que el lote tenga polígono.");
         } finally {
             setSyncing(false);
+        }
+    };
+
+    const handleCreated = async (e) => {
+        const { layerType, layer } = e;
+        if (layerType === 'polygon') {
+            const geojson = layer.toGeoJSON();
+            try {
+                setSyncing(true);
+                await apiClient.put(`/lotes/${lote.idLote}/poligono`, {
+                    coordenadasGeoJson: JSON.stringify(geojson)
+                });
+                alert("Polígono guardado exitosamente. Ahora puedes sincronizar NDVI.");
+                window.location.reload();
+            } catch (error) {
+                console.error(error);
+                alert("Error al guardar polígono.");
+            } finally {
+                setSyncing(false);
+            }
         }
     };
 
@@ -141,13 +163,41 @@ export default function MonitoreoSatelitalViewer({ lote }) {
                             )}
                         </MapContainer>
                     ) : (
-                        <div className="h-full w-full bg-[#0a0f16] flex flex-col items-center justify-center p-4 text-center">
-                            <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3">
-                                <Satellite className="w-6 h-6 text-white/20" />
+                        <MapContainer center={[-31.42, -60.84]} zoom={6} scrollWheelZoom={true} style={{ height: '100%', width: '100%' }}>
+                            <TileLayer
+                                url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                                attribution="Tiles &copy; Esri"
+                            />
+                            <FeatureGroup>
+                                <EditControl
+                                  position='topright'
+                                  onCreated={handleCreated}
+                                  draw={{
+                                    rectangle: false,
+                                    polyline: false,
+                                    circle: false,
+                                    circlemarker: false,
+                                    marker: false,
+                                    polygon: {
+                                        allowIntersection: false,
+                                        drawError: { color: '#e1e100', message: '<strong>¡Oh!</strong> no podés cruzar las líneas' },
+                                        shapeOptions: { color: '#10b981' }
+                                    }
+                                  }}
+                                />
+                            </FeatureGroup>
+                            <div className="absolute top-4 left-4 right-16 z-[1000] pointer-events-none">
+                                <div className="bg-[#0a0f16]/90 backdrop-blur-md border border-white/10 rounded-xl p-3 flex items-start gap-3 w-fit shadow-lg max-w-sm pointer-events-auto">
+                                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                        <PenTool className="w-4 h-4 text-emerald-400" />
+                                    </div>
+                                    <div>
+                                        <p className="text-white/90 text-sm font-semibold mb-0.5">Dibujá tu lote</p>
+                                        <p className="text-white/60 text-xs">Usá la herramienta de polígono arriba a la derecha para delimitar tu campo. Al terminar, se guardará y sincronizará con Agromonitoring automáticamente.</p>
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-white/50 text-sm mb-1">Polígono no configurado</p>
-                            <p className="text-white/30 text-xs max-w-xs">Para ver el mapa y sincronizar NDVI, debés registrar las coordenadas GeoJSON al crear el lote.</p>
-                        </div>
+                        </MapContainer>
                     )}
 
                     {/* Timeline slider for images */}

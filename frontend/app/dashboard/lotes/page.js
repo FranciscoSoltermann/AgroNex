@@ -7,6 +7,7 @@ import {
 import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
 import dynamic from 'next/dynamic';
+import { toast } from "sonner";
 
 const MonitoreoSatelitalViewer = dynamic(() => import('@/components/MonitoreoSatelitalViewer'), { ssr: false });
 
@@ -149,6 +150,7 @@ export default function CiclosPage() {
             const res = await apiClient.post("/actividades", payload);
             setActividades((prev) => [res.data, ...prev]);
             setSubmitSuccess("Aplicación registrada correctamente.");
+            toast.success("¡Actividad registrada con éxito!");
             setFormAct((p) => ({
                 ...p,
                 costoServicio: "",
@@ -156,7 +158,7 @@ export default function CiclosPage() {
                 notas: "",
                 insumos: [emptyInsumoRow()],
             }));
-            setTimeout(() => setSubmitSuccess(null), 3500);
+            setTimeout(() => setSubmitSuccess(null), 1500);
         } catch (err) {
             const d = err.response?.data;
             const msg =
@@ -173,6 +175,7 @@ export default function CiclosPage() {
         if (!window.confirm("¿Seguro que querés eliminar esta actividad?")) return;
         try {
             await apiClient.delete(`/actividades/${idActividad}`);
+            toast.success("¡Actividad eliminada!");
             setActividades((prev) => prev.filter(a => a.idActividad !== idActividad));
         } catch (err) {
             alert(err.response?.data?.message || "Error al eliminar actividad.");
@@ -184,6 +187,7 @@ export default function CiclosPage() {
         if (!window.confirm("¿Estás seguro que querés eliminar este lote y TODAS sus campañas y actividades?")) return;
         try {
             await apiClient.delete(`/lotes/${idLoteSeleccionado}`);
+            toast.success("¡Lote y campañas eliminados!");
             await fetchData();
             setIdLoteSeleccionado("");
         } catch (err) {
@@ -207,11 +211,12 @@ export default function CiclosPage() {
             setIdCampaniaActiva(res.data.idCampania);
             setFormAct((p) => ({ ...p, idCampania: res.data.idCampania }));
             setCampSuccess("Campaña creada.");
+            toast.success("¡Campaña iniciada!");
             setFormCampania({ cultivo: "", fechaInicio: "", fechaFin: "", idLote: "" });
             setTimeout(() => {
                 setShowModalCampania(false);
                 setCampSuccess(null);
-            }, 1200);
+            }, 800);
         } catch (err) {
             const d = err.response?.data;
             setCampError(d?.error || d?.message || "Error al crear la campaña.");
@@ -259,8 +264,22 @@ export default function CiclosPage() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" />
+            <div className="space-y-6 max-w-6xl mx-auto p-2">
+                <div className="flex justify-between items-start">
+                    <div className="space-y-3">
+                        <div className="h-4 w-40 bg-gray-200 rounded-md animate-pulse"></div>
+                        <div className="h-8 w-64 bg-gray-200 rounded-md animate-pulse"></div>
+                    </div>
+                </div>
+                <div className="h-24 bg-gray-100 rounded-2xl animate-pulse"></div>
+                <div className="h-16 bg-gray-100 rounded-2xl animate-pulse"></div>
+                <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
+                    <div className="space-y-3">
+                        <div className="h-8 w-48 bg-gray-200 rounded-md animate-pulse"></div>
+                        {[1, 2, 3].map(i => <div key={i} className="h-28 bg-gray-100 rounded-xl animate-pulse" /> )}
+                    </div>
+                    <div className="h-[500px] bg-gray-100/80 rounded-2xl animate-pulse" />
+                </div>
             </div>
         );
     }
@@ -761,11 +780,11 @@ function ActividadCard({ actividad, onEliminar }) {
 }
 
 const INPUT_CLASS =
-    "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white transition-colors placeholder:text-gray-400";
+    "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/15 focus:bg-white transition-all placeholder:text-gray-400";
 const INPUT_GREEN =
-    "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white placeholder:text-green-200/50 focus:outline-none focus:bg-white/20 transition-colors";
+    "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white placeholder:text-green-200/50 focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-emerald-400/50 transition-all";
 const SELECT_GREEN =
-    "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white focus:outline-none focus:bg-white/20 transition-colors [&>option]:text-gray-900";
+    "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-emerald-400/50 transition-all [&>option]:text-gray-900";
 
 function FormField({ label, required, children }) {
     return (

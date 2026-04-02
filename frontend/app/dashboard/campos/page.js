@@ -1,6 +1,7 @@
 "use client";
 import SelectorUbicacion from "@/components/SelectorUbicacion";
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import dynamic from "next/dynamic";
@@ -107,11 +108,12 @@ export default function CamposPage() {
             });
     
             setSubmitSuccess("¡Campo registrado con éxito!");
+            toast.success("¡Campo registrado con éxito!");
             
             // Limpiamos todo
             setFormCampo({ nombre: "", ubicacion: "", superficieTotal: "", latitud: null, longitud: null });
             await fetchData(userId);
-            setTimeout(() => setShowModalCampo(false), 1500);
+            setTimeout(() => setShowModalCampo(false), 800);
     
         } catch (err) {
             let errMsg = "Error al conectar con el servidor.";
@@ -144,9 +146,10 @@ export default function CamposPage() {
                 coordenadasGeoJson: formLote.coordenadasGeoJson || undefined
             });
             setSubmitSuccess("¡Lote creado con éxito!");
+            toast.success("¡Lote creado con éxito!");
             setFormLote({ nombre: "", superficie: "1", coordenadasGeoJson: "" });
             await fetchData(userId);
-            setTimeout(() => { setShowModalLote(false); setSubmitSuccess(null); }, 1500);
+            setTimeout(() => { setShowModalLote(false); setSubmitSuccess(null); }, 800);
         } catch (err) {
             const status = err?.response?.status;
             if (status === 401 || status === 403) {
@@ -163,6 +166,7 @@ export default function CamposPage() {
         if (!window.confirm(`¿Estás seguro que querés eliminar el campo "${campo.nombre}"?\nEsto eliminará permanentemente todos sus lotes y el historial de progreso asociado. Esta acción NO se puede deshacer.`)) return;
         try {
             await apiClient.delete(`/campos/${campo.idCampo}`);
+            toast.success("¡Campo eliminado!");
             await fetchData(userId);
         } catch (err) {
             alert(err.response?.data?.message || "Ocurrió un error al eliminar el campo.");
@@ -170,8 +174,32 @@ export default function CamposPage() {
     };
 
     if (loading) return (
-        <div className="flex items-center justify-center h-full">
-            <Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" />
+        <div className="space-y-6 max-w-6xl mx-auto p-2">
+            {/* Header Skeleton */}
+            <div className="flex justify-between items-start">
+                <div className="space-y-3">
+                    <div className="h-3 w-24 bg-gray-200 rounded-md animate-pulse"></div>
+                    <div className="h-8 w-64 bg-gray-200 rounded-md animate-pulse"></div>
+                    <div className="h-4 w-48 bg-gray-200 rounded-md animate-pulse"></div>
+                </div>
+                <div className="h-10 w-40 bg-gray-200 rounded-xl animate-pulse"></div>
+            </div>
+            {/* Stats Skeleton */}
+            <div className="grid grid-cols-3 gap-4">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="bg-white rounded-2xl p-5 border border-gray-100 flex flex-col gap-3 h-32 animate-pulse">
+                        <div className="h-3 w-28 bg-gray-200 rounded-md"></div>
+                        <div className="h-8 w-20 bg-gray-200 rounded-md"></div>
+                        <div className="h-2 w-full bg-gray-100 rounded-full mt-auto"></div>
+                    </div>
+                ))}
+            </div>
+            {/* Cards Skeleton */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+                {[1, 2, 3].map(i => (
+                    <div key={i} className="h-[280px] bg-gray-100 rounded-2xl animate-pulse"></div>
+                ))}
+            </div>
         </div>
     );
 
@@ -428,7 +456,7 @@ function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo }) {
 }
 
 // ─── Componentes reutilizables ───
-const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white transition-colors placeholder:text-gray-400";
+const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/15 focus:bg-white transition-all placeholder:text-gray-400";
 
 function Modal({ titulo, onClose, children }) {
     return (

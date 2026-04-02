@@ -85,4 +85,22 @@ public class LoteService {
 
         loteRepository.delete(lote);
     }
+
+    @Transactional
+    public LoteResponse actualizarPoligono(UUID idLote, String coordenadasGeoJson, UUID idUsuarioToken) {
+        Lote lote = loteRepository.findById(idLote)
+                .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("No tenés permiso para modificar este lote");
+        }
+        lote.setCoordenadasGeoJson(coordenadasGeoJson);
+        if (coordenadasGeoJson != null && !coordenadasGeoJson.isBlank()) {
+            String polyId = agromonitoringService.registrarPoligono(lote.getNombre(), coordenadasGeoJson);
+            if (polyId != null) {
+                lote.setIdPoligonoAgro(polyId);
+            }
+        }
+        Lote guardado = loteRepository.save(lote);
+        return loteMapper.toResponse(guardado);
+    }
 }

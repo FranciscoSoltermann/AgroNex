@@ -43,4 +43,14 @@ public class LoteController {
         loteService.eliminarLote(idLote, idUsuario);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{idLote}/poligono")
+    public ResponseEntity<LoteResponse> actualizarPoligono(
+            @PathVariable UUID idLote,
+            @RequestBody LoteRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        LoteResponse response = loteService.actualizarPoligono(idLote, request.getCoordenadasGeoJson(), idUsuario);
+        return ResponseEntity.ok(response);
+    }
 }

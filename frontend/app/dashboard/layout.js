@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import {
     LayoutDashboard, Map, RefreshCw, CircleDollarSign, Wheat, Settings,
-    LogOut, Cloud, Sparkles, Activity
+    LogOut, Cloud, Activity
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import NotificationBell from "@/components/notifications/NotificationBell";
@@ -91,7 +91,6 @@ export default function DashboardLayout({ children }) {
         { name: "Costos", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} /> },
         { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} /> },
         { name: "Analítica Comparativa", path: "/dashboard/analitica", icon: <Activity size={18} /> },
-        { name: "AgroNex AI", path: "/dashboard/ia", icon: <Sparkles size={18} /> },
         { name: "Configuración", path: "/dashboard/settings", icon: <Settings size={18} /> },
     ];
 
