@@ -6,6 +6,7 @@ import org.agronex.backend.dto.request.LoteRequest;
 import org.agronex.backend.dto.response.LoteResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.LoteService;
+import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class LoteController {
 
     private final LoteService loteService;
+    private final UsuarioService usuarioService;
 
     @PostMapping
     public ResponseEntity<LoteResponse> crearLote(
@@ -33,7 +35,7 @@ public class LoteController {
     }
     @GetMapping
     public ResponseEntity<List<LoteResponse>> listarMisLotes(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(loteService.listarMisLotes(idUsuario));
     }
 
@@ -47,7 +49,7 @@ public class LoteController {
     @PutMapping("/{idLote}/poligono")
     public ResponseEntity<LoteResponse> actualizarPoligono(
             @PathVariable UUID idLote,
-            @RequestBody LoteRequest request,
+            @Valid @RequestBody LoteRequest request,
             @AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
         LoteResponse response = loteService.actualizarPoligono(idLote, request.getCoordenadasGeoJson(), idUsuario);

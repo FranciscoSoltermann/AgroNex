@@ -6,6 +6,7 @@ import org.agronex.backend.dto.request.GastoFijoRequest;
 import org.agronex.backend.dto.response.GastoFijoResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.GastoFijoService;
+import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,6 +21,7 @@ import java.util.UUID;
 public class GastoFijoController {
 
     private final GastoFijoService gastoFijoService;
+    private final UsuarioService usuarioService;
 
     @PostMapping
     public ResponseEntity<GastoFijoResponse> registrarGasto(
@@ -32,7 +34,7 @@ public class GastoFijoController {
 
     @GetMapping
     public ResponseEntity<java.util.List<GastoFijoResponse>> listMisGastos(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(gastoFijoService.listarGastosPersonales(idUsuario));
     }
 

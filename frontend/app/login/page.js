@@ -5,7 +5,7 @@ import { Navbar } from "../../components/layout/Navbar";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, ArrowRight, Chrome } from "lucide-react";
+import { Mail, Lock, ArrowRight, Globe } from "lucide-react";
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -24,12 +24,17 @@ export default function AuthPage() {
 
     useEffect(() => { setError(null); }, [isLogin]);
 
+    const isUserAlreadyRegisteredError = (err) => {
+        const msg = (err?.message || "").toLowerCase();
+        return msg.includes("user already registered") || msg.includes("already registered");
+    };
+
     const resolveAuthError = (err, fallback = "Ocurrió un error inesperado.") => {
         const data = err?.response?.data;
 
         if (typeof data === "string" && data.trim()) return data;
-        if (data?.error) return data.error;
         if (data?.message) return data.message;
+        if (data?.error) return data.error;
 
         if (data && typeof data === "object") {
             const firstMessage = Object.values(data).find((value) => typeof value === "string" && value.trim());
@@ -67,32 +72,68 @@ export default function AuthPage() {
         try {
             if (isLogin) {
                 const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-                if (loginError) throw new Error("Credenciales incorrectas.");
+                if (loginError) throw loginError;
                 router.push("/dashboard");
             } else {
                 const disponibilidadPayload = tipoUsuario === "FISICA"
                     ? { email: email.trim(), dni: dni.trim() }
                     : { email: email.trim(), cuit: cuit.trim() };
 
-                await apiClient.post("/public/auth/registro/validar-disponibilidad", disponibilidadPayload, {
-                    headers: { Authorization: "" }
-                });
+                await apiClient.post("/public/auth/registro/validar-disponibilidad", disponibilidadPayload);
 
                 const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim(), password });
-                if (authError) throw new Error(authError.message);
+                let session = authData?.session;
 
-                const supabaseId = authData.user?.id;
+                if (authError) {
+                    if (!isUserAlreadyRegisteredError(authError)) {
+                        throw authError;
+                    }
+
+                    const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                        email: email.trim(),
+                        password,
+                    });
+
+                    if (signInErr) {
+                        throw new Error(
+                            "Ese correo ya existe en Supabase. Iniciá sesión con su contraseña original para completar el alta en AgroNex."
+                        );
+                    }
+                    session = signInData?.session;
+                }
+
+                if (!session) {
+                    const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                        email: email.trim(),
+                        password,
+                    });
+                    if (signInErr) {
+                        throw new Error(
+                            "Cuenta creada. Confirme el correo si su proyecto lo exige e inicie sesión para completar el registro en AgroNex."
+                        );
+                    }
+                    session = signInData?.session;
+                }
+                if (!session?.access_token) {
+                    throw new Error("No hay sesión para completar el registro. Intente iniciar sesión.");
+                }
+
+                const registroEstado = await apiClient.get("/usuarios/me/check");
+                if (registroEstado?.data?.registrado === true) {
+                    router.push("/dashboard");
+                    return;
+                }
+
                 const url = tipoUsuario === "FISICA"
-                    ? `/public/auth/registro/fisica/${supabaseId}`
-                    : `/public/auth/registro/juridica/${supabaseId}`;
+                    ? `/public/auth/registro/fisica`
+                    : `/public/auth/registro/juridica`;
 
                 const payload = tipoUsuario === "FISICA"
                     ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim() }
                     : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim() };
 
-                // Limpiamos el header para evitar el 401 en ruta pública
                 await apiClient.post(url, payload, {
-                    headers: { Authorization: '' }
+                    headers: { Authorization: `Bearer ${session.access_token}` },
                 });
 
                 router.push("/dashboard");
@@ -167,7 +208,7 @@ export default function AuthPage() {
                                     disabled={loading}
                                     className="w-full bg-white border-2 border-gray-200 hover:border-[#2D6A4F] text-gray-800 py-3.5 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 mt-4 flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
-                                    <Chrome size={14} /> Continuar con Google
+                                    <Globe size={14} /> Continuar con Google
                                 </button>
                             </form>
                         </div>

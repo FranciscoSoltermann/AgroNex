@@ -5,8 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.agronex.backend.dto.request.InsumoRequest;
 import org.agronex.backend.dto.response.InsumoResponse;
-import org.agronex.backend.entity.Campo;
-import org.agronex.backend.entity.Insumo;
+import org.agronex.backend.entity.*;
 import org.agronex.backend.mapper.InsumoMapper;
 import org.agronex.backend.repository.CampoRepository;
 import org.agronex.backend.repository.InsumoRepository;
@@ -24,6 +23,7 @@ public class InsumoService {
     private final InsumoRepository insumoRepository;
     private final CampoRepository campoRepository;
     private final InsumoMapper insumoMapper;
+    private final AuditService auditService;
 
     @Transactional
     public InsumoResponse crearInsumo(InsumoRequest request, UUID idUsuarioToken) {
@@ -37,6 +37,17 @@ public class InsumoService {
         nuevoInsumo.setCampo(campo);
 
         Insumo guardado = insumoRepository.save(nuevoInsumo);
+
+        auditService.registrar(
+                idUsuarioToken, campo.getUsuario().getEmail(),
+                EntidadAudit.INSUMO, guardado.getIdInsumo().toString(),
+                guardado.getNombre(),
+                AccionAudit.CREAR,
+                "Stock inicial: " + guardado.getCantidad() + " " + guardado.getUnidad()
+                        + ". Precio unitario: " + guardado.getPrecioUnitario()
+                        + ". Campo: " + campo.getNombre()
+        );
+
         return insumoMapper.toResponse(guardado);
     }
 
@@ -59,7 +70,6 @@ public class InsumoService {
                 .collect(Collectors.toList());
     }
 
-    // Método adicional útil para el flujo de ActividadInsumo
     @Transactional(readOnly = true)
     public InsumoResponse buscarPorId(UUID id, UUID idUsuarioToken) {
         Insumo insumo = insumoRepository.findById(id)

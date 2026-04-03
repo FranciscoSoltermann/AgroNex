@@ -25,7 +25,8 @@ public class NotificacionController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(name = "limit", defaultValue = "10") int limit) {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
-        return ResponseEntity.ok(notificacionService.listarRecientes(idUsuario, limit));
+        int safeLimit = Math.min(Math.max(limit, 1), 50);
+        return ResponseEntity.ok(notificacionService.listarRecientes(idUsuario, safeLimit));
     }
 
     @GetMapping("/no-leidas/count")

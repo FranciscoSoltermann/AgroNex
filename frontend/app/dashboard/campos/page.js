@@ -169,7 +169,7 @@ export default function CamposPage() {
             toast.success("¡Campo eliminado!");
             await fetchData(userId);
         } catch (err) {
-            alert(err.response?.data?.message || "Ocurrió un error al eliminar el campo.");
+            toast.error(err.response?.data?.message || "Ocurrió un error al eliminar el campo.");
         }
     };
 

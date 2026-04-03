@@ -4,10 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.UsuarioSettingsUpdateRequest;
 import org.agronex.backend.dto.response.UsuarioSettingsResponse;
-import org.agronex.backend.entity.PersonaFisica;
-import org.agronex.backend.entity.PersonaJuridica;
-import org.agronex.backend.entity.Usuario;
-import org.agronex.backend.entity.UsuarioConfiguracion;
+import org.agronex.backend.entity.*;
 import org.agronex.backend.repository.UsuarioConfiguracionRepository;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
@@ -21,6 +18,7 @@ public class UsuarioSettingsService {
 
     private final UsuarioRepository usuarioRepository;
     private final UsuarioConfiguracionRepository usuarioConfiguracionRepository;
+    private final AuditService auditService;
 
     @Transactional(readOnly = true)
     public UsuarioSettingsResponse obtenerSettings(UUID idUsuario) {
@@ -65,6 +63,15 @@ public class UsuarioSettingsService {
 
         Usuario guardadoUsuario = usuarioRepository.save(usuario);
         UsuarioConfiguracion guardadaConfig = usuarioConfiguracionRepository.save(config);
+
+        auditService.registrar(
+                idUsuario, usuario.getEmail(),
+                EntidadAudit.CONFIGURACION, config.getIdConfiguracion().toString(),
+                "Configuración de " + usuario.getEmail(),
+                AccionAudit.ACTUALIZAR,
+                "Perfil y preferencias de notificaciones actualizados"
+        );
+
         return toResponse(guardadoUsuario, guardadaConfig);
     }
 

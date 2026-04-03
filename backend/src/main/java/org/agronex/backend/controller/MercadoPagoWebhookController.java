@@ -31,10 +31,10 @@ public class MercadoPagoWebhookController {
             return ResponseEntity.ok(Map.of("message", "Webhook procesado"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("message", "Webhook rechazado", "detail", e.getMessage()));
+                    .body(Map.of("message", "Webhook rechazado"));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(Map.of("message", "Webhook no procesado", "detail", e.getMessage()));
+                    .body(Map.of("message", "Webhook no procesado"));
         }
     }
 }

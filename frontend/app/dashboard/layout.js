@@ -10,6 +10,7 @@ import {
     LogOut, Cloud, Activity
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import SiteFooter from "@/components/layout/SiteFooter";
 
@@ -53,7 +54,10 @@ export default function DashboardLayout({ children }) {
                     const res = await apiClient.get("/usuarios/me/check", { timeout: 4000 });
                     const data = res?.data;
                     if (data && data.registrado === false) {
-                        alert("Acceso denegado: este correo de Google no existe en nuestros registros. Por favor, regístrese primero.");
+                        toast.error(
+                            "Acceso denegado: este correo no está registrado en AgroNex. Regístrese primero.",
+                            { duration: 6000 }
+                        );
                         await supabase.auth.signOut();
                         router.push("/login");
                         return;

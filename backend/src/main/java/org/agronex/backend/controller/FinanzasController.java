@@ -5,6 +5,7 @@ import org.agronex.backend.dto.response.FinanzasCampoResponse;
 import org.agronex.backend.dto.response.ResumenCampaniaResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.FinanzasService;
+import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,10 +23,11 @@ import java.util.UUID;
 public class FinanzasController {
 
     private final FinanzasService finanzasService;
+    private final UsuarioService usuarioService;
 
     @GetMapping("/resumen")
     public ResponseEntity<List<FinanzasCampoResponse>> obtenerResumen(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(finanzasService.obtenerResumenGeneral(idUsuario));
     }
 
@@ -33,7 +35,7 @@ public class FinanzasController {
     public ResponseEntity<ResumenCampaniaResponse> resumenPorCampania(
             @PathVariable UUID idCampania,
             @AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(finanzasService.obtenerResumenCampania(idCampania, idUsuario));
     }
 }

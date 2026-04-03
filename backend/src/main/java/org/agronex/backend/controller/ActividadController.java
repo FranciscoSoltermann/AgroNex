@@ -9,6 +9,7 @@ import org.agronex.backend.dto.response.ActividadInsumoResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.ActividadService;
 import org.agronex.backend.service.ActividadInsumoService;
+import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,6 +26,7 @@ public class ActividadController {
 
     private final ActividadService actividadService;
     private final ActividadInsumoService actividadInsumoService;
+    private final UsuarioService usuarioService;
 
     @PostMapping
     public ResponseEntity<ActividadResponse> registrarActividad(
@@ -45,7 +47,7 @@ public class ActividadController {
     }
     @GetMapping
     public ResponseEntity<List<ActividadResponse>> listarMisActividades(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(actividadService.listarMisActividades(idUsuario));
     }
 

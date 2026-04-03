@@ -36,7 +36,6 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
         Map<String, String> error = new HashMap<>();
         error.put("error", "Error al guardar: Es posible que el registro ya exista o los datos sean inválidos.");
-        error.put("detail", ex.getMostSpecificCause().getMessage());
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
@@ -85,8 +84,6 @@ public class GlobalExceptionHandler {
         log.error("Error inesperado [{}]: {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
         Map<String, String> error = new HashMap<>();
         error.put("error", "Ocurrió un error inesperado en el servidor.");
-        error.put("message", ex.getMessage());
-        error.put("type", ex.getClass().getSimpleName());
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
