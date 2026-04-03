@@ -1,12 +1,18 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
+import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
 import { 
     CloudRain, ThermometerSun, Leaf, Clock, 
     Droplets, Loader2, AlertCircle, RefreshCw 
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+const ClimaBarsChart = dynamic(() => import("@/components/charts/ClimaBarsChart"), {
+    ssr: false,
+    loading: () => <div className="h-full w-full bg-blue-50 rounded-xl animate-pulse" />,
+});
 
 export default function ClimaPage() {
     const [campos, setCampos] = useState([]);
@@ -18,14 +24,11 @@ export default function ClimaPage() {
     const [error, setError] = useState(null);
     const [userId, setUserId] = useState(null);
 
-    const fetchData = useCallback(async (uid) => {
+    const fetchData = useCallback(async (_uid) => {
         try {
-            const [camposRes, campaniasRes] = await Promise.all([
-                apiClient.get("/campos"),
-                apiClient.get("/campanias")
-            ]);
-            setCampos(camposRes.data || []);
-            setCampanias(campaniasRes.data || []);
+            const bootstrap = await getDashboardBootstrapData();
+            setCampos(bootstrap.campos || []);
+            setCampanias(bootstrap.campanias || []);
         } catch (err) {
             setError("Error al cargar datos del establecimiento.");
         } finally {
@@ -280,15 +283,7 @@ function ModuloLluvias({ campoId }) {
                 <div className="text-center p-10 text-gray-400 text-sm font-medium border-2 border-dashed border-gray-100 rounded-xl">No hay registros de lluvias para este campo todavía.</div>
             ) : (
                 <div className="h-[250px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={historial} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EFF6FF" />
-                            <XAxis dataKey="fecha" tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} dy={10} />
-                            <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} axisLine={false} tickLine={false} />
-                            <Tooltip cursor={{ fill: '#EFF6FF' }} contentStyle={{ borderRadius: '12px', border: 'none', fontWeight: 'bold' }} />
-                            <Bar dataKey="mm" name="Lluvia caída (mm)" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    <ClimaBarsChart data={historial} />
                 </div>
             )}
         </div>

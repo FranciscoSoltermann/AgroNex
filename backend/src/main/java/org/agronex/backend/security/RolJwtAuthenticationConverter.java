@@ -2,7 +2,6 @@ package org.agronex.backend.security;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.agronex.backend.entity.Usuario;
 import org.agronex.backend.enums.RolUsuario;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.core.convert.converter.Converter;

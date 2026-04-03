@@ -2,6 +2,7 @@ package org.agronex.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.entity.AccionAudit;
@@ -141,7 +142,7 @@ public class MercadoPagoWebhookService {
             return new HashMap<>();
         }
         try {
-            return objectMapper.readValue(rawBody, Map.class);
+            return objectMapper.readValue(rawBody, new TypeReference<Map<String, Object>>() {});
         } catch (Exception e) {
             log.warn("No se pudo parsear body del webhook de MP: {}", e.getMessage());
             return new HashMap<>();
