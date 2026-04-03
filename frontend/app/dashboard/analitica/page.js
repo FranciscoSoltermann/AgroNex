@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import apiClient from "@/lib/api-client";
 import { Activity, Loader2, BarChart3, Presentation, AlertCircle } from "lucide-react";
 
-const AnaliticaRindeChart = dynamic(() => import("@/components/charts/AnaliticaRindeChart"), {
+const AnaliticaRindeChart = dynamic(() => import("@/components/features/dashboard/charts/AnaliticaRindeChart"), {
     ssr: false,
     loading: () => <div className="h-full w-full bg-gray-50 rounded-xl animate-pulse" />,
 });

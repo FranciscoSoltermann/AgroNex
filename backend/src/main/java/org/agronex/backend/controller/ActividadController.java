@@ -6,7 +6,7 @@ import org.agronex.backend.dto.request.ActividadRequest;
 import org.agronex.backend.dto.request.ActividadInsumoRequest;
 import org.agronex.backend.dto.response.ActividadResponse;
 import org.agronex.backend.dto.response.ActividadInsumoResponse;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.ActividadService;
 import org.agronex.backend.service.ActividadInsumoService;
 import org.agronex.backend.service.UsuarioService;

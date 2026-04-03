@@ -94,3 +94,4 @@ public class AuditService {
         registrar(idUsuario, emailUsuario, entidad, idEntidad, nombreEntidad, accion, detalle, null);
     }
 }
+

@@ -9,3 +9,4 @@ public class SuscripcionMercadoPagoResponse {
     private String checkoutUrl;
     private String preapprovalId;
 }
+

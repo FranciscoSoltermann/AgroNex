@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import org.agronex.backend.dto.request.MonitoreoSatelitalRequest;
 import org.agronex.backend.dto.response.MonitoreoSatelitalResponse;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.MonitoreoSatelitalService;
 import org.agronex.backend.service.UsuarioService;
 
@@ -50,3 +50,4 @@ public class MonitoreoSatelitalController {
         return ResponseEntity.ok().build();
     }
 }
+

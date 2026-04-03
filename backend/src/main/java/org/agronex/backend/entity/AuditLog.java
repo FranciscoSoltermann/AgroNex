@@ -71,3 +71,4 @@ public class AuditLog {
     @Column(name = "ocurrido_en", nullable = false, updatable = false)
     private OffsetDateTime ocurridoEn;
 }
+

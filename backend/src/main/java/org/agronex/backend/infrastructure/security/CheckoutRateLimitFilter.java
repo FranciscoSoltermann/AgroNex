@@ -1,4 +1,4 @@
-package org.agronex.backend.security;
+package org.agronex.backend.infrastructure.security;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -80,3 +80,5 @@ public class CheckoutRateLimitFilter extends OncePerRequestFilter {
         return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";
     }
 }
+
+

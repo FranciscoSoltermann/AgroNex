@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import FooterMount from "@/components/layout/FooterMount";
+import FooterMount from "@/components/shared/layout/FooterMount";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({

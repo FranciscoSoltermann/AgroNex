@@ -2,7 +2,7 @@ package org.agronex.backend.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.response.PronosticoLoteResponse.SueloActualDTO;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.PronosticoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -35,3 +35,4 @@ public class PronosticoController {
         return ResponseEntity.ok(suelo);
     }
 }
+

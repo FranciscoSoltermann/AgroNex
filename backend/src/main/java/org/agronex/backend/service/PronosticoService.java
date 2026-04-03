@@ -96,3 +96,4 @@ public class PronosticoService {
         return "SECO";
     }
 }
+

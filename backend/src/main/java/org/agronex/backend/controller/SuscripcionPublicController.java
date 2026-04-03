@@ -25,3 +25,4 @@ public class SuscripcionPublicController {
         return ResponseEntity.ok(mercadoPagoSubscriptionService.crearSuscripcion(request));
     }
 }
+

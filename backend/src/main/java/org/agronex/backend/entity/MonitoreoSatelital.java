@@ -38,3 +38,4 @@ public class MonitoreoSatelital {
     @Column(name = "tipo_satelite", length = 20)
     private String tipoSatelite;
 }
+

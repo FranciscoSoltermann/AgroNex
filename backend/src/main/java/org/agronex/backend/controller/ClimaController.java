@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.agronex.backend.dto.request.RegistroClimaRequest;
 import org.agronex.backend.dto.response.RegistroClimaResponse;
 import org.agronex.backend.dto.response.ResumenClimaCampaniaResponse;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.ClimaService;
 import org.agronex.backend.service.UsuarioService;
 
@@ -49,3 +49,4 @@ public class ClimaController {
         return ResponseEntity.ok(climaService.calcularResumenClimaCampania(idCampania, idUsuario));
     }
 }
+

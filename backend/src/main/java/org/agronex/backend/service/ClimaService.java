@@ -248,3 +248,4 @@ public class ClimaService {
         return BigDecimal.valueOf(10);
     }
 }
+

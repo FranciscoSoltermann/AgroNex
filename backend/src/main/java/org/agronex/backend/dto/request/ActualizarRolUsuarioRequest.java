@@ -15,3 +15,4 @@ public class ActualizarRolUsuarioRequest {
     /** Obligatorio si rol es EMPLEADO: dueño de los datos que podrá consultar. */
     private UUID idPropietario;
 }
+

@@ -3,7 +3,7 @@ package org.agronex.backend.controller;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.entity.AuditLog;
 import org.agronex.backend.repository.AuditLogRepository;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -60,3 +60,4 @@ public class AuditController {
         );
     }
 }
+

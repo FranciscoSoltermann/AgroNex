@@ -204,3 +204,4 @@ public class MercadoPagoSubscriptionService {
     private record PlanConfig(String reason, int frequency, String frequencyType, BigDecimal amount) {
     }
 }
+

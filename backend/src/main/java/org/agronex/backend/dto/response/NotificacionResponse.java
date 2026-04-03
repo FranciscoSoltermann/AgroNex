@@ -15,3 +15,4 @@ public class NotificacionResponse {
     private Boolean leida;
     private OffsetDateTime creadoEn;
 }
+

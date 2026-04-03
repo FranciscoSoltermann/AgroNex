@@ -6,7 +6,7 @@ import org.agronex.backend.dto.request.AsignarEmpleadoRequest;
 import org.agronex.backend.dto.request.ActualizarRolUsuarioRequest;
 import org.agronex.backend.dto.request.UsuarioSettingsUpdateRequest;
 import org.agronex.backend.dto.response.UsuarioSettingsResponse;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.UsuarioService;
 import org.agronex.backend.service.UsuarioSettingsService;
 import org.springframework.http.ResponseEntity;
@@ -77,3 +77,4 @@ public class UsuarioController {
         return ResponseEntity.noContent().build();
     }
 }
+

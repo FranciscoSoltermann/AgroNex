@@ -1,8 +1,8 @@
-package org.agronex.backend.config;
+package org.agronex.backend.infrastructure.config;
 
 import lombok.RequiredArgsConstructor;
-import org.agronex.backend.security.CheckoutRateLimitFilter;
-import org.agronex.backend.security.RolJwtAuthenticationConverter;
+import org.agronex.backend.infrastructure.security.CheckoutRateLimitFilter;
+import org.agronex.backend.infrastructure.security.RolJwtAuthenticationConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -178,3 +178,4 @@ public class SecurityConfig {
         return source;
     }
 }
+

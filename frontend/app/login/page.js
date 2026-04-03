@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Navbar } from "../../components/layout/Navbar";
+import { Navbar } from "@/components/shared/layout/Navbar";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { useRouter } from "next/navigation";

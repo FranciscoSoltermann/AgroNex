@@ -63,3 +63,4 @@ public class SuscripcionUsuario {
         this.fechaActualizacion = OffsetDateTime.now();
     }
 }
+

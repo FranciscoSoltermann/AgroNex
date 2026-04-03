@@ -14,3 +14,4 @@ public class SuscripcionMercadoPagoRequest {
 
     private String email;
 }
+

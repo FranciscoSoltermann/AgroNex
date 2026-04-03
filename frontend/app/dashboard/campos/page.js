@@ -1,12 +1,12 @@
 "use client";
-import SelectorUbicacion from "@/components/SelectorUbicacion";
+import SelectorUbicacion from "@/components/features/dashboard/campos/SelectorUbicacion";
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import dynamic from "next/dynamic";
-const LoteDrawer = dynamic(() => import('@/components/LoteDrawer'), { ssr: false });
+const LoteDrawer = dynamic(() => import('@/components/features/dashboard/campos/LoteDrawer'), { ssr: false });
 import {
     Plus, MapPin, Loader2, AlertCircle, MoreVertical,
     LayoutGrid, List, CheckCircle2, AlertTriangle, X, Scan

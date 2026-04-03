@@ -14,3 +14,4 @@ public class DetalleInsumoGasto {
     private BigDecimal precioUnitario;
     private BigDecimal costoTotal;
 }
+

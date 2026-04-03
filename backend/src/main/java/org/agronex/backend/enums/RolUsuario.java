@@ -13,3 +13,4 @@ public enum RolUsuario {
     PROPIETARIO,
     EMPLEADO
 }
+

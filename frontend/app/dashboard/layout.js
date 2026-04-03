@@ -11,8 +11,8 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import NotificationBell from "@/components/notifications/NotificationBell";
-import SiteFooter from "@/components/layout/SiteFooter";
+import NotificationBell from "@/components/shared/notifications/NotificationBell";
+import SiteFooter from "@/components/shared/layout/SiteFooter";
 
 export default function DashboardLayout({ children }) {
     const pathname = usePathname();

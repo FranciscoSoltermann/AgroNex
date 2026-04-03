@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.GastoFijoRequest;
 import org.agronex.backend.dto.response.GastoFijoResponse;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.GastoFijoService;
 import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.HttpStatus;
