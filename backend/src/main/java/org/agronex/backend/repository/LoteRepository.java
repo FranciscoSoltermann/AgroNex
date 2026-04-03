@@ -2,6 +2,7 @@ package org.agronex.backend.repository;
 
 import org.agronex.backend.entity.Lote;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.UUID;
@@ -10,4 +11,8 @@ import java.util.UUID;
 public interface LoteRepository extends JpaRepository<Lote, UUID> {
     List<Lote> findByCampoIdCampo(UUID idCampo);
     List<Lote> findByCampoUsuarioIdUsuario(UUID idUsuario);
+
+    /** Retorna todos los lotes que tienen un polígono registrado en Agromonitoring. */
+    @Query("SELECT l FROM Lote l WHERE l.idPoligonoAgro IS NOT NULL AND l.idPoligonoAgro <> ''")
+    List<Lote> findAllWithPoligono();
 }

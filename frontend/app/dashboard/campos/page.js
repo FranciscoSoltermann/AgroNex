@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
+import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import dynamic from "next/dynamic";
 const LoteDrawer = dynamic(() => import('@/components/LoteDrawer'), { ssr: false });
 import {
@@ -36,16 +37,37 @@ export default function CamposPage() {
     const [showModalLote, setShowModalLote] = useState(false);
     const [campoSeleccionado, setCampoSeleccionado] = useState(null);
     const [formLote, setFormLote] = useState({ nombre: "", superficie: "", coordenadasGeoJson: "" });
-    
-    const fetchData = useCallback(async (uid) => {
+    const [loteInitialCenter, setLoteInitialCenter] = useState(null);
+
+    const resolveCampoCenter = useCallback(async (campo) => {
+        if (!campo) return null;
+
+        if (campo.latitud != null && campo.longitud != null) {
+            return [campo.latitud, campo.longitud];
+        }
+
+        if (!campo.ubicacion) return null;
+
         try {
-            const timestamp = new Date().getTime();
-            const [camposRes, lotesRes] = await Promise.all([
-                apiClient.get(`/campos?t=${timestamp}`),
-                apiClient.get(`/lotes?t=${timestamp}`),
-            ]);
-            const cList = camposRes.data || [];
-            const lList = lotesRes.data || [];
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(campo.ubicacion)}&limit=1`;
+            const res = await fetch(url);
+            if (!res.ok) return null;
+
+            const data = await res.json();
+            const first = data?.[0];
+            if (!first?.lat || !first?.lon) return null;
+
+            return [parseFloat(first.lat), parseFloat(first.lon)];
+        } catch {
+            return null;
+        }
+    }, []);
+    
+    const fetchData = useCallback(async (_uid, options = {}) => {
+        try {
+            const bootstrap = await getDashboardBootstrapData({ forceRefresh: !!options.forceRefresh });
+            const cList = bootstrap.campos || [];
+            const lList = bootstrap.lotes || [];
             
             setCampos(cList);
 
@@ -92,7 +114,7 @@ export default function CamposPage() {
         e.preventDefault();
         
         // Validación de seguridad: si no hay coordenadas, avisamos
-        if (!formCampo.latitud || !formCampo.longitud) {
+        if (formCampo.latitud == null || formCampo.longitud == null) {
             setSubmitError("Por favor, seleccioná una ubicación válida de la lista.");
             return;
         }
@@ -112,7 +134,8 @@ export default function CamposPage() {
             
             // Limpiamos todo
             setFormCampo({ nombre: "", ubicacion: "", superficieTotal: "", latitud: null, longitud: null });
-            await fetchData(userId);
+            invalidateDashboardBootstrapCache();
+            await fetchData(userId, { forceRefresh: true });
             setTimeout(() => setShowModalCampo(false), 800);
     
         } catch (err) {
@@ -148,7 +171,8 @@ export default function CamposPage() {
             setSubmitSuccess("¡Lote creado con éxito!");
             toast.success("¡Lote creado con éxito!");
             setFormLote({ nombre: "", superficie: "1", coordenadasGeoJson: "" });
-            await fetchData(userId);
+            invalidateDashboardBootstrapCache();
+            await fetchData(userId, { forceRefresh: true });
             setTimeout(() => { setShowModalLote(false); setSubmitSuccess(null); }, 800);
         } catch (err) {
             const status = err?.response?.status;
@@ -167,7 +191,8 @@ export default function CamposPage() {
         try {
             await apiClient.delete(`/campos/${campo.idCampo}`);
             toast.success("¡Campo eliminado!");
-            await fetchData(userId);
+            invalidateDashboardBootstrapCache();
+            await fetchData(userId, { forceRefresh: true });
         } catch (err) {
             toast.error(err.response?.data?.message || "Ocurrió un error al eliminar el campo.");
         }
@@ -281,6 +306,10 @@ export default function CamposPage() {
                                     setSubmitError(null);
                                     setSubmitSuccess(null);
                                     setFormLote({ nombre: "", superficie: "", coordenadasGeoJson: "" });
+                                    setLoteInitialCenter(null);
+                                    resolveCampoCenter(campo).then((center) => {
+                                        if (center) setLoteInitialCenter(center);
+                                    });
                                 }}
                                 onEliminarCampo={handleEliminarCampo}
                             />
@@ -364,7 +393,8 @@ export default function CamposPage() {
                         {!formLote.coordenadasGeoJson && (
                             <FormField label="Dibujar Manualmente">
                                 <LoteDrawer 
-                                    initialCenter={campoSeleccionado?.latitud && campoSeleccionado?.longitud ? [campoSeleccionado.latitud, campoSeleccionado.longitud] : null}
+                                    key={`${campoSeleccionado?.idCampo || "campo"}-${loteInitialCenter ? "centered" : "default"}`}
+                                    initialCenter={loteInitialCenter}
                                     onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
                                         setFormLote(p => ({
                                             ...p,

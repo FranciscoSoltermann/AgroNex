@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
+import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import {
     Loader2, CheckCircle2,
     BarChart2, Tractor, TrendingUp, PieChart, Lock
@@ -53,17 +54,16 @@ export default function FinanzasPage() {
     const [cosechaLoading, setCosechaLoading] = useState(false);
     const [cosechaSuccess, setCosechaSuccess] = useState(null);
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (options = {}) => {
         try {
             const timestamp = new Date().getTime();
-            const [camposRes, campaniasRes, resumenRes, gastosRes] = await Promise.all([
-                apiClient.get(`/campos?t=${timestamp}`).catch(() => ({ data: [] })),
-                apiClient.get(`/campanias?t=${timestamp}`).catch(() => ({ data: [] })),
+            const [bootstrap, resumenRes, gastosRes] = await Promise.all([
+                getDashboardBootstrapData({ forceRefresh: !!options.forceRefresh }),
                 apiClient.get(`/finanzas/resumen?t=${timestamp}`).catch(() => ({ data: [] })),
                 apiClient.get(`/gastos?t=${timestamp}`).catch(() => ({ data: [] }))
             ]);
-            setCampos(camposRes.data || []);
-            setCampanias(campaniasRes.data || []);
+            setCampos(bootstrap.campos || []);
+            setCampanias(bootstrap.campanias || []);
             setResumen(resumenRes.data || []);
             setGastos(gastosRes.data || []);
         } catch (err) {
@@ -119,7 +119,8 @@ export default function FinanzasPage() {
             await apiClient.post("/gastos", body);
             setGastoSuccess("¡Gasto registrado con éxito!");
             setFormGasto(p => ({ ...p, descripcion: "", montoTotal: "", idCampania: "" }));
-            await fetchData();
+            invalidateDashboardBootstrapCache();
+            await fetchData({ forceRefresh: true });
             if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
             setTimeout(() => setGastoSuccess(null), 3000);
         } catch (err) {
@@ -162,7 +163,8 @@ export default function FinanzasPage() {
                 fletePropioLitrosCombustible: "",
                 fletePropioPrecioLitro: "",
             }));
-            await fetchData();
+            invalidateDashboardBootstrapCache();
+            await fetchData({ forceRefresh: true });
             if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
             setTimeout(() => setCosechaSuccess(null), 3000);
         } catch (err) {

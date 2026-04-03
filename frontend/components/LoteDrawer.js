@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useEffect } from 'react';
-import { MapContainer, TileLayer, FeatureGroup } from 'react-leaflet';
+import { MapContainer, TileLayer, FeatureGroup, useMap } from 'react-leaflet';
 import { EditControl } from 'react-leaflet-draw';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -12,6 +12,18 @@ export default function LoteDrawer({ initialCenter, onDrawComplete }) {
 
     // Use field coordinates or a default point in Agentina for initial centering.
     const center = initialCenter || [-31.42, -60.84];
+
+    function RecenterOnChange({ targetCenter }) {
+        const map = useMap();
+
+        useEffect(() => {
+            if (Array.isArray(targetCenter) && targetCenter.length === 2) {
+                map.setView(targetCenter, map.getZoom(), { animate: false });
+            }
+        }, [map, targetCenter]);
+
+        return null;
+    }
 
     useEffect(() => {
         delete L.Icon.Default.prototype._getIconUrl;
@@ -76,6 +88,7 @@ export default function LoteDrawer({ initialCenter, onDrawComplete }) {
                 style={{ height: '100%', width: '100%' }}
                 scrollWheelZoom={false}
             >
+                <RecenterOnChange targetCenter={center} />
                 <TileLayer
                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                     attribution="Tiles &copy; Esri &mdash; USDA, USGS, AEX, GeoEye"

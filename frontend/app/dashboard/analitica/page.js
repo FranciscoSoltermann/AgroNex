@@ -1,10 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import apiClient from "@/lib/api-client";
 import { Activity, Loader2, BarChart3, Presentation, AlertCircle } from "lucide-react";
-import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-} from "recharts";
+
+const AnaliticaRindeChart = dynamic(() => import("@/components/charts/AnaliticaRindeChart"), {
+    ssr: false,
+    loading: () => <div className="h-full w-full bg-gray-50 rounded-xl animate-pulse" />,
+});
 
 export default function AnaliticaPage() {
     const [lotes, setLotes] = useState([]);
@@ -183,18 +186,7 @@ export default function AnaliticaPage() {
                             <h3 className="text-[13px] font-bold text-gray-800 mb-4 flex items-center gap-2">
                                 <BarChart3 size={16} className="text-[#2D6A4F]"/> Evolución del Rendimiento (Ton/Ha)
                             </h3>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 20 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
-                                    <Tooltip 
-                                        cursor={{fill: '#F3F4F6'}}
-                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                    />
-                                    <Bar dataKey="rindeHa" name="Rendimiento (Tn/Ha)" fill="#2D6A4F" radius={[6, 6, 0, 0]} maxBarSize={60} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                            <AnaliticaRindeChart data={chartData} />
                         </div>
                     </div>
                 )}

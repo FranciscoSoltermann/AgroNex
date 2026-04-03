@@ -3,6 +3,7 @@ import ClimaCarrusel from "@/components/ClimaCarousel";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
+import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
 import {
     Loader2, TrendingUp, Grid2x2, DollarSign, RefreshCw,
     Sprout, Droplets, FlameKindling, Receipt, ChevronRight,
@@ -75,21 +76,20 @@ export default function DashboardHome() {
                     try {
                         const t = new Date().getTime();
                         // 1. Añadimos resCampos a la carga masiva
-                        const [resStats, resActs, resCampanias, resGastos, resCosechas, resCampos] = await Promise.all([
+                        const [bootstrap, resStats, resActs, resGastos, resCosechas] = await Promise.all([
+                            getDashboardBootstrapData(),
                             apiClient.get(`/campos/stats?t=${t}`).catch(() => ({ data: {} })),
                             apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/campanias?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/gastos?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/campos?t=${t}`).catch(() => ({ data: [] })) // <--- NUEVA LLAMADA
                         ]);
                         
                         const actos = resActs.data || [];
                         const gast = resGastos.data || [];
-                        const camps = resCampanias.data || [];
+                        const camps = bootstrap.campanias || [];
                         const coses = resCosechas.data || [];
                         const d = resStats.data || {};
-                        const listaCampos = resCampos.data || []; // <--- DATOS DE TUS CAMPOS
+                        const listaCampos = bootstrap.campos || [];
 
                         const totalCostosActs = actos.reduce((sum, a) => sum + (a.costoServicio || 0), 0);
                         const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);

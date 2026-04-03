@@ -72,7 +72,7 @@ public class SecurityConfig {
                 .referrerPolicy(ref -> ref
                     .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)
                 )
-                .permissionsPolicy(policy ->
+                .permissionsPolicyHeader(policy ->
                     policy.policy("camera=(), microphone=(), geolocation=()")
                 )
             )

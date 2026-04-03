@@ -6,10 +6,12 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
+import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import dynamic from 'next/dynamic';
 import { toast } from "sonner";
 
 const MonitoreoSatelitalViewer = dynamic(() => import('@/components/MonitoreoSatelitalViewer'), { ssr: false });
+const ClimaLotePanel = dynamic(() => import('@/components/ClimaLotePanel'), { ssr: false });
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
@@ -60,17 +62,16 @@ export default function CiclosPage() {
         [campanias, idCampaniaActiva]
     );
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (options = {}) => {
         try {
             setError(null);
             const timestamp = new Date().getTime();
-            const [lotesRes, campRes, actRes] = await Promise.all([
-                apiClient.get(`/lotes?t=${timestamp}`).catch(() => ({ data: [] })),
-                apiClient.get(`/campanias?t=${timestamp}`).catch(() => ({ data: [] })),
+            const [bootstrap, actRes] = await Promise.all([
+                getDashboardBootstrapData({ forceRefresh: !!options.forceRefresh }),
                 apiClient.get(`/actividades?t=${timestamp}`).catch(() => ({ data: [] })),
             ]);
-            setLotes(lotesRes.data || []);
-            setCampanias(campRes.data || []);
+            setLotes(bootstrap.lotes || []);
+            setCampanias(bootstrap.campanias || []);
             setActividades(actRes.data || []);
         } catch (err) {
             setError("Error al cargar datos del servidor.");
@@ -188,7 +189,8 @@ export default function CiclosPage() {
         try {
             await apiClient.delete(`/lotes/${idLoteSeleccionado}`);
             toast.success("¡Lote y campañas eliminados!");
-            await fetchData();
+            invalidateDashboardBootstrapCache();
+            await fetchData({ forceRefresh: true });
             setIdLoteSeleccionado("");
         } catch (err) {
             alert(err.response?.data?.message || "Error al eliminar lote.");
@@ -212,6 +214,7 @@ export default function CiclosPage() {
             setFormAct((p) => ({ ...p, idCampania: res.data.idCampania }));
             setCampSuccess("Campaña creada.");
             toast.success("¡Campaña iniciada!");
+            invalidateDashboardBootstrapCache();
             setFormCampania({ cultivo: "", fechaInicio: "", fechaFin: "", idLote: "" });
             setTimeout(() => {
                 setShowModalCampania(false);
@@ -412,6 +415,9 @@ export default function CiclosPage() {
 
             {/* Monitoreo Satelital */}
             {loteActual && <MonitoreoSatelitalViewer lote={loteActual} />}
+
+            {/* Clima, Suelo y Pronóstico */}
+            {loteActual && <ClimaLotePanel lote={loteActual} />}
 
             <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
                 <div className="space-y-3">

@@ -1,0 +1,334 @@
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import apiClient from "@/lib/api-client";
+import {
+    Thermometer, Droplets, Wind, RefreshCw, Loader2, CloudRain,
+    Sun, Cloud, Zap, CloudSun, Info, AlertTriangle, Leaf
+} from "lucide-react";
+
+/**
+ * Panel de Clima, Suelo y Pronóstico para un Lote.
+ *
+ * Estrategia dual:
+ * - Clima actual + pronóstico 7 días → Open-Meteo (gratis, usa lat/lon del campo)
+ * - Datos de suelo (temp + humedad) → Agromonitoring (único, requiere polígono)
+ */
+export default function ClimaLotePanel({ lote }) {
+    const [weatherData, setWeatherData] = useState(null);
+    const [sueloData, setSueloData] = useState(null);
+    const [loadingWeather, setLoadingWeather] = useState(true);
+    const [loadingSuelo, setLoadingSuelo] = useState(false);
+    const [errorWeather, setErrorWeather] = useState(false);
+
+    // ─── Obtener lat/lon del campo del lote ───────────────────────────────────
+    const lat = lote?.campo?.latitud ?? lote?.latitudCampo ?? lote?.latitud ?? null;
+    const lon = lote?.campo?.longitud ?? lote?.longitudCampo ?? lote?.longitud ?? null;
+    const tienePoligono = !!lote?.idPoligonoAgro;
+
+    // ─── Open-Meteo: clima actual + pronóstico 7 días ─────────────────────────
+    const fetchWeather = useCallback(async () => {
+        if (lat == null || lon == null) {
+            setLoadingWeather(false);
+            return;
+        }
+        setLoadingWeather(true);
+        setErrorWeather(false);
+        try {
+            const params = new URLSearchParams({
+                latitude: String(lat),
+                longitude: String(lon),
+                current: [
+                    "temperature_2m",
+                    "relative_humidity_2m",
+                    "apparent_temperature",
+                    "weather_code",
+                    "wind_speed_10m",
+                    "precipitation",
+                ].join(","),
+                daily: [
+                    "weather_code",
+                    "temperature_2m_max",
+                    "temperature_2m_min",
+                    "precipitation_sum",
+                    "precipitation_probability_max",
+                ].join(","),
+                forecast_days: "8",
+                timezone: "auto",
+            });
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+            const data = await res.json();
+            setWeatherData(data);
+        } catch {
+            setErrorWeather(true);
+        } finally {
+            setLoadingWeather(false);
+        }
+    }, [lat, lon]);
+
+    // ─── Agromonitoring: solo datos de suelo (exclusivo de esta API) ──────────
+    const fetchSuelo = useCallback(async () => {
+        if (!tienePoligono || !lote?.idLote) return;
+        setLoadingSuelo(true);
+        try {
+            const { data } = await apiClient.get(`/pronostico/lote/${lote.idLote}/suelo`);
+            setSueloData(data);
+        } catch {
+            setSueloData(null); // Silenciamos: el suelo es un bonus, no bloquea
+        } finally {
+            setLoadingSuelo(false);
+        }
+    }, [lote?.idLote, tienePoligono]);
+
+    const handleRefresh = () => {
+        fetchWeather();
+        fetchSuelo();
+    };
+
+    useEffect(() => {
+        fetchWeather();
+        fetchSuelo();
+    }, [fetchWeather, fetchSuelo]);
+
+    if (!lote) return null;
+
+    // ─── Sin coordenadas del campo ────────────────────────────────────────────
+    if (!loadingWeather && lat == null) {
+        return (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+                <Info size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-amber-800 text-xs font-medium">
+                    Para ver el clima en tiempo real, el campo debe tener coordenadas (latitud/longitud) registradas.
+                </p>
+            </div>
+        );
+    }
+
+    // ─── Loading ──────────────────────────────────────────────────────────────
+    if (loadingWeather) {
+        return (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-gray-100 flex items-center gap-3">
+                    <div className="w-8 h-8 bg-sky-100 rounded-full animate-pulse" />
+                    <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="h-20 bg-gray-50 rounded-xl animate-pulse border border-gray-100" />
+                    ))}
+                </div>
+                <div className="px-5 pb-5 grid grid-cols-4 sm:grid-cols-8 gap-2">
+                    {[...Array(8)].map((_, i) => (
+                        <div key={i} className="h-20 bg-gray-50 rounded-xl animate-pulse border border-gray-100" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (errorWeather || !weatherData?.current) {
+        return (
+            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3 text-red-700 text-sm">
+                <AlertTriangle size={16} className="shrink-0" />
+                No se pudo cargar el clima. Verificá tu conexión.
+                <button onClick={handleRefresh} className="ml-auto text-xs font-bold underline">Reintentar</button>
+            </div>
+        );
+    }
+
+    const { current, daily } = weatherData;
+    const { desc, emoji } = getWeatherInfo(current.weather_code);
+
+    // Recomendación de riego (suelo de Agromonitoring + lluvia esperada de Open-Meteo)
+    const lluviaManana = daily?.precipitation_sum?.[1] ?? 0;
+    const probLluvia = daily?.precipitation_probability_max?.[0] ?? 0;
+    const recomendacion = generarRecomendacion(sueloData, lluviaManana, probLluvia);
+
+    return (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* ── Header ── */}
+            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-sky-50 to-blue-50">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center text-lg">
+                        {emoji}
+                    </div>
+                    <div>
+                        <h3 className="font-black text-[13px] text-gray-900">Clima & Suelo en tiempo real</h3>
+                        <p className="text-[10px] text-gray-400">
+                            Open-Meteo · {desc}{tienePoligono ? " · Suelo via Agromonitoring" : ""}
+                        </p>
+                    </div>
+                </div>
+                <button
+                    onClick={handleRefresh}
+                    disabled={loadingWeather}
+                    className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-500 hover:text-sky-600 hover:border-sky-300 py-1.5 px-3 rounded-lg text-[11px] font-bold transition-all shadow-sm"
+                >
+                    <RefreshCw size={12} className={loadingWeather ? "animate-spin" : ""} />
+                    Actualizar
+                </button>
+            </div>
+
+            {/* ── Métricas clima actual ── */}
+            <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <MetricCard
+                    icon={<Thermometer size={16} className="text-orange-500" />}
+                    bg="bg-orange-50 border-orange-100"
+                    label="Temperatura"
+                    value={`${Math.round(current.temperature_2m)}°C`}
+                    sub={`Sensación ${Math.round(current.apparent_temperature)}°C`}
+                />
+                <MetricCard
+                    icon={<Droplets size={16} className="text-sky-500" />}
+                    bg="bg-sky-50 border-sky-100"
+                    label="Humedad aire"
+                    value={`${current.relative_humidity_2m}%`}
+                    sub={`Lluvia actual: ${current.precipitation > 0 ? `${current.precipitation} mm` : "0 mm"}`}
+                />
+                <MetricCard
+                    icon={<Wind size={16} className="text-slate-500" />}
+                    bg="bg-slate-50 border-slate-100"
+                    label="Viento"
+                    value={`${Math.round(current.wind_speed_10m)} km/h`}
+                    sub={`Prob. lluvia hoy: ${probLluvia}%`}
+                />
+                {/* Suelo: solo si tiene polígono en Agromonitoring */}
+                {loadingSuelo ? (
+                    <div className="rounded-xl border bg-emerald-50 border-emerald-100 p-3 flex items-center justify-center">
+                        <Loader2 size={16} className="animate-spin text-emerald-400" />
+                    </div>
+                ) : sueloData ? (
+                    <MetricCard
+                        icon={<Leaf size={16} className={getSueloIconColor(sueloData.estadoHumedad)} />}
+                        bg={getSueloBg(sueloData.estadoHumedad)}
+                        label="Humedad suelo"
+                        value={sueloData.humedadPct != null ? `${sueloData.humedadPct.toFixed(0)}%` : "—"}
+                        sub={`Estado: ${sueloData.estadoHumedad ?? "—"} · ${sueloData.temp10cmC != null ? `${sueloData.temp10cmC.toFixed(1)}°C a 10cm` : ""}`}
+                        badge={sueloData.estadoHumedad}
+                    />
+                ) : (
+                    <div className="rounded-xl border bg-gray-50 border-gray-100 p-3 flex flex-col justify-center">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Humedad suelo</p>
+                        <p className="text-sm font-black text-gray-300">—</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">{tienePoligono ? "Cargando..." : "Sin polígono"}</p>
+                    </div>
+                )}
+            </div>
+
+            {/* ── Recomendación de riego ── */}
+            {recomendacion && (
+                <div className="mx-5 mb-4 bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-100 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                    <Droplets size={15} className="text-sky-500 mt-0.5 shrink-0" />
+                    <p className="text-[12px] text-sky-800 font-medium leading-relaxed">{recomendacion}</p>
+                </div>
+            )}
+
+            {/* ── Pronóstico 7 días ── */}
+            {daily?.time?.length > 0 && (
+                <div className="px-5 pb-5">
+                    <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                        Pronóstico 7 días
+                    </h4>
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                        {daily.time.map((iso, i) => (
+                            <DiaDaysCard
+                                key={iso}
+                                iso={iso}
+                                code={daily.weather_code[i]}
+                                tMax={daily.temperature_2m_max[i]}
+                                tMin={daily.temperature_2m_min[i]}
+                                mm={daily.precipitation_sum?.[i]}
+                                prob={daily.precipitation_probability_max?.[i]}
+                                isToday={i === 0}
+                            />
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Subcomponentes ───────────────────────────────────────────────────────────
+
+function MetricCard({ icon, bg, label, value, sub }) {
+    return (
+        <div className={`rounded-xl border p-3 ${bg}`}>
+            <div className="flex items-center gap-1.5 mb-1.5">
+                {icon}
+                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{label}</span>
+            </div>
+            <p className="text-xl font-black text-gray-900 leading-none">{value}</p>
+            <p className="text-[10px] text-gray-500 mt-1 leading-snug">{sub}</p>
+        </div>
+    );
+}
+
+function DiaDaysCard({ iso, code, tMax, tMin, mm, prob, isToday }) {
+    const { emoji } = getWeatherInfo(code);
+    const label = isToday ? "Hoy" : new Date(`${iso}T12:00:00`).toLocaleDateString("es-AR", { weekday: "short" });
+
+    return (
+        <div className={`rounded-xl p-2 text-center border transition-colors ${isToday ? "bg-sky-50 border-sky-200" : "bg-gray-50 border-gray-100 hover:border-sky-200 hover:bg-sky-50"}`}>
+            <p className={`text-[9px] font-black uppercase ${isToday ? "text-sky-600" : "text-gray-400"}`}>{label}</p>
+            <span className="text-xl block my-1">{emoji}</span>
+            <p className="text-[11px] font-black text-gray-800">{tMax != null ? `${Math.round(tMax)}°` : "—"}</p>
+            <p className="text-[10px] text-gray-400">{tMin != null ? `${Math.round(tMin)}°` : "—"}</p>
+            {mm > 0 && (
+                <p className="text-[9px] font-bold text-sky-500 mt-0.5">{mm < 10 ? mm.toFixed(1) : Math.round(mm)}mm</p>
+            )}
+            {prob > 0 && (
+                <p className="text-[9px] text-violet-500 font-bold">{Math.round(prob)}%</p>
+            )}
+        </div>
+    );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getWeatherInfo(code) {
+    if (code === 0) return { emoji: "☀️", desc: "Despejado" };
+    if ([1, 2].includes(code)) return { emoji: "🌤️", desc: "Parcialmente nublado" };
+    if ([3].includes(code)) return { emoji: "☁️", desc: "Nublado" };
+    if ([45, 48].includes(code)) return { emoji: "🌫️", desc: "Niebla" };
+    if ([51, 53, 55].includes(code)) return { emoji: "🌦️", desc: "Llovizna" };
+    if ([61, 63, 65, 80, 81, 82].includes(code)) return { emoji: "🌧️", desc: "Lluvia" };
+    if ([71, 73, 75, 77].includes(code)) return { emoji: "❄️", desc: "Nieve" };
+    if ([95, 96, 99].includes(code)) return { emoji: "⛈️", desc: "Tormenta" };
+    return { emoji: "🌤️", desc: "Variable" };
+}
+
+function generarRecomendacion(suelo, lluviaManana, probLluvia) {
+    // Con datos de suelo de Agromonitoring
+    if (suelo?.humedadPct != null) {
+        const h = suelo.humedadPct;
+        if (h > 60) return `🟢 Suelo saturado (${Math.round(h)}%). Suspender riego. Revisar drenaje.`;
+        if (h > 40) {
+            if (lluviaManana >= 5 || probLluvia >= 60)
+                return `🔵 Humedad adecuada (${Math.round(h)}%). Se espera lluvia mañana. Riego no necesario.`;
+            return `🟡 Humedad moderada (${Math.round(h)}%). Monitorear. Regar si no llueve en 2 días.`;
+        }
+        if (h > 25) {
+            if (lluviaManana >= 10) return `🔵 Humedad baja (${Math.round(h)}%) pero se esperan ${lluviaManana.toFixed(1)} mm. Esperá la lluvia.`;
+            return `🟠 Humedad baja (${Math.round(h)}%). Riego recomendado en 24-48 horas.`;
+        }
+        return `🔴 Humedad crítica (${Math.round(h)}%). ¡Riego urgente! Riesgo de estrés hídrico.`;
+    }
+    // Sin datos de suelo: solo clima
+    if (probLluvia >= 70 || lluviaManana >= 10)
+        return `🌧️ Alta probabilidad de lluvia (${probLluvia}%). Suspender riego planificado.`;
+    if (probLluvia >= 40)
+        return `🌦️ Lluvia posible (${probLluvia}%). Monitorear antes de regar.`;
+    return null;
+}
+
+function getSueloIconColor(estado) {
+    if (estado === "SECO") return "text-orange-500";
+    if (estado === "SATURADO") return "text-blue-500";
+    return "text-emerald-500";
+}
+
+function getSueloBg(estado) {
+    if (estado === "SECO") return "bg-orange-50 border-orange-100";
+    if (estado === "SATURADO") return "bg-blue-50 border-blue-100";
+    return "bg-emerald-50 border-emerald-100";
+}
