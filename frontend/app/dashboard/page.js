@@ -1,5 +1,5 @@
 "use client";
-import ClimaCarrusel from "@/components/ClimaCarousel";
+import ClimaCarrusel from "@/components/features/dashboard/clima/ClimaCarousel";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
@@ -10,14 +10,6 @@ import {
     Plus, Wifi, FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers
 } from "lucide-react";
 
-const CHART_DATA = [
-    { mes: "MAR", costos: 38, cosecha: 22 },
-    { mes: "ABR", costos: 52, cosecha: 35 },
-    { mes: "MAY", costos: 45, cosecha: 40 },
-    { mes: "JUN", costos: 70, cosecha: 62 },
-    { mes: "JUL", costos: 88, cosecha: 80 },
-];
-const MAX_VAL = 100;
 const getActividadConfig = (tipo) => {
     const t = tipo?.toLowerCase() || "";
     

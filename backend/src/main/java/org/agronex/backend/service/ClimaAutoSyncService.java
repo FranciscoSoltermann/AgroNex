@@ -54,3 +54,4 @@ public class ClimaAutoSyncService {
         log.info("[ClimaAutoSync] Sincronización satelital completa. OK={} Errores={}", ok, errores);
     }
 }
+

@@ -6,7 +6,7 @@ import {
     CreditCard,
     Share2,
 } from "lucide-react";
-import { Navbar } from "@/components/layout/Navbar";
+import { Navbar } from "@/components/shared/layout/Navbar";
 import apiClient from "@/lib/api-client";
 import { supabase } from "@/lib/supabase";
 

@@ -1,4 +1,4 @@
-package org.agronex.backend.security;
+package org.agronex.backend.infrastructure.security;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,3 +56,5 @@ public class RolJwtAuthenticationConverter implements Converter<Jwt, AbstractAut
         return new JwtAuthenticationToken(jwt, authorities, sub);
     }
 }
+
+

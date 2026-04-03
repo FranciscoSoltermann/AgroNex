@@ -35,3 +35,4 @@ public class RegistroClima {
     @Column(precision = 6, scale = 2)
     private BigDecimal precipitacionesMm;
 }
+

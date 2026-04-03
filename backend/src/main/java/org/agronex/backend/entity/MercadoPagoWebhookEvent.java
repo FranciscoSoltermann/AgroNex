@@ -43,3 +43,4 @@ public class MercadoPagoWebhookEvent {
     @Column(name = "creado_en", nullable = false, updatable = false)
     private OffsetDateTime creadoEn;
 }
+

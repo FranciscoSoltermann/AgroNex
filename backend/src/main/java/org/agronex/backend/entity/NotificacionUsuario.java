@@ -39,3 +39,4 @@ public class NotificacionUsuario {
     @Column(name = "creado_en", nullable = false, updatable = false)
     private OffsetDateTime creadoEn;
 }
+

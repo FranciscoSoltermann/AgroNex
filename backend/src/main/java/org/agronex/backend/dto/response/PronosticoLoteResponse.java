@@ -56,3 +56,4 @@ public class PronosticoLoteResponse {
         private String icono;             // emoji representativo
     }
 }
+

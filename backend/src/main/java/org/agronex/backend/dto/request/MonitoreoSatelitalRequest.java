@@ -19,3 +19,4 @@ public class MonitoreoSatelitalRequest {
     private BigDecimal nubosidad;
     private String tipoSatelite;
 }
+

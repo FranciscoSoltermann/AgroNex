@@ -14,3 +14,4 @@ public class FinanzasCampoResponse {
     private BigDecimal margenBruto;
     private BigDecimal roi; // Return on investment
 }
+

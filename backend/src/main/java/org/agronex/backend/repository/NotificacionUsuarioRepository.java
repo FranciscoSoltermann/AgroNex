@@ -22,3 +22,4 @@ public interface NotificacionUsuarioRepository extends JpaRepository<Notificacio
     @Query("update NotificacionUsuario n set n.leida = true where n.usuario.idUsuario = :idUsuario and n.leida = false")
     int marcarTodasComoLeidas(@Param("idUsuario") UUID idUsuario);
 }
+

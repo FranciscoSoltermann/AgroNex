@@ -16,3 +16,4 @@ public interface LoteRepository extends JpaRepository<Lote, UUID> {
     @Query("SELECT l FROM Lote l WHERE l.idPoligonoAgro IS NOT NULL AND l.idPoligonoAgro <> ''")
     List<Lote> findAllWithPoligono();
 }
+

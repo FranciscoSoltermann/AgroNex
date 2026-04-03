@@ -1,4 +1,4 @@
-package org.agronex.backend.security;
+package org.agronex.backend.infrastructure.security;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -33,3 +33,5 @@ public final class SecurityUtils {
         }
     }
 }
+
+

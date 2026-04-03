@@ -40,3 +40,4 @@ public class ResumenCampaniaResponse {
     private BigDecimal margenBrutoPorHa;
     private BigDecimal quintalesPorHa;
 }
+

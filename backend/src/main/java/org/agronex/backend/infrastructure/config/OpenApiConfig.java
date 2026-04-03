@@ -1,4 +1,4 @@
-package org.agronex.backend.config;
+package org.agronex.backend.infrastructure.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
@@ -17,3 +17,4 @@ public class OpenApiConfig {
                         .description("Sistema de gestión para el sector agropecuario"));
     }
 }
+

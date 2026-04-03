@@ -30,3 +30,4 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, UUID> {
     /** Todos los eventos, paginados (vista de admin). */
     Page<AuditLog> findAllByOrderByOcurridoEnDesc(Pageable pageable);
 }
+

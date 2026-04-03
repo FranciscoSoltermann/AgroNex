@@ -3,7 +3,7 @@ package org.agronex.backend.controller;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.response.FinanzasCampoResponse;
 import org.agronex.backend.dto.response.ResumenCampaniaResponse;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.FinanzasService;
 import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.ResponseEntity;
@@ -39,3 +39,4 @@ public class FinanzasController {
         return ResponseEntity.ok(finanzasService.obtenerResumenCampania(idCampania, idUsuario));
     }
 }
+

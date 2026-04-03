@@ -17,3 +17,4 @@ public class MonitoreoSatelitalResponse {
     private BigDecimal nubosidad;
     private String tipoSatelite;
 }
+

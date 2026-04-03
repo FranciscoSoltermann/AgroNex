@@ -1,4 +1,4 @@
-package org.agronex.backend.config;
+package org.agronex.backend.infrastructure.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
@@ -18,3 +18,5 @@ public class AppConfig {
         return new ObjectMapper();
     }
 }
+
+

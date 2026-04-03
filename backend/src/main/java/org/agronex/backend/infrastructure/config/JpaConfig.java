@@ -1,4 +1,4 @@
-package org.agronex.backend.config;
+package org.agronex.backend.infrastructure.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
@@ -7,3 +7,4 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 @EnableJpaAuditing // Esto activa el @CreatedDate y @LastModifiedDate
 public class JpaConfig {
 }
+

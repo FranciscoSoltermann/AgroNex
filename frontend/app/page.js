@@ -1,5 +1,5 @@
-import { Navbar } from '../components/layout/Navbar';
-import { Hero } from '../components/sections/Hero';
+import { Navbar } from '@/components/shared/layout/Navbar';
+import { Hero } from '@/components/features/marketing/Hero';
 
 export default function Home() {
   return (

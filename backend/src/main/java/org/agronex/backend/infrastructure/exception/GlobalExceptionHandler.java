@@ -1,4 +1,4 @@
-package org.agronex.backend.exception;
+package org.agronex.backend.infrastructure.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -87,3 +87,4 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
+

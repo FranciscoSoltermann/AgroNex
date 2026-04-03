@@ -19,3 +19,4 @@ public enum EntidadAudit {
     CONFIGURACION,
     SISTEMA
 }
+

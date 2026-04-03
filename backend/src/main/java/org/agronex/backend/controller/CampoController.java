@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.CampoRequest;
 import org.agronex.backend.dto.response.CampoResponse;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.CampoService;
 import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.ResponseEntity;

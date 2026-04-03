@@ -9,7 +9,7 @@ import {
     Droplets, Loader2, AlertCircle, RefreshCw 
 } from "lucide-react";
 
-const ClimaBarsChart = dynamic(() => import("@/components/charts/ClimaBarsChart"), {
+const ClimaBarsChart = dynamic(() => import("@/components/features/dashboard/charts/ClimaBarsChart"), {
     ssr: false,
     loading: () => <div className="h-full w-full bg-blue-50 rounded-xl animate-pulse" />,
 });

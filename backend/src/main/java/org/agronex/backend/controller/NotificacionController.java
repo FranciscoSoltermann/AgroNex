@@ -2,7 +2,7 @@ package org.agronex.backend.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.response.NotificacionResponse;
-import org.agronex.backend.security.SecurityUtils;
+import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.NotificacionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -51,3 +51,4 @@ public class NotificacionController {
         return ResponseEntity.ok(Map.of("actualizadas", actualizadas));
     }
 }
+

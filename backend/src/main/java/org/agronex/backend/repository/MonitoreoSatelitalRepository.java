@@ -11,3 +11,4 @@ import java.util.UUID;
 public interface MonitoreoSatelitalRepository extends JpaRepository<MonitoreoSatelital, UUID> {
     List<MonitoreoSatelital> findByLote_IdLoteOrderByFechaImagenDesc(UUID idLote);
 }
+

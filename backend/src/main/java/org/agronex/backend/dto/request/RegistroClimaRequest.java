@@ -18,3 +18,4 @@ public class RegistroClimaRequest {
     private BigDecimal tempMax;
     private BigDecimal precipitacionesMm;
 }
+

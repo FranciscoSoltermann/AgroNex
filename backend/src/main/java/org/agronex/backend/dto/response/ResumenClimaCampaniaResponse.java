@@ -20,3 +20,4 @@ public class ResumenClimaCampaniaResponse {
     private String estadioFenologico;
     private LocalDate fechaCosechaEstimada;
 }
+

@@ -10,8 +10,8 @@ import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/
 import dynamic from 'next/dynamic';
 import { toast } from "sonner";
 
-const MonitoreoSatelitalViewer = dynamic(() => import('@/components/MonitoreoSatelitalViewer'), { ssr: false });
-const ClimaLotePanel = dynamic(() => import('@/components/ClimaLotePanel'), { ssr: false });
+const MonitoreoSatelitalViewer = dynamic(() => import('@/components/features/dashboard/lotes/MonitoreoSatelitalViewer'), { ssr: false });
+const ClimaLotePanel = dynamic(() => import('@/components/features/dashboard/lotes/ClimaLotePanel'), { ssr: false });
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];

@@ -17,3 +17,4 @@ public class RegistroClimaResponse {
     private BigDecimal tempMax;
     private BigDecimal precipitacionesMm;
 }
+
