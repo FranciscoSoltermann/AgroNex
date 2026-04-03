@@ -6,6 +6,7 @@ import org.agronex.backend.dto.request.InsumoRequest;
 import org.agronex.backend.dto.response.InsumoResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.InsumoService;
+import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,13 +22,14 @@ import java.util.UUID;
 public class InsumoController {
 
     private final InsumoService insumoService;
+    private final UsuarioService usuarioService;
 
     // Obtener todo el catálogo de semillas, químicos, etc.
     @GetMapping
     public ResponseEntity<List<InsumoResponse>> listarInsumos(
             @AuthenticationPrincipal Jwt jwt, 
             @RequestParam(required = false) UUID idCampo) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(insumoService.listarTodos(idUsuario, idCampo));
     }
 
@@ -35,7 +37,7 @@ public class InsumoController {
     public ResponseEntity<InsumoResponse> obtenerPorId(
             @PathVariable UUID id,
             @AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(insumoService.buscarPorId(id, idUsuario));
     }
 

@@ -6,6 +6,7 @@ import org.agronex.backend.dto.request.CampaniaRequest;
 import org.agronex.backend.dto.response.CampaniaResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.CampaniaService;
+import org.agronex.backend.service.UsuarioService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +22,7 @@ import java.util.UUID;
 public class CampaniaController {
 
     private final CampaniaService campaniaService;
+    private final UsuarioService usuarioService;
 
     @PostMapping
     public ResponseEntity<CampaniaResponse> crearCampania(
@@ -34,7 +36,7 @@ public class CampaniaController {
 
     @GetMapping
     public ResponseEntity<List<CampaniaResponse>> listarMisCampanias(@AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(campaniaService.listarMisCampanias(idUsuario));
     }
 

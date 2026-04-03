@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.agronex.backend.enums.RolUsuario;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,12 +32,35 @@ public abstract class Usuario {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "fecha_registro", insertable = false, updatable = false)
+    /**
+     * Rol del usuario en el sistema AgroNex.
+     * Default: PROPIETARIO al registrarse.
+     * Solo un ADMIN puede cambiar roles.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rol", nullable = false, length = 20)
+    @Builder.Default
+    private RolUsuario rol = RolUsuario.PROPIETARIO;
+
+    /**
+     * Si {@code rol == EMPLEADO}, apunta al {@code id_usuario} del propietario cuyos datos puede consultar.
+     */
+    @Column(name = "id_propietario")
+    private UUID idPropietario;
+
+    @Column(name = "fecha_registro", updatable = false)
     private OffsetDateTime fechaRegistro;
+
+    @PrePersist
+    private void prePersist() {
+        if (fechaRegistro == null) {
+            fechaRegistro = OffsetDateTime.now(ZoneOffset.UTC);
+        }
+    }
 
     @Builder.Default
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
-    @ToString.Exclude // 👈 Evita que el toString() de Lombok dispare la carga de la lista
-    @JsonIgnore       // 👈 CRITICAL: Evita que Jackson intente serializar esta lista en el JSON
+    @ToString.Exclude
+    @JsonIgnore
     private List<Campo> campos = new ArrayList<>();
 }

@@ -3,7 +3,9 @@ package org.agronex.backend.service;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.CampoRequest;
 import org.agronex.backend.dto.response.CampoResponse;
+import org.agronex.backend.entity.AccionAudit;
 import org.agronex.backend.entity.Campo;
+import org.agronex.backend.entity.EntidadAudit;
 import org.agronex.backend.entity.Usuario;
 import org.agronex.backend.mapper.CampoMapper;
 import org.agronex.backend.repository.CampoRepository;
@@ -22,34 +24,35 @@ public class CampoService {
     private final CampoRepository campoRepository;
     private final CampoMapper campoMapper;
     private final UsuarioService usuarioService;
+    private final AuditService auditService;
 
     @Transactional
     public CampoResponse crearCampo(CampoRequest request, Jwt jwt) {
-        // 1. Nos aseguramos de tener el usuario persistido y gestionado por JPA
-        // IMPORTANTE: Este método debe devolver el usuario recuperado de la DB
         Usuario usuario = usuarioService.obtenerOCrearUsuario(jwt);
 
-        // 2. Construimos el campo usando el Builder (ya que lo tenés en la entidad)
-        // Es más limpio que los setters manuales
         Campo campo = Campo.builder()
                 .nombre(request.getNombre())
                 .ubicacion(request.getUbicacion())
                 .superficieTotal(request.getSuperficieTotal())
                 .usuario(usuario)
                 .latitud(request.getLatitud())
-                .longitud(request.getLongitud()) // Aquí le pasamos la entidad gestionada
+                .longitud(request.getLongitud())
                 .build();
 
-        // 3. Al guardar el campo, Hibernate ya sabe que el usuario existe
-        // y solo va a insertar el ID en la columna id_usuario
         Campo guardado = campoRepository.save(campo);
+
+        auditService.registrar(
+                usuario.getIdUsuario(), usuario.getEmail(),
+                EntidadAudit.CAMPO, guardado.getIdCampo().toString(),
+                guardado.getNombre(), AccionAudit.CREAR,
+                "Superficie: " + guardado.getSuperficieTotal() + " Ha. Ubicación: " + guardado.getUbicacion()
+        );
 
         return campoMapper.toResponse(guardado);
     }
 
     @Transactional(readOnly = true)
     public List<CampoResponse> listarMisCampos(UUID idUsuarioToken) {
-
         return campoRepository.findByUsuarioIdUsuario(idUsuarioToken)
                 .stream()
                 .map(campoMapper::toResponse)
@@ -58,7 +61,6 @@ public class CampoService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> obtenerEstadisticas(UUID idUsuarioToken) {
-
         List<Campo> campos = campoRepository.findByUsuarioIdUsuario(idUsuarioToken);
 
         long camposActivos = campos.size();
@@ -80,11 +82,18 @@ public class CampoService {
     public void eliminarCampo(UUID idCampo, UUID idUsuarioToken) {
         Campo campo = campoRepository.findById(idCampo)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Campo no encontrado"));
-                
+
         if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
             throw new org.springframework.security.access.AccessDeniedException("No tenés permiso para eliminar este campo");
         }
-        
+
+        auditService.registrar(
+                idUsuarioToken, campo.getUsuario().getEmail(),
+                EntidadAudit.CAMPO, idCampo.toString(),
+                campo.getNombre(), AccionAudit.ELIMINAR,
+                "Campo eliminado. Superficie total: " + campo.getSuperficieTotal() + " Ha"
+        );
+
         campoRepository.delete(campo);
     }
 }

@@ -1,13 +1,11 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException; // <-- Import para el 404
-import org.springframework.security.access.AccessDeniedException; // <-- Import para el 403
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.GastoFijoRequest;
 import org.agronex.backend.dto.response.GastoFijoResponse;
-import org.agronex.backend.entity.Campania;
-import org.agronex.backend.entity.Campo;
-import org.agronex.backend.entity.GastoFijo;
+import org.agronex.backend.entity.*;
 import org.agronex.backend.mapper.GastoFijoMapper;
 import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.CampoRepository;
@@ -25,14 +23,13 @@ public class GastoFijoService {
     private final CampoRepository campoRepository;
     private final CampaniaRepository campaniaRepository;
     private final GastoFijoMapper gastoFijoMapper;
+    private final AuditService auditService;
 
     @Transactional
     public GastoFijoResponse registrarGasto(GastoFijoRequest request, UUID idUsuarioToken) {
-        // 1. SEGURIDAD: Validamos el Campo y lanzamos 404 si no existe
         Campo campo = campoRepository.findById(request.getIdCampo())
                 .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
 
-        // 2. SEGURIDAD: Validamos propiedad y lanzamos 403 si no es el dueño
         if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
             throw new AccessDeniedException("No tienes permiso sobre este campo");
         }
@@ -49,13 +46,21 @@ public class GastoFijoService {
             }
         }
 
-        // 4. MAPPER: Transformamos el Request a Entidad
         GastoFijo nuevoGasto = gastoFijoMapper.toEntity(request, campo, campania);
-
-        // 5. GUARDAMOS
         GastoFijo guardado = gastoFijoRepository.save(nuevoGasto);
 
-        // 6. MAPPER: Transformamos la Entidad guardada a Response
+        String contexto = campania != null
+                ? "Campaña: " + campania.getCultivo()
+                : "Gasto de campo sin campaña";
+
+        auditService.registrar(
+                idUsuarioToken, campo.getUsuario().getEmail(),
+                EntidadAudit.GASTO_FIJO, guardado.getIdGasto().toString(),
+                guardado.getCategoria() + " - " + campo.getNombre(),
+                AccionAudit.CREAR,
+                "Monto: " + guardado.getMontoTotal() + " " + guardado.getMoneda() + ". " + contexto
+        );
+
         return gastoFijoMapper.toResponse(guardado);
     }
 
@@ -75,6 +80,14 @@ public class GastoFijoService {
         if (!gastoFijo.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
             throw new AccessDeniedException("No tenés permiso para eliminar este gasto");
         }
+
+        auditService.registrar(
+                idUsuarioToken, gastoFijo.getCampo().getUsuario().getEmail(),
+                EntidadAudit.GASTO_FIJO, idGasto.toString(),
+                gastoFijo.getCategoria() + " - " + gastoFijo.getCampo().getNombre(),
+                AccionAudit.ELIMINAR,
+                "Monto eliminado: " + gastoFijo.getMontoTotal() + " " + gastoFijo.getMoneda()
+        );
 
         gastoFijoRepository.delete(gastoFijo);
     }

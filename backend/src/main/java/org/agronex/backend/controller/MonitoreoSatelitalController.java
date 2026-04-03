@@ -12,6 +12,7 @@ import org.agronex.backend.dto.request.MonitoreoSatelitalRequest;
 import org.agronex.backend.dto.response.MonitoreoSatelitalResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.MonitoreoSatelitalService;
+import org.agronex.backend.service.UsuarioService;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class MonitoreoSatelitalController {
 
     private final MonitoreoSatelitalService monitoreoService;
+    private final UsuarioService usuarioService;
 
     @PostMapping
     public ResponseEntity<MonitoreoSatelitalResponse> registrarMonitoreo(
@@ -35,7 +37,7 @@ public class MonitoreoSatelitalController {
     public ResponseEntity<List<MonitoreoSatelitalResponse>> obtenerHistorialLote(
             @PathVariable UUID idLote,
             @AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(monitoreoService.obtenerHistorialLote(idLote, idUsuario));
     }
 

@@ -1,11 +1,13 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException; // <-- Import para el 404
-import org.springframework.security.access.AccessDeniedException; // <-- Import para el 403
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.LoteRequest;
 import org.agronex.backend.dto.response.LoteResponse;
+import org.agronex.backend.entity.AccionAudit;
 import org.agronex.backend.entity.Campo;
+import org.agronex.backend.entity.EntidadAudit;
 import org.agronex.backend.entity.Lote;
 import org.agronex.backend.mapper.LoteMapper;
 import org.agronex.backend.repository.CampoRepository;
@@ -25,6 +27,7 @@ public class LoteService {
     private final CampoRepository campoRepository;
     private final LoteMapper loteMapper;
     private final AgromonitoringService agromonitoringService;
+    private final AuditService auditService;
 
     @Transactional
     public LoteResponse crearLote(LoteRequest request, UUID idUsuarioToken) {
@@ -61,7 +64,15 @@ public class LoteService {
         // 4. GUARDAR
         Lote guardado = loteRepository.save(nuevoLote);
 
-        // 5. MAPPER: Entity -> Response
+        // 5. AUDITORÍA
+        auditService.registrar(
+                idUsuarioToken, null,
+                EntidadAudit.LOTE, guardado.getIdLote().toString(),
+                guardado.getNombre(), AccionAudit.CREAR,
+                "Superficie: " + guardado.getSuperficie() + " Ha en campo: " + campo.getNombre()
+        );
+
+        // 6. MAPPER: Entity -> Response
         return loteMapper.toResponse(guardado);
     }
     @Transactional(readOnly = true)
@@ -83,6 +94,14 @@ public class LoteService {
             throw new AccessDeniedException("No tenés permiso para eliminar este lote");
         }
 
+        // AUDITORÍA (antes de eliminar para capturar el nombre)
+        auditService.registrar(
+                idUsuarioToken, null,
+                EntidadAudit.LOTE, idLote.toString(),
+                lote.getNombre(), AccionAudit.ELIMINAR,
+                "Lote eliminado del campo: " + lote.getCampo().getNombre()
+        );
+
         loteRepository.delete(lote);
     }
 
@@ -101,6 +120,15 @@ public class LoteService {
             }
         }
         Lote guardado = loteRepository.save(lote);
+
+        // AUDITORÍA
+        auditService.registrar(
+                idUsuarioToken, null,
+                EntidadAudit.LOTE, idLote.toString(),
+                guardado.getNombre(), AccionAudit.ACTUALIZAR,
+                "Polígono geográfico actualizado"
+        );
+
         return loteMapper.toResponse(guardado);
     }
 }

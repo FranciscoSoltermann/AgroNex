@@ -5,8 +5,8 @@ import org.agronex.backend.dto.request.PersonaFisicaRequest;
 import org.agronex.backend.dto.request.PersonaJuridicaRequest;
 import org.agronex.backend.dto.response.PersonaFisicaResponse;
 import org.agronex.backend.dto.response.PersonaJuridicaResponse;
-import org.agronex.backend.entity.PersonaFisica;
-import org.agronex.backend.entity.PersonaJuridica;
+import org.agronex.backend.entity.*;
+import org.agronex.backend.enums.RolUsuario;
 import org.agronex.backend.mapper.PersonaFisicaMapper;
 import org.agronex.backend.mapper.PersonaJuridicaMapper;
 import org.agronex.backend.repository.PersonaFisicaRepository;
@@ -26,6 +26,7 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PersonaFisicaMapper fisicaMapper;
     private final PersonaJuridicaMapper juridicaMapper;
+    private final AuditService auditService;
 
     @Transactional
     public PersonaFisicaResponse registrarPersonaFisica(PersonaFisicaRequest request, UUID supabaseUuid) {
@@ -41,8 +42,19 @@ public class AuthService {
         PersonaFisica persona = fisicaMapper.toEntity(request, supabaseUuid);
         persona.setEmail(emailNormalizado);
         persona.setDni(dniNormalizado);
+        persona.setRol(RolUsuario.PROPIETARIO);
+        persona.setIdPropietario(null);
 
         PersonaFisica guardada = fisicaRepository.save(persona);
+
+        auditService.registrar(
+                guardada.getIdUsuario(), guardada.getEmail(),
+                EntidadAudit.USUARIO, guardada.getIdUsuario().toString(),
+                guardada.getNombre() + " " + guardada.getApellido(),
+                AccionAudit.REGISTRO,
+                "Registro como Persona Física. DNI: " + dniNormalizado
+        );
+
         return fisicaMapper.toResponse(guardada);
     }
 
@@ -60,7 +72,18 @@ public class AuthService {
         PersonaJuridica empresa = juridicaMapper.toEntity(request, supabaseUuid);
         empresa.setEmail(emailNormalizado);
         empresa.setCuit(cuitNormalizado);
+        empresa.setRol(RolUsuario.PROPIETARIO);
+        empresa.setIdPropietario(null);
         PersonaJuridica guardada = juridicaRepository.save(empresa);
+
+        auditService.registrar(
+                guardada.getIdUsuario(), guardada.getEmail(),
+                EntidadAudit.USUARIO, guardada.getIdUsuario().toString(),
+                guardada.getRazonSocial(),
+                AccionAudit.REGISTRO,
+                "Registro como Persona Jurídica. CUIT: " + cuitNormalizado
+        );
+
         return juridicaMapper.toResponse(guardada);
     }
 
@@ -69,17 +92,18 @@ public class AuthService {
         String emailNormalizado = normalizarEmail(email);
         String dniNormalizado = normalizarNumerico(dni);
         String cuitNormalizado = normalizarNumerico(cuit);
+        String mensajeDuplicado = "Algunos datos de registro ya están en uso.";
 
         if (emailNormalizado != null && usuarioRepository.existsByEmailIgnoreCase(emailNormalizado)) {
-            throw new IllegalArgumentException("El correo ya está registrado.");
+            throw new IllegalArgumentException(mensajeDuplicado);
         }
 
         if (dniNormalizado != null && fisicaRepository.existsByDni(dniNormalizado)) {
-            throw new IllegalArgumentException("El DNI ya está registrado.");
+            throw new IllegalArgumentException(mensajeDuplicado);
         }
 
         if (cuitNormalizado != null && juridicaRepository.existsByCuit(cuitNormalizado)) {
-            throw new IllegalArgumentException("El CUIT ya está registrado.");
+            throw new IllegalArgumentException(mensajeDuplicado);
         }
     }
 

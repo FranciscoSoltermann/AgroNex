@@ -1,13 +1,11 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException; // <-- Import nuevo
-import org.springframework.security.access.AccessDeniedException; // <-- Import nuevo
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.ActividadInsumoRequest;
 import org.agronex.backend.dto.response.ActividadInsumoResponse;
-import org.agronex.backend.entity.Actividad;
-import org.agronex.backend.entity.ActividadInsumo;
-import org.agronex.backend.entity.Insumo;
+import org.agronex.backend.entity.*;
 import org.agronex.backend.mapper.ActividadInsumoMapper;
 import org.agronex.backend.repository.ActividadInsumoRepository;
 import org.agronex.backend.repository.ActividadRepository;
@@ -25,29 +23,31 @@ public class ActividadInsumoService {
     private final ActividadRepository actividadRepository;
     private final InsumoRepository insumoRepository;
     private final ActividadInsumoMapper actividadInsumoMapper;
+    private final AuditService auditService;
 
     @Transactional
     public ActividadInsumoResponse agregarInsumo(ActividadInsumoRequest request, UUID idUsuarioToken) {
-        // 1. Buscamos la actividad y verificamos seguridad
         Actividad actividad = actividadRepository.findById(request.getIdActividad())
-                .orElseThrow(() -> new EntityNotFoundException("Actividad no encontrada")); // <-- Cambio a 404
+                .orElseThrow(() -> new EntityNotFoundException("Actividad no encontrada"));
 
-        // SEGURIDAD: Verificamos propiedad en cascada nivel 4 (Actividad -> Campaña -> Lote -> Campo -> Usuario)
         if (!actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
-            throw new AccessDeniedException("No tienes permiso para modificar esta actividad"); // <-- Cambio a 403
+            throw new AccessDeniedException("No tienes permiso para modificar esta actividad");
         }
 
-        // 2. Buscamos el insumo del catálogo general
         Insumo insumo = insumoRepository.findById(request.getIdInsumo())
-                .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en el catálogo")); // <-- Cambio a 404
+                .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en el catálogo"));
 
-        // 3. MAPPER: Request -> Entity
         ActividadInsumo nuevoVinculo = actividadInsumoMapper.toEntity(request, actividad, insumo);
-
-        // 4. GUARDAR
         ActividadInsumo guardado = actividadInsumoRepository.save(nuevoVinculo);
 
-        // 5. MAPPER: Entity -> Response
+        auditService.registrar(
+                idUsuarioToken, actividad.getCampania().getLote().getCampo().getUsuario().getEmail(),
+                EntidadAudit.ACTIVIDAD_INSUMO, guardado.getIdActividadInsumo().toString(),
+                "Insumo '" + insumo.getNombre() + "' → Actividad " + actividad.getTipoActv(),
+                AccionAudit.CREAR,
+                "Dosis: " + guardado.getDosisHa() + " " + insumo.getUnidad() + "/Ha"
+        );
+
         return actividadInsumoMapper.toResponse(guardado);
     }
 }

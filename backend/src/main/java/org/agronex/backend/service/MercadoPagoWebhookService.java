@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.agronex.backend.entity.AccionAudit;
+import org.agronex.backend.entity.EntidadAudit;
 import org.agronex.backend.entity.MercadoPagoWebhookEvent;
 import org.agronex.backend.entity.SuscripcionUsuario;
 import org.agronex.backend.repository.MercadoPagoWebhookEventRepository;
@@ -39,6 +41,7 @@ public class MercadoPagoWebhookService {
     private final SuscripcionUsuarioRepository suscripcionUsuarioRepository;
     private final UsuarioRepository usuarioRepository;
     private final MercadoPagoWebhookEventRepository webhookEventRepository;
+    private final AuditService auditService;
 
     @Value("${mercadopago.access-token:}")
     private String accessToken;
@@ -115,6 +118,22 @@ public class MercadoPagoWebhookService {
 
         suscripcionUsuarioRepository.save(suscripcion);
         log.info("Suscripción MP sincronizada. preapprovalId={}, estado={}", preapprovalId, suscripcion.getEstado());
+
+        // AUDITORÍA: determinar la acción según el estado recibido de MP
+        AccionAudit accionAudit = switch (status.toUpperCase()) {
+            case "AUTHORIZED", "ACTIVE" -> AccionAudit.PAGO_RECIBIDO;
+            case "CANCELLED", "PAUSED"  -> AccionAudit.PAGO_CANCELADO;
+            default                     -> AccionAudit.CAMBIO_PLAN;
+        };
+        UUID idUsuarioSus = suscripcion.getUsuario() != null ? suscripcion.getUsuario().getIdUsuario() : null;
+        String emailSus   = suscripcion.getUsuario() != null ? suscripcion.getUsuario().getEmail() : payerEmail;
+        auditService.registrar(
+                idUsuarioSus, emailSus,
+                EntidadAudit.SUSCRIPCION, suscripcion.getIdSuscripcion().toString(),
+                "Plan " + plan + " (" + billingCycle + ")",
+                accionAudit,
+                "Estado MP: " + status + ". preapprovalId: " + preapprovalId
+        );
     }
 
     private Map<String, Object> parseBody(String rawBody) {
@@ -131,7 +150,7 @@ public class MercadoPagoWebhookService {
 
     private void validarFirmaWebhook(String preapprovalId, String xSignature, String xRequestId) {
         if (!webhookSignatureRequired) {
-            return;
+            log.warn("Configuración insegura detectada: webhook-signature-required=false. Se fuerza validación de firma.");
         }
 
         if (webhookSecret == null || webhookSecret.isBlank()) {

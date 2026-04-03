@@ -15,12 +15,16 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(async (config) => {
     const url = config.url || '';
 
-    // 1. No agregamos token si la ruta es pública (contiene /public/)
-    if (url.includes('/public/')) {
+    // Rutas públicas que no llevan JWT (el registro fisica/juridica SÍ requiere Bearer — VUL-08)
+    const publicSinToken =
+        url.includes('/registro/validar-disponibilidad') ||
+        url.includes('/mercadopago/checkout') ||
+        url.includes('/mercadopago/webhook');
+
+    if (url.includes('/public/') && publicSinToken) {
         return config;
     }
 
-    // 2. Para rutas privadas, buscamos la sesión
     const { data: { session } } = await supabase.auth.getSession();
 
     if (session?.access_token) {

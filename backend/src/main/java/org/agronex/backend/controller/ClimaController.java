@@ -12,6 +12,7 @@ import org.agronex.backend.dto.response.RegistroClimaResponse;
 import org.agronex.backend.dto.response.ResumenClimaCampaniaResponse;
 import org.agronex.backend.security.SecurityUtils;
 import org.agronex.backend.service.ClimaService;
+import org.agronex.backend.service.UsuarioService;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +23,7 @@ import java.util.UUID;
 public class ClimaController {
 
     private final ClimaService climaService;
+    private final UsuarioService usuarioService;
 
     @PostMapping
     public ResponseEntity<RegistroClimaResponse> registrarClima(
@@ -35,7 +37,7 @@ public class ClimaController {
     public ResponseEntity<List<RegistroClimaResponse>> obtenerClimaCampo(
             @PathVariable UUID idCampo,
             @AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(climaService.obtenerHistorialPorCampo(idCampo, idUsuario));
     }
 
@@ -43,7 +45,7 @@ public class ClimaController {
     public ResponseEntity<ResumenClimaCampaniaResponse> resumenClimaCampania(
             @PathVariable UUID idCampania,
             @AuthenticationPrincipal Jwt jwt) {
-        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(climaService.calcularResumenClimaCampania(idCampania, idUsuario));
     }
 }

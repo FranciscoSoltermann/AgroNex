@@ -1,11 +1,13 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException; // <-- Import para el 404
-import org.springframework.security.access.AccessDeniedException; // <-- Import para el 403
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.CampaniaRequest;
 import org.agronex.backend.dto.response.CampaniaResponse;
+import org.agronex.backend.entity.AccionAudit;
 import org.agronex.backend.entity.Campania;
+import org.agronex.backend.entity.EntidadAudit;
 import org.agronex.backend.entity.Lote;
 import org.agronex.backend.mapper.CampaniaMapper;
 import org.agronex.backend.repository.CampaniaRepository;
@@ -27,27 +29,31 @@ public class CampaniaService {
     private final CampaniaRepository campaniaRepository;
     private final LoteRepository loteRepository;
     private final CampaniaMapper campaniaMapper;
+    private final AuditService auditService;
 
     @Transactional
     public CampaniaResponse crearCampania(CampaniaRequest request, UUID idUsuarioToken) {
-        // 1. Buscamos el lote y lanzamos 404 si no existe
         Lote lote = loteRepository.findById(request.getIdLote())
                 .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
 
-        // 2. SEGURIDAD: Verificamos propiedad y lanzamos 403 si no es el dueño
         if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
             throw new AccessDeniedException("Acceso denegado al lote especificado");
         }
 
-        // 3. MAPPER: Transformamos Request -> Entity
         Campania campania = campaniaMapper.toEntity(request, lote);
-
-        // 4. GUARDAMOS
         Campania guardada = campaniaRepository.save(campania);
 
-        // 5. MAPPER: Transformamos Entity -> Response
+        auditService.registrar(
+                idUsuarioToken, lote.getCampo().getUsuario().getEmail(),
+                EntidadAudit.CAMPANIA, guardada.getIdCampania().toString(),
+                "Campaña " + guardada.getCultivo() + " en " + lote.getNombre(),
+                AccionAudit.CREAR,
+                "Cultivo: " + guardada.getCultivo() + ". Inicio: " + guardada.getFechaInicio()
+        );
+
         return campaniaMapper.toResponse(guardada);
     }
+
     @Transactional(readOnly = true)
     public List<CampaniaResponse> listarMisCampanias(UUID idUsuarioToken) {
         return campaniaRepository.findByLoteCampoUsuarioIdUsuario(idUsuarioToken)
@@ -70,6 +76,16 @@ public class CampaniaService {
         if (campania.getFechaFin() == null) {
             campania.setFechaFin(LocalDate.now());
         }
-        return campaniaMapper.toResponse(campaniaRepository.save(campania));
+        Campania guardada = campaniaRepository.save(campania);
+
+        auditService.registrar(
+                idUsuarioToken, campania.getLote().getCampo().getUsuario().getEmail(),
+                EntidadAudit.CAMPANIA, idCampania.toString(),
+                "Campaña " + campania.getCultivo() + " en " + campania.getLote().getNombre(),
+                AccionAudit.ACTUALIZAR,
+                "Estado cambiado a CERRADA. Fecha fin: " + guardada.getFechaFin()
+        );
+
+        return campaniaMapper.toResponse(guardada);
     }
 }
