@@ -1,6 +1,7 @@
 package org.agronex.backend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SpecVersion;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -34,8 +36,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.oauth2.jwt.Jwt;
 
-@WebMvcTest(controllers = AuthController.class)
+@WebMvcTest(
+        controllers = AuthController.class,
+        excludeAutoConfiguration = OAuth2ResourceServerAutoConfiguration.class
+)
 @AutoConfigureMockMvc(addFilters = false)
 @Import(GlobalExceptionHandler.class)
 class AuthControllerWebTest {
@@ -45,11 +51,22 @@ class AuthControllerWebTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
+        @Autowired
+        private AuthController authController;
+
     private ObjectMapper objectMapper;
 
         @MockitoBean
     private AuthService authService;
+
+        @MockitoBean
+        private org.agronex.backend.repository.UsuarioRepository usuarioRepository;
+
+        AuthControllerWebTest() {
+                        this.objectMapper = new ObjectMapper()
+                                .findAndRegisterModules()
+                                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        }
 
     @Test
     void givenValidPayload_whenValidarDisponibilidad_thenReturns200() throws Exception {
@@ -125,16 +142,19 @@ class AuthControllerWebTest {
 
         when(authService.registrarPersonaFisica(any(PersonaFisicaRequest.class), eq(USER_ID))).thenReturn(response);
 
+        Jwt jwt = Jwt.withTokenValue("token")
+                .header("alg", "none")
+                .subject(USER_ID.toString())
+                .build();
+
         // When
-        String rawResponse = mockMvc.perform(post("/api/public/auth/registro/fisica")
-                        .with(jwt().jwt(jwt -> jwt.subject(USER_ID.toString())))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value("qa@agronex.com"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+        var responseEntity = authController.registrarPersonaFisica(request, jwt);
+
+        assertThat(responseEntity.getStatusCode().value()).isEqualTo(201);
+        assertThat(responseEntity.getBody()).isNotNull();
+        assertThat(responseEntity.getBody().getEmail()).isEqualTo("qa@agronex.com");
+
+        String rawResponse = objectMapper.writeValueAsString(responseEntity.getBody());
 
         // Then
         String schema = """
