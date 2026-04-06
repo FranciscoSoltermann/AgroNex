@@ -1,0 +1,187 @@
+name: dependency-security-scan
+
+on:
+  pull_request:
+    branches: ["main", "master", "develop"]
+  push:
+    branches: ["main", "master", "develop"]
+  schedule:
+    - cron: "0 5 * * 1"
+
+jobs:
+  backend-owasp-scan:
+    name: Backend OWASP Dependency Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Scan Maven dependencies (fail >= CVSS 7)
+        run: ./mvnw -B org.owasp:dependency-check-maven:check
+
+      - name: Upload OWASP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-owasp-report
+          path: backend/target/dependency-check-report.*
+
+  frontend-npm-audit:
+    name: Frontend npm audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (prod deps, high+)
+        run: npm run audit:deps
+
+  codeql:
+    name: CodeQL Static Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: ["java-kotlin", "javascript-typescript"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  container-trivy-scan:
+    name: Container Trivy Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t agronex-backend:scan ./backend
+
+      - name: Build frontend image
+        run: docker build -t agronex-frontend:scan ./frontend
+
+      - name: Trivy scan backend image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: agronex-backend:scan
+          format: sarif
+          output: trivy-backend.sarif
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+
+      - name: Trivy scan frontend image
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: agronex-frontend:scan
+          format: sarif
+          output: trivy-frontend.sarif
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+
+      - name: Upload backend Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-backend.sarif
+          category: trivy-backend
+
+      - name: Upload frontend Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-frontend.sarif
+          category: trivy-frontend
+
+  pr-security-comment:
+    name: PR Security Summary Comment
+    if: github.event_name == 'pull_request' && always()
+    runs-on: ubuntu-latest
+    needs:
+      - backend-owasp-scan
+      - frontend-npm-audit
+      - codeql
+      - container-trivy-scan
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment PR with security summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const icon = (status) => {
+              if (status === "success") return "✅";
+              if (status === "failure") return "❌";
+              if (status === "cancelled") return "⚪";
+              return "⚠️";
+            };
+
+            const backend = "${{ needs.backend-owasp-scan.result }}";
+            const frontend = "${{ needs.frontend-npm-audit.result }}";
+            const codeql = "${{ needs.codeql.result }}";
+            const trivy = "${{ needs.container-trivy-scan.result }}";
+
+            const body = [
+              "## Security Scan Summary",
+              "",
+              `${icon(backend)} Backend OWASP Dependency Check: **${backend}**`,
+              `${icon(frontend)} Frontend npm audit (prod, high+): **${frontend}**`,
+              `${icon(codeql)} CodeQL Static Analysis: **${codeql}**`,
+              `${icon(trivy)} Trivy Container Scan: **${trivy}**`,
+              "",
+              "Policy:",
+              "- OWASP Maven falla si CVSS >= 7",
+              "- npm audit falla con severidad high/critical",
+              "- Trivy falla con vulnerabilidades HIGH/CRITICAL",
+              "",
+              "Revisar artifacts del workflow para reportes detallados (OWASP, SARIF de Trivy y alertas de CodeQL)."
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

@@ -1,6 +1,11 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 
+const TOKEN_CACHE_TTL_MS = 30 * 1000;
+let accessTokenCache = null;
+let lastTokenReadAt = 0;
+let authSubscriptionInitialized = false;
+
 const normalizeApiBaseUrl = (rawBaseUrl) => {
     const fallback = 'http://localhost:8080/api';
     const value = (rawBaseUrl || fallback).trim().replace(/\/$/, '');
@@ -11,6 +16,26 @@ const apiClient = axios.create({
     // Si en .env o docker-compose falta /api, lo agregamos automáticamente.
     baseURL: normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL),
 });
+
+const readAccessToken = async ({ force = false } = {}) => {
+    const now = Date.now();
+    if (!force && now - lastTokenReadAt < TOKEN_CACHE_TTL_MS) {
+        return accessTokenCache;
+    }
+
+    const { data: { session } } = await supabase.auth.getSession();
+    accessTokenCache = session?.access_token || null;
+    lastTokenReadAt = now;
+    return accessTokenCache;
+};
+
+if (typeof window !== 'undefined' && !authSubscriptionInitialized) {
+    authSubscriptionInitialized = true;
+    supabase.auth.onAuthStateChange((_event, session) => {
+        accessTokenCache = session?.access_token || null;
+        lastTokenReadAt = Date.now();
+    });
+}
 
 apiClient.interceptors.request.use(async (config) => {
     const url = config.url || '';
@@ -25,10 +50,10 @@ apiClient.interceptors.request.use(async (config) => {
         return config;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
+    const token = await readAccessToken();
 
-    if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
 
     return config;

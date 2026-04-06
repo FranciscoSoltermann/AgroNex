@@ -3,6 +3,7 @@
 import { Box } from 'lucide-react';
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import {
@@ -11,8 +12,12 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import NotificationBell from "@/components/shared/notifications/NotificationBell";
 import SiteFooter from "@/components/shared/layout/SiteFooter";
+
+const NotificationBell = dynamic(
+    () => import("@/components/shared/notifications/NotificationBell"),
+    { ssr: false }
+);
 
 export default function DashboardLayout({ children }) {
     const pathname = usePathname();

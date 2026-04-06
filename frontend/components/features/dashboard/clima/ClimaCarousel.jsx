@@ -14,6 +14,26 @@ import 'swiper/css/navigation';
 
 import apiClient from '@/lib/api-client';
 
+const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000;
+const weatherCache = new Map();
+
+function readCachedWeather(cacheKey) {
+    const cached = weatherCache.get(cacheKey);
+    if (!cached) return null;
+    if (Date.now() - cached.createdAt > WEATHER_CACHE_TTL_MS) {
+        weatherCache.delete(cacheKey);
+        return null;
+    }
+    return cached.data;
+}
+
+function writeCachedWeather(cacheKey, data) {
+    weatherCache.set(cacheKey, {
+        createdAt: Date.now(),
+        data,
+    });
+}
+
 function getWeatherInfo(code, iconSize = 70) {
     if (code === 0) return { icon: <Sun size={iconSize} className="text-yellow-300" />, desc: 'Despejado' };
     if ([1, 2, 3].includes(code)) return { icon: <CloudSun size={iconSize} className="text-white/80" />, desc: 'Nublado' };
@@ -46,14 +66,27 @@ function dayLabelEs(isoDate) {
     }
 }
 
-function ClimaSlide({ idCampo, lat, lon, nombre, mode }) {
+function ClimaSlide({ idCampo, lat, lon, nombre, mode, shouldFetch }) {
     const [current, setCurrent] = useState(null);
     const [daily, setDaily] = useState(null);
     const [hourlyProb, setHourlyProb] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(shouldFetch);
 
     useEffect(() => {
+        if (!shouldFetch) return;
+
         const fetchWeather = async () => {
+            const cacheKey = `${idCampo}:${lat}:${lon}`;
+            const cachedData = readCachedWeather(cacheKey);
+
+            if (cachedData) {
+                setCurrent(cachedData.current);
+                setDaily(cachedData.daily);
+                setHourlyProb(cachedData.hourlyProb);
+                setLoading(false);
+                return;
+            }
+
             try {
                 const params = new URLSearchParams({
                     latitude: String(lat),
@@ -82,10 +115,20 @@ function ClimaSlide({ idCampo, lat, lon, nombre, mode }) {
                     `https://api.open-meteo.com/v1/forecast?${params.toString()}`
                 );
                 const data = await response.json();
-                setCurrent(data.current ?? null);
-                setDaily(data.daily ?? null);
+                const nextCurrent = data.current ?? null;
+                const nextDaily = data.daily ?? null;
                 const hp = data.hourly?.precipitation_probability;
-                setHourlyProb(Array.isArray(hp) && hp.length ? hp[0] : null);
+                const nextHourlyProb = Array.isArray(hp) && hp.length ? hp[0] : null;
+
+                setCurrent(nextCurrent);
+                setDaily(nextDaily);
+                setHourlyProb(nextHourlyProb);
+
+                writeCachedWeather(cacheKey, {
+                    current: nextCurrent,
+                    daily: nextDaily,
+                    hourlyProb: nextHourlyProb,
+                });
 
                 // Guardar/Actualizar el registro del clima en el backend para este campo
                 const fechaDiaria = data.daily?.time?.[0];
@@ -117,7 +160,7 @@ function ClimaSlide({ idCampo, lat, lon, nombre, mode }) {
         };
         if (lat != null && lon != null) fetchWeather();
         else setLoading(false);
-    }, [idCampo, lat, lon, nombre]);
+    }, [idCampo, lat, lon, nombre, shouldFetch]);
 
     if (loading) {
         return (
@@ -287,6 +330,13 @@ function ClimaSlide({ idCampo, lat, lon, nombre, mode }) {
 
 export default function ClimaCarrusel({ campos = [] }) {
     const [forecastMode, setForecastMode] = useState('day');
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    useEffect(() => {
+        if (activeIndex >= campos.length) {
+            setActiveIndex(0);
+        }
+    }, [activeIndex, campos.length]);
 
     return (
         <div className="relative w-full min-h-[380px] flex flex-col rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-gradient-to-br from-[#1e3a8a] to-[#3b82f6]">
@@ -346,10 +396,11 @@ export default function ClimaCarrusel({ campos = [] }) {
                     navigation={true}
                     autoHeight={true}
                     watchOverflow
+                    onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
                     className="w-full !pb-8"
                 >
                     {campos.length > 0 ? (
-                        campos.map((campo) => (
+                        campos.map((campo, index) => (
                             <SwiperSlide key={campo.idCampo || campo.id}>
                                 <ClimaSlide
                                     idCampo={campo.idCampo || campo.id}
@@ -357,6 +408,7 @@ export default function ClimaCarrusel({ campos = [] }) {
                                     lon={campo.longitud}
                                     nombre={campo.nombre}
                                     mode={forecastMode}
+                                    shouldFetch={Math.abs(index - activeIndex) <= 1}
                                 />
                             </SwiperSlide>
                         ))

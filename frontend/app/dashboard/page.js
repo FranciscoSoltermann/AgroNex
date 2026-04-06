@@ -1,6 +1,7 @@
 "use client";
-import ClimaCarrusel from "@/components/features/dashboard/clima/ClimaCarousel";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
@@ -9,6 +10,16 @@ import {
     Sprout, Droplets, FlameKindling, Receipt, ChevronRight,
     Plus, Wifi, FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers
 } from "lucide-react";
+
+const ClimaCarrusel = dynamic(
+    () => import("@/components/features/dashboard/clima/ClimaCarousel"),
+    {
+        ssr: false,
+        loading: () => (
+            <div className="w-full min-h-[380px] rounded-3xl bg-blue-50 animate-pulse border border-blue-100" />
+        ),
+    }
+);
 
 const getActividadConfig = (tipo) => {
     const t = tipo?.toLowerCase() || "";
@@ -256,9 +267,9 @@ export default function DashboardHome() {
                             );
                         })}
                     </div>
-                    <a href="/dashboard/lotes" className="mt-4 w-full flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 text-[11px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all text-center">
+                    <Link href="/dashboard/lotes" className="mt-4 w-full flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 text-[11px] font-bold text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all text-center">
                         Ver Historial Completo <ChevronRight size={12} />
-                    </a>
+                    </Link>
                 </div>
             </div>
             {/* --- SECCIÓN PRINCIPAL: CLIMA (IZQ) Y ACTIVIDAD (DER) --- */}
