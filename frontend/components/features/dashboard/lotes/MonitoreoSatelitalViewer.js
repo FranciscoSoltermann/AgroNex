@@ -6,13 +6,14 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { EditControl } from 'react-leaflet-draw';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Loader2, RefreshCw, Satellite, PenTool } from 'lucide-react';
+import { Loader2, RefreshCw, Satellite, PenTool, HelpCircle, X } from 'lucide-react';
 
 export default function MonitoreoSatelitalViewer({ lote }) {
     const [historial, setHistorial] = useState([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
     const [selectedImage, setSelectedImage] = useState(null);
+    const [showDrawHelp, setShowDrawHelp] = useState(false);
 
     // Parse the geoJson stored in Lote
     let coordinates = [];
@@ -186,17 +187,30 @@ export default function MonitoreoSatelitalViewer({ lote }) {
                                   }}
                                 />
                             </FeatureGroup>
-                            <div className="absolute top-4 left-4 right-16 z-[1000] pointer-events-none">
-                                <div className="bg-[#0a0f16]/90 backdrop-blur-md border border-white/10 rounded-xl p-3 flex items-start gap-3 w-fit shadow-lg max-w-sm pointer-events-auto">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                                        <PenTool className="w-4 h-4 text-emerald-400" />
-                                    </div>
-                                    <div>
-                                        <p className="text-white/90 text-sm font-semibold mb-0.5">Dibujá tu lote</p>
-                                        <p className="text-white/60 text-xs">Usá la herramienta de polígono arriba a la derecha para delimitar tu campo. Al terminar, se guardará y sincronizará con Agromonitoring automáticamente.</p>
+                            {/* Help toggle button */}
+                            <div className="absolute bottom-2 left-2 z-[1000]">
+                                <button
+                                    onClick={() => setShowDrawHelp(prev => !prev)}
+                                    className="w-8 h-8 rounded-full bg-[#0a0f16]/80 backdrop-blur-md border border-white/15 flex items-center justify-center shadow-lg hover:bg-[#0a0f16] transition-all"
+                                    title="Ayuda para dibujar"
+                                >
+                                    {showDrawHelp ? <X className="w-4 h-4 text-white/80" /> : <HelpCircle className="w-4 h-4 text-emerald-400" />}
+                                </button>
+                            </div>
+                            {/* Collapsible help tooltip */}
+                            {showDrawHelp && (
+                                <div className="absolute bottom-12 left-2 right-16 z-[1000] pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                    <div className="bg-[#0a0f16]/90 backdrop-blur-md border border-white/10 rounded-xl p-3 flex items-start gap-3 w-fit shadow-lg max-w-sm pointer-events-auto">
+                                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                                            <PenTool className="w-4 h-4 text-emerald-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white/90 text-sm font-semibold mb-0.5">Dibujá tu lote</p>
+                                            <p className="text-white/60 text-xs">Usá la herramienta de polígono arriba a la derecha para delimitar tu campo. Al terminar, se guardará y sincronizará con Agromonitoring automáticamente.</p>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </MapContainer>
                     )}
 

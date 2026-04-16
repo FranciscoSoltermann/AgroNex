@@ -279,7 +279,7 @@ export default function CiclosPage() {
                 <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
                     <div className="space-y-3">
                         <div className="h-8 w-48 bg-gray-200 rounded-md animate-pulse"></div>
-                        {[1, 2, 3].map(i => <div key={i} className="h-28 bg-gray-100 rounded-xl animate-pulse" /> )}
+                        {[1, 2, 3].map(i => <div key={i} className="h-28 bg-gray-100 rounded-xl animate-pulse" />)}
                     </div>
                     <div className="h-[500px] bg-gray-100/80 rounded-2xl animate-pulse" />
                 </div>
@@ -383,7 +383,7 @@ export default function CiclosPage() {
                     <button
                         type="button"
                         onClick={() => setShowModalCampania(true)}
-                        className="text-[11px] font-bold text-[#2D6A4F] hover:underline flex items-center gap-1"
+                        className="flex items-center gap-2 bg-[#2D6A4F] text-white px-4 py-2.5 rounded-xl text-[10px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/5"
                     >
                         <Plus size={14} /> Nueva campaña
                     </button>
@@ -393,9 +393,8 @@ export default function CiclosPage() {
                         {FASES.map((fase, i) => (
                             <div
                                 key={fase}
-                                className={`flex-1 flex items-center justify-center transition-all ${
-                                    i <= faseActual ? "bg-[#2D6A4F]" : "bg-gray-100"
-                                }`}
+                                className={`flex-1 flex items-center justify-center transition-all ${i <= faseActual ? "bg-[#2D6A4F]" : "bg-gray-100"
+                                    }`}
                             >
                                 {i === faseActual && (
                                     <RefreshCw size={14} className="text-white animate-spin" style={{ animationDuration: "3s" }} />
@@ -623,7 +622,7 @@ export default function CiclosPage() {
             </div>
 
             {showModalCampania && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1100] p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-5">
                             <h3 className="font-black text-[16px] text-gray-900">Nueva campaña</h3>
@@ -725,7 +724,7 @@ function ActividadCard({ actividad, onEliminar }) {
 
     return (
         <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative group">
-            <button 
+            <button
                 onClick={() => onEliminar && onEliminar(actividad.idActividad)}
                 className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all font-bold text-[10px] flex items-center gap-1 bg-red-50 px-2 py-1 rounded-md"
                 title="Eliminar actividad"
