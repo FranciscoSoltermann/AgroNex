@@ -18,7 +18,7 @@ export default function LoteDrawer({ initialCenter, onDrawComplete }) {
 
         useEffect(() => {
             if (Array.isArray(targetCenter) && targetCenter.length === 2) {
-                map.setView(targetCenter, map.getZoom(), { animate: false });
+                map.setView(targetCenter, 13, { animate: true });
             }
         }, [map, targetCenter]);
 
@@ -84,9 +84,9 @@ export default function LoteDrawer({ initialCenter, onDrawComplete }) {
         <div className="h-[300px] w-full rounded-xl overflow-hidden border border-gray-200 z-0 relative shadow-inner">
             <MapContainer 
                 center={center} 
-                zoom={15} 
+                zoom={13} 
                 style={{ height: '100%', width: '100%' }}
-                scrollWheelZoom={false}
+                scrollWheelZoom={true}
             >
                 <RecenterOnChange targetCenter={center} />
                 <TileLayer

@@ -47,4 +47,13 @@ public class CampaniaController {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(campaniaService.cerrarCampania(idCampania, idUsuario));
     }
+
+    @DeleteMapping("/{idCampania}")
+    public ResponseEntity<Void> eliminarCampania(
+            @PathVariable UUID idCampania,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        campaniaService.eliminarCampania(idCampania, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
 }

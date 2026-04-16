@@ -10,7 +10,10 @@ import org.agronex.backend.entity.Campania;
 import org.agronex.backend.entity.EntidadAudit;
 import org.agronex.backend.entity.Lote;
 import org.agronex.backend.mapper.CampaniaMapper;
+import org.agronex.backend.repository.ActividadInsumoRepository;
+import org.agronex.backend.repository.ActividadRepository;
 import org.agronex.backend.repository.CampaniaRepository;
+import org.agronex.backend.repository.CosechaRepository;
 import org.agronex.backend.repository.LoteRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,9 @@ public class CampaniaService {
     private final LoteRepository loteRepository;
     private final CampaniaMapper campaniaMapper;
     private final AuditService auditService;
+    private final ActividadInsumoRepository actividadInsumoRepository;
+    private final ActividadRepository actividadRepository;
+    private final CosechaRepository cosechaRepository;
 
     @Transactional
     public CampaniaResponse crearCampania(CampaniaRequest request, UUID idUsuarioToken) {
@@ -87,5 +93,36 @@ public class CampaniaService {
         );
 
         return campaniaMapper.toResponse(guardada);
+    }
+
+    @Transactional
+    public void eliminarCampania(UUID idCampania, UUID idUsuarioToken) {
+        Campania campania = campaniaRepository.findById(idCampania)
+                .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
+
+        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("Acceso denegado");
+        }
+
+        // Registrar audítoría antes de borrar (ya que los datos se perderán)
+        auditService.registrar(
+                idUsuarioToken, campania.getLote().getCampo().getUsuario().getEmail(),
+                EntidadAudit.CAMPANIA, idCampania.toString(),
+                "Campaña " + campania.getCultivo() + " en " + campania.getLote().getNombre(),
+                AccionAudit.ELIMINAR,
+                "Campaña eliminada. Estado previo: " + campania.getEstado()
+        );
+
+        // 1. Borrar ActividadInsumo (depende de Actividad, que depende de Campaña)
+        actividadInsumoRepository.deleteByCampaniaId(idCampania);
+
+        // 2. Borrar Actividades (dependen de Campaña)
+        actividadRepository.deleteByCampaniaId(idCampania);
+
+        // 3. Borrar Cosechas físicamente (bypass del @SQLDelete soft-delete)
+        cosechaRepository.deleteFisicoByCampaniaId(idCampania);
+
+        // 4. Finalmente eliminar la campaña
+        campaniaRepository.delete(campania);
     }
 }

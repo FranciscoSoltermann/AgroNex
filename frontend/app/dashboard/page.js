@@ -6,8 +6,8 @@ import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
 import {
     Loader2, TrendingUp, Grid2x2, DollarSign, RefreshCw,
-    Sprout, Droplets, FlameKindling, Receipt, ChevronRight,
-    Plus, Wifi, FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers
+    Sprout, Droplets, ChevronRight,
+    FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers
 } from "lucide-react";
 
 const getActividadConfig = (tipo) => {
@@ -186,19 +186,35 @@ export default function DashboardHome() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard label="Total Ha" value={`${Number(stats.hectareasTotales).toLocaleString("es-AR", { maximumFractionDigits: 1 })}` || "1,240.5"} sub="+12% respecto al año pasado" subColor="text-green-600" icon={<TrendingUp size={18} className="text-green-600" />} iconBg="bg-green-50" />
-                <StatCard label="Cantidad de Campos" value={stats.camposActivos || 0} sub="8 en mantenimiento" subColor="text-gray-400" icon={<Grid2x2 size={18} className="text-indigo-600" />} iconBg="bg-indigo-50" />
+                <StatCard
+                    label="Total Ha"
+                    value={Number(stats.hectareasTotales).toLocaleString("es-AR", { maximumFractionDigits: 1 }) || "0"}
+                    icon={<TrendingUp size={18} className="text-green-600" />}
+                    iconBg="bg-green-50"
+                />
+                <StatCard
+                    label="Cantidad de Campos"
+                    value={stats.camposActivos || 0}
+                    sub={stats.camposActivos === 1 ? "1 campo activo" : stats.camposActivos > 0 ? `${stats.camposActivos} campos activos` : "Sin campos registrados"}
+                    subColor="text-gray-400"
+                    icon={<Grid2x2 size={18} className="text-indigo-600" />}
+                    iconBg="bg-indigo-50"
+                />
                 <StatCard
                     label="Gastos Acumulados"
                     value={stats.gastosAcumulados > 0 ? `$${Number(stats.gastosAcumulados).toLocaleString("es-AR")}` : "$0"}
-                    sub="75% del presupuesto trimestral"
-                    subColor="text-orange-500"
+                    sub={stats.gastosAcumulados > 0 ? "Total de actividades y gastos fijos" : "Sin gastos registrados"}
+                    subColor={stats.gastosAcumulados > 0 ? "text-orange-500" : "text-gray-400"}
                     icon={<DollarSign size={18} className="text-orange-500" />}
                     iconBg="bg-orange-50"
                 />
-                <StatCard label="Ciclos Activos" value={stats.ciclosActivos || 0}
-                    sub={<span className="flex gap-1 mt-1"><span className="w-3 h-3 rounded-full bg-green-500 inline-block" /><span className="w-3 h-3 rounded-full bg-amber-400 inline-block" /><span className="w-3 h-3 rounded-full bg-blue-500 inline-block" /></span>}
-                    icon={<RefreshCw size={18} className="text-teal-600" />} iconBg="bg-teal-50"
+                <StatCard
+                    label="Ciclos Activos"
+                    value={stats.ciclosActivos || 0}
+                    sub={stats.ciclosActivos === 1 ? "1 campaña en curso" : stats.ciclosActivos > 0 ? `${stats.ciclosActivos} campañas en curso` : "Sin ciclos activos"}
+                    subColor="text-teal-600"
+                    icon={<RefreshCw size={18} className="text-teal-600" />}
+                    iconBg="bg-teal-50"
                 />
             </div>
 
@@ -261,44 +277,9 @@ export default function DashboardHome() {
                     </a>
                 </div>
             </div>
-            {/* --- SECCIÓN PRINCIPAL: CLIMA (IZQ) Y ACTIVIDAD (DER) --- */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                            
-            {/* PANEL IZQUIERDO: EL CARRUSEL */}
-            <div className="lg:col-span-2 relative min-h-[400px]">
-                {/* PASAMOS LOS CAMPOS AQUÍ: */}
-                <ClimaCarrusel campos={campos} /> 
-            </div>
-
-                {/* PANEL DERECHO: INFO DEL LOTE (Ocupa 1 columna) */}
-                <div className="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col justify-between relative overflow-hidden">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Región Activa</p>
-                            <h3 className="text-[18px] font-black text-gray-900 tracking-tight">Sector Sur – Bloque A</h3>
-                        </div>
-                        <button className="w-9 h-9 bg-[#2D6A4F] rounded-xl flex items-center justify-center text-white hover:bg-[#1B4332] transition-colors shadow-lg shadow-green-900/20">
-                            <Plus size={16} />
-                        </button>
-                    </div>
-                    
-                    <div className="w-full h-24 rounded-xl mt-4 mb-4" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=400&auto=format&fit=crop')", backgroundSize: "cover", backgroundPosition: "center" }} />
-                    
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                            <span className="text-[12px] font-semibold text-gray-700">85% Sembrado</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0" />
-                            <span className="text-[12px] font-semibold text-gray-700">12% Cosechado</span>
-                        </div>
-                    </div>
-                    
-                    <button className="mt-3 flex items-center gap-1 text-[11px] font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors">
-                        Abrir Mapa de Precisión <ChevronRight size={12} />
-                    </button>
-                </div>
+            {/* --- SECCIÓN CLIMA --- */}
+            <div className="w-full">
+                <ClimaCarrusel campos={campos} />
             </div>
         </div>
     );

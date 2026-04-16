@@ -38,6 +38,7 @@ export default function CamposPage() {
     const [campoSeleccionado, setCampoSeleccionado] = useState(null);
     const [formLote, setFormLote] = useState({ nombre: "", superficie: "", coordenadasGeoJson: "" });
     const [loteInitialCenter, setLoteInitialCenter] = useState(null);
+    const [resolvingCenter, setResolvingCenter] = useState(false);
 
     const resolveCampoCenter = useCallback(async (campo) => {
         if (!campo) return null;
@@ -300,16 +301,18 @@ export default function CamposPage() {
                                 campo={campo}
                                 imagen={IMAGES[i % IMAGES.length]}
                                 vista={vista}
-                                onAgregarLote={() => {
-                                    setCampoSeleccionado(campo);
-                                    setShowModalLote(true);
+                                resolvingCenter={resolvingCenter}
+                                onAgregarLote={async () => {
                                     setSubmitError(null);
                                     setSubmitSuccess(null);
                                     setFormLote({ nombre: "", superficie: "", coordenadasGeoJson: "" });
-                                    setLoteInitialCenter(null);
-                                    resolveCampoCenter(campo).then((center) => {
-                                        if (center) setLoteInitialCenter(center);
-                                    });
+                                    // Resolver coordenadas ANTES de abrir el modal
+                                    setResolvingCenter(true);
+                                    const center = await resolveCampoCenter(campo);
+                                    setResolvingCenter(false);
+                                    setLoteInitialCenter(center || [-34.6, -63.5]); // fallback centro de Argentina
+                                    setCampoSeleccionado(campo);
+                                    setShowModalLote(true);
                                 }}
                                 onEliminarCampo={handleEliminarCampo}
                             />
@@ -391,9 +394,9 @@ export default function CamposPage() {
                         </FormField>
 
                         {!formLote.coordenadasGeoJson && (
-                            <FormField label="Dibujar Manualmente">
+                            <FormField label="Dibujá el lote en el mapa">
                                 <LoteDrawer 
-                                    key={`${campoSeleccionado?.idCampo || "campo"}-${loteInitialCenter ? "centered" : "default"}`}
+                                    key={`${campoSeleccionado?.idCampo}-map`}
                                     initialCenter={loteInitialCenter}
                                     onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
                                         setFormLote(p => ({
@@ -432,7 +435,7 @@ export default function CamposPage() {
     );
 }
 
-function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo }) {
+function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo, resolvingCenter }) {
     if (vista === "lista") {
         return (
             <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
@@ -445,8 +448,8 @@ function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo }) {
                     <p className="font-black text-gray-900">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
                     <p className="text-[10px] text-gray-400">{campo.cantidadLotes} lotes</p>
                 </div>
-                <button onClick={onAgregarLote} className="ml-2 p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-400">
-                    <MoreVertical size={14} />
+                <button onClick={onAgregarLote} disabled={resolvingCenter} className="ml-2 p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 disabled:opacity-60">
+                    {resolvingCenter ? <Loader2 size={14} className="animate-spin" /> : <MoreVertical size={14} />}
                 </button>
             </div>
         );
@@ -476,8 +479,12 @@ function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo }) {
                     <button onClick={() => onEliminarCampo && onEliminarCampo(campo)} className="text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
                         Eliminar
                     </button>
-                    <button onClick={onAgregarLote} className="text-[11px] font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors flex items-center gap-1">
-                        Gestionar Lotes →
+                    <button
+                        onClick={onAgregarLote}
+                        disabled={resolvingCenter}
+                        className="text-[11px] font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors flex items-center gap-1 disabled:opacity-60"
+                    >
+                        {resolvingCenter ? <><Loader2 size={11} className="animate-spin" /> Cargando mapa…</> : "Gestionar Lotes →"}
                     </button>
                 </div>
             </div>

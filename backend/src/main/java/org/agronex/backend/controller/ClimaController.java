@@ -1,6 +1,7 @@
 package org.agronex.backend.controller;
 
 import jakarta.validation.Valid;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.ClimaService;
 import org.agronex.backend.service.UsuarioService;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -47,6 +49,32 @@ public class ClimaController {
             @AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(climaService.calcularResumenClimaCampania(idCampania, idUsuario));
+    }
+
+    @PutMapping("/{idRegistro}")
+    public ResponseEntity<RegistroClimaResponse> actualizarRegistro(
+            @PathVariable UUID idRegistro,
+            @RequestBody UpdateClimaRequest body,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(climaService.actualizarRegistroClima(
+                idRegistro, body.getPrecipitacionesMm(), body.getTempMin(), body.getTempMax(), idUsuario));
+    }
+
+    @DeleteMapping("/{idRegistro}")
+    public ResponseEntity<Void> eliminarRegistro(
+            @PathVariable UUID idRegistro,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        climaService.eliminarRegistroClima(idRegistro, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Data
+    static class UpdateClimaRequest {
+        private BigDecimal precipitacionesMm;
+        private BigDecimal tempMin;
+        private BigDecimal tempMax;
     }
 }
 

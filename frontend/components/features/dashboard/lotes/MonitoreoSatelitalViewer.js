@@ -1,12 +1,23 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import apiClient from '@/lib/api-client';
-import { MapContainer, TileLayer, Polygon, ImageOverlay, FeatureGroup } from 'react-leaflet';
+import { MapContainer, TileLayer, Polygon, ImageOverlay, FeatureGroup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { EditControl } from 'react-leaflet-draw';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Loader2, RefreshCw, Satellite, PenTool, HelpCircle, X } from 'lucide-react';
+
+// Mueve la vista del mapa cuando cambia el lote
+function MapUpdater({ center, zoom = 15 }) {
+    const map = useMap();
+    useEffect(() => {
+        if (center && center.length === 2) {
+            map.setView(center, zoom, { animate: true });
+        }
+    }, [map, center, zoom]);
+    return null;
+}
 
 export default function MonitoreoSatelitalViewer({ lote }) {
     const [historial, setHistorial] = useState([]);
@@ -152,7 +163,14 @@ export default function MonitoreoSatelitalViewer({ lote }) {
                 {/* Map Section */}
                 <div className="h-64 rounded-xl border border-white/5 overflow-hidden relative">
                     {coordinates.length > 0 ? (
-                        <MapContainer center={center} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+                        <MapContainer
+                            key={lote.idLote}
+                            center={center}
+                            zoom={15}
+                            scrollWheelZoom={false}
+                            style={{ height: '100%', width: '100%' }}
+                        >
+                            <MapUpdater center={center} zoom={15} />
                             <TileLayer
                                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                                 attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"

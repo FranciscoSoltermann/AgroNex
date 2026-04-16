@@ -2,7 +2,7 @@
 
 import {
     Sprout, Wind, FlaskConical, BugOff, Droplets, Tractor, Microscope, Layers, Wheat,
-    MapPin, ClipboardList, Plus, Loader2, AlertCircle, CheckCircle2, X, RefreshCw, Leaf
+    MapPin, ClipboardList, Plus, Loader2, AlertCircle, CheckCircle2, X, RefreshCw, Leaf, Trash2
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
@@ -15,6 +15,14 @@ const ClimaLotePanel = dynamic(() => import('@/components/features/dashboard/lot
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
+
+const UNIDAD_LABEL = {
+    UNIDADES: "und",
+    LITROS: "L",
+    KILOGRAMOS: "kg",
+    TONELADAS: "tn",
+};
+const getUnidadLabel = (unidad) => UNIDAD_LABEL[unidad] ?? "und";
 
 const emptyInsumoRow = () => ({ idInsumo: "", dosisHa: "" });
 
@@ -228,6 +236,20 @@ export default function CiclosPage() {
         }
     };
 
+    const handleEliminarCampania = async (idCampania) => {
+        const camp = campanias.find(c => c.idCampania === idCampania);
+        if (!camp) return;
+        if (!window.confirm(`¿Seguro que querés eliminar la campaña "${camp.cultivo}"?\nEsta acción eliminará también todas sus actividades registradas. NO se puede deshacer.`)) return;
+        try {
+            await apiClient.delete(`/campanias/${idCampania}`);
+            toast.success("¡Campaña eliminada!");
+            invalidateDashboardBootstrapCache();
+            await fetchData({ forceRefresh: true });
+        } catch (err) {
+            toast.error(err.response?.data?.message || "Error al eliminar la campaña.");
+        }
+    };
+
     const actividadesFiltradas = actividades.filter(
         (a) => a.idCampania === idCampaniaActiva || (a.campania && a.campania.idCampania === idCampaniaActiva)
     );
@@ -340,9 +362,20 @@ export default function CiclosPage() {
                     </select>
                 </div>
                 <div className="flex-1 min-w-[220px]">
-                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
-                        Campaña en este lote
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                            Campaña en este lote
+                        </label>
+                        {idCampaniaActiva && (
+                            <button
+                                onClick={() => handleEliminarCampania(idCampaniaActiva)}
+                                className="text-[10px] text-red-400 hover:text-red-500 font-bold flex items-center gap-1 transition-colors"
+                                title="Eliminar campaña"
+                            >
+                                <Trash2 size={10} /> Eliminar
+                            </button>
+                        )}
+                    </div>
                     <select
                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
                         value={idCampaniaActiva}
@@ -550,13 +583,15 @@ export default function CiclosPage() {
                                                 <option value="" disabled>Seleccionar insumo...</option>
                                                 {insumos.map((ins) => (
                                                     <option key={ins.idInsumo} value={ins.idInsumo}>
-                                                        {ins.nombre} {ins.cantidadDisponible != null ? `(Stock: ${ins.cantidadDisponible})` : ''}
+                                                        {ins.nombre} — {getUnidadLabel(ins.unidad)}{ins.cantidad != null ? ` (Stock: ${ins.cantidad})` : ''}
                                                     </option>
                                                 ))}
                                             </select>
                                         </div>
                                         <div className="flex items-center justify-between gap-3 pl-8">
-                                            <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
+                                            <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">
+                                                Dosis por Ha
+                                            </span>
                                             <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
                                                 <input
                                                     type="number"
@@ -567,7 +602,14 @@ export default function CiclosPage() {
                                                     onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)}
                                                     className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20"
                                                 />
-                                                <span className="text-[9px] text-green-200/50 font-bold uppercase">Und</span>
+                                                <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all"
+                                                    style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}
+                                                >
+                                                    {row.idInsumo
+                                                        ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad)
+                                                        : 'und'
+                                                    }
+                                                </span>
                                             </div>
                                         </div>
                                     </div>

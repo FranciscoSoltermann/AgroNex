@@ -89,7 +89,13 @@ export default function InventarioPage() {
         return true;
     });
 
-    const valorEstimado = displayInsumos.reduce((acc, curr) => acc + (Number(curr.precioUnitario) * Number(curr.cantidad || 0)), 0);
+    // Valor total = suma de (precio unitario × stock actual)
+    const valorTotal = displayInsumos.reduce((acc, curr) => acc + (Number(curr.precioUnitario) * Number(curr.cantidad || 0)), 0);
+    const itemsConStockBajo = displayInsumos.filter(i => {
+        const pct = i.cantidadInicial ? (Number(i.cantidad) / Number(i.cantidadInicial)) * 100 : null;
+        return Number(i.cantidad) <= 0 || (pct !== null && pct < 20);
+    }).length;
+    const itemsDisponibles = displayInsumos.filter(i => Number(i.cantidad) > 0).length;
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -147,10 +153,10 @@ export default function InventarioPage() {
                     {/* Tarjetas de Estadísticas (Stats Cards) */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valor Total del Catálogo</p>
-                            <p className="text-4xl font-black text-gray-900 tracking-tight">${valorEstimado.toLocaleString("es-AR")}</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valor Total del Inventario</p>
+                            <p className="text-4xl font-black text-gray-900 tracking-tight">${valorTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             <p className="text-[13px] font-bold text-green-600 mt-2 flex items-center gap-1">
-                                <TrendingUp size={16} /> Valoración de activos
+                                <TrendingUp size={16} /> Precio unitario × stock actual
                             </p>
                         </div>
 
@@ -158,20 +164,24 @@ export default function InventarioPage() {
                             <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
                                 <AlertTriangle size={120} className="text-orange-500" />
                             </div>
-                            <p className="text-[10px] font-bold text-orange-800 uppercase tracking-widest mb-2">Artículos Controlados</p>
-                            <p className="text-4xl font-black text-orange-600 tracking-tight">{displayInsumos.length}</p>
+                            <p className="text-[10px] font-bold text-orange-800 uppercase tracking-widest mb-2">Stock Bajo / Sin Stock</p>
+                            <p className="text-4xl font-black text-orange-600 tracking-tight">{itemsConStockBajo}</p>
                             <p className="text-[13px] font-medium text-orange-700 mt-2 flex items-center gap-1.5">
-                                <AlertTriangle size={14} /> Verificación sin faltantes críticos
+                                <AlertTriangle size={14} /> {itemsConStockBajo === 0 ? 'Sin alertas críticas' : `${itemsConStockBajo} artículo${itemsConStockBajo > 1 ? 's' : ''} requieren atención`}
                             </p>
                         </div>
 
                         <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Uso y Rotación</p>
+                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Artículos Disponibles</p>
                             <div className="flex items-baseline gap-2">
-                                <p className="text-4xl font-black text-gray-900 tracking-tight">Estable</p>
+                                <p className="text-4xl font-black text-gray-900 tracking-tight">{itemsDisponibles}</p>
+                                <p className="text-sm font-bold text-gray-400">/ {displayInsumos.length}</p>
                             </div>
                             <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-[#2D6A4F] rounded-full" style={{ width: "100%" }}></div>
+                                <div
+                                    className="h-full bg-[#2D6A4F] rounded-full transition-all duration-500"
+                                    style={{ width: displayInsumos.length > 0 ? `${(itemsDisponibles / displayInsumos.length) * 100}%` : '0%' }}
+                                />
                             </div>
                         </div>
                     </div>
@@ -199,8 +209,9 @@ export default function InventarioPage() {
                                 <thead>
                                     <tr className="border-b border-gray-100 bg-gray-50/50">
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Artículo / Campo</th>
-                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio Ref.</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio Unit.</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Stock Actual</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Valor Total</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Unidad</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</th>
                                     </tr>
@@ -221,17 +232,41 @@ export default function InventarioPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="p-4 text-sm text-gray-900 font-bold text-right">${Number(item.precioUnitario).toLocaleString("es-AR", { minimumFractionDigits: 2 })}</td>
-                                            <td className="p-4 text-center">
-                                                <div className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-50 border border-gray-100 text-sm font-black text-gray-900">
-                                                    {Number(item.cantidad || 0).toLocaleString("es-AR")}
+                                            {/* Precio unitario (precio de referencia por unidad) */}
+                                            <td className="p-4 text-sm text-gray-500 font-semibold text-right">
+                                                ${Number(item.precioUnitario).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                                            </td>
+                                            {/* Stock con barra de progreso */}
+                                            <td className="p-4">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <div className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-50 border border-gray-100 text-sm font-black text-gray-900">
+                                                        {Number(item.cantidad || 0).toLocaleString("es-AR")}
+                                                    </div>
+                                                    {item.cantidadInicial && Number(item.cantidadInicial) > 0 && (
+                                                        <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full rounded-full ${
+                                                                    (Number(item.cantidad) / Number(item.cantidadInicial)) > 0.4
+                                                                        ? 'bg-emerald-400'
+                                                                        : (Number(item.cantidad) / Number(item.cantidadInicial)) > 0.15
+                                                                            ? 'bg-orange-400'
+                                                                            : 'bg-red-500'
+                                                                }`}
+                                                                style={{ width: `${Math.min(100, (Number(item.cantidad) / Number(item.cantidadInicial)) * 100)}%` }}
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
-                                            <td className="p-4">
-                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.unidad}</p>
+                                            {/* Valor total = precio unitario × stock actual */}
+                                            <td className="p-4 text-sm font-black text-gray-900 text-right">
+                                                ${(Number(item.precioUnitario) * Number(item.cantidad || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="p-4">
-                                                <BadgeEstado stock={item.cantidad} />
+                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.unidad?.toLowerCase().replace('_', ' ') || '—'}</p>
+                                            </td>
+                                            <td className="p-4">
+                                                <BadgeEstado stock={item.cantidad} inicial={item.cantidadInicial} />
                                             </td>
                                         </tr>
                                     ))}
@@ -300,8 +335,19 @@ export default function InventarioPage() {
     );
 }
 
-function BadgeEstado({ stock }) {
-    if (Number(stock) <= 0) return <span className="bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-red-100">SIN STOCK</span>;
-    if (Number(stock) < 10) return <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-orange-100">STOCK BAJO</span>;
+function BadgeEstado({ stock, inicial }) {
+    const qty = Number(stock);
+    if (qty <= 0) return <span className="bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-red-100">SIN STOCK</span>;
+    
+    // Si tenemos cantidad inicial, usamos porcentaje
+    if (inicial && Number(inicial) > 0) {
+        const pct = (qty / Number(inicial)) * 100;
+        if (pct <= 15) return <span className="bg-red-50 text-red-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-red-100">CRÍTICO</span>;
+        if (pct <= 30) return <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-orange-100">STOCK BAJO</span>;
+        return <span className="bg-[#bbf7d0] text-[#166534] px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-200">DISPONIBLE</span>;
+    }
+    
+    // Fallback sin cantidad inicial — umbral genérico
+    if (qty < 5) return <span className="bg-orange-50 text-orange-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-orange-100">STOCK BAJO</span>;
     return <span className="bg-[#bbf7d0] text-[#166534] px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border border-green-200">DISPONIBLE</span>;
 }

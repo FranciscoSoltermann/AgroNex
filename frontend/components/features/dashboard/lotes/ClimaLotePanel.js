@@ -3,7 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import apiClient from "@/lib/api-client";
 import {
     Thermometer, Droplets, Wind, RefreshCw, Loader2, CloudRain,
-    Sun, Cloud, Zap, CloudSun, Info, AlertTriangle, Leaf
+    Sun, Cloud, Zap, CloudSun, Info, AlertTriangle, Leaf, ChevronDown,
+    X, Gauge
 } from "lucide-react";
 
 /**
@@ -11,7 +12,8 @@ import {
  *
  * Estrategia dual:
  * - Clima actual + pronóstico 7 días → Open-Meteo (gratis, usa lat/lon del campo)
- * - Datos de suelo (temp + humedad) → Agromonitoring (único, requiere polígono)
+ * - Datos de suelo (temp + humedad) → Agromonitoring (requiere polígono)
+ *   Si falla o no hay polígono, muestra humedad del aire de Open-Meteo como fallback.
  */
 export default function ClimaLotePanel({ lote }) {
     const [weatherData, setWeatherData] = useState(null);
@@ -19,13 +21,14 @@ export default function ClimaLotePanel({ lote }) {
     const [loadingWeather, setLoadingWeather] = useState(true);
     const [loadingSuelo, setLoadingSuelo] = useState(false);
     const [errorWeather, setErrorWeather] = useState(false);
+    const [sueloError, setSueloError] = useState(false);
+    const [diaSeleccionado, setDiaSeleccionado] = useState(null); // índice del día seleccionado
 
-    // ─── Obtener lat/lon del campo del lote ───────────────────────────────────
     const lat = lote?.campo?.latitud ?? lote?.latitudCampo ?? lote?.latitud ?? null;
     const lon = lote?.campo?.longitud ?? lote?.longitudCampo ?? lote?.longitud ?? null;
     const tienePoligono = !!lote?.idPoligonoAgro;
 
-    // ─── Open-Meteo: clima actual + pronóstico 7 días ─────────────────────────
+    // ─── Open-Meteo: clima actual + pronóstico 8 días ─────────────────────────
     const fetchWeather = useCallback(async () => {
         if (lat == null || lon == null) {
             setLoadingWeather(false);
@@ -44,6 +47,7 @@ export default function ClimaLotePanel({ lote }) {
                     "weather_code",
                     "wind_speed_10m",
                     "precipitation",
+                    "surface_pressure",
                 ].join(","),
                 daily: [
                     "weather_code",
@@ -51,6 +55,9 @@ export default function ClimaLotePanel({ lote }) {
                     "temperature_2m_min",
                     "precipitation_sum",
                     "precipitation_probability_max",
+                    "wind_speed_10m_max",
+                    "relative_humidity_2m_max",
+                    "relative_humidity_2m_min",
                 ].join(","),
                 forecast_days: "8",
                 timezone: "auto",
@@ -65,19 +72,21 @@ export default function ClimaLotePanel({ lote }) {
         }
     }, [lat, lon]);
 
-    // ─── Agromonitoring: solo datos de suelo (exclusivo de esta API) ──────────
+    // ─── Backend: datos de suelo via Agromonitoring ───────────────────────────
     const fetchSuelo = useCallback(async () => {
-        if (!tienePoligono || !lote?.idLote) return;
+        if (!lote?.idLote) return;
         setLoadingSuelo(true);
+        setSueloError(false);
         try {
             const { data } = await apiClient.get(`/pronostico/lote/${lote.idLote}/suelo`);
             setSueloData(data);
         } catch {
-            setSueloData(null); // Silenciamos: el suelo es un bonus, no bloquea
+            setSueloData(null);
+            setSueloError(true);
         } finally {
             setLoadingSuelo(false);
         }
-    }, [lote?.idLote, tienePoligono]);
+    }, [lote?.idLote]);
 
     const handleRefresh = () => {
         fetchWeather();
@@ -85,13 +94,13 @@ export default function ClimaLotePanel({ lote }) {
     };
 
     useEffect(() => {
+        setDiaSeleccionado(null);
         fetchWeather();
         fetchSuelo();
     }, [fetchWeather, fetchSuelo]);
 
     if (!lote) return null;
 
-    // ─── Sin coordenadas del campo ────────────────────────────────────────────
     if (!loadingWeather && lat == null) {
         return (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
@@ -103,7 +112,6 @@ export default function ClimaLotePanel({ lote }) {
         );
     }
 
-    // ─── Loading ──────────────────────────────────────────────────────────────
     if (loadingWeather) {
         return (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -138,10 +146,73 @@ export default function ClimaLotePanel({ lote }) {
     const { current, daily } = weatherData;
     const { desc, emoji } = getWeatherInfo(current.weather_code);
 
-    // Recomendación de riego (suelo de Agromonitoring + lluvia esperada de Open-Meteo)
     const lluviaManana = daily?.precipitation_sum?.[1] ?? 0;
     const probLluvia = daily?.precipitation_probability_max?.[0] ?? 0;
     const recomendacion = generarRecomendacion(sueloData, lluviaManana, probLluvia);
+
+    // Día seleccionado para el panel de detalle
+    const diaDetalle = diaSeleccionado !== null && daily ? {
+        iso: daily.time[diaSeleccionado],
+        code: daily.weather_code[diaSeleccionado],
+        tMax: daily.temperature_2m_max[diaSeleccionado],
+        tMin: daily.temperature_2m_min[diaSeleccionado],
+        mm: daily.precipitation_sum?.[diaSeleccionado],
+        prob: daily.precipitation_probability_max?.[diaSeleccionado],
+        viento: daily.wind_speed_10m_max?.[diaSeleccionado],
+        humedadMax: daily.relative_humidity_2m_max?.[diaSeleccionado],
+        humedadMin: daily.relative_humidity_2m_min?.[diaSeleccionado],
+    } : null;
+
+    // ─── Tarjeta de humedad de suelo (con fallback a humedad aire) ────────────
+    const renderHumedadCard = () => {
+        if (loadingSuelo) {
+            return (
+                <div className="rounded-xl border bg-emerald-50 border-emerald-100 p-3 flex flex-col justify-center gap-1.5">
+                    <div className="flex items-center gap-1.5">
+                        <Loader2 size={14} className="animate-spin text-emerald-400" />
+                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Humedad suelo</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400">Consultando API...</p>
+                </div>
+            );
+        }
+
+        if (sueloData?.humedadPct != null) {
+            // ✅ Datos reales de Agromonitoring
+            return (
+                <MetricCard
+                    icon={<Leaf size={16} className={getSueloIconColor(sueloData.estadoHumedad)} />}
+                    bg={getSueloBg(sueloData.estadoHumedad)}
+                    label="Humedad suelo"
+                    value={`${sueloData.humedadPct.toFixed(0)}%`}
+                    sub={`${sueloData.estadoHumedad ?? "—"} · ${sueloData.temp10cmC != null ? `${sueloData.temp10cmC.toFixed(1)}°C 10cm` : "Suelo vía API"}`}
+                    badge="Agromonitoring"
+                />
+            );
+        }
+
+        // ⚠️ Sin polígono o API falló → mostrar humedad del aire de Open-Meteo
+        return (
+            <div className="rounded-xl border bg-sky-50 border-sky-100 p-3 flex flex-col justify-between">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                    <Droplets size={16} className="text-sky-400" />
+                    <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Humedad suelo</span>
+                </div>
+                <p className="text-xl font-black text-gray-900 leading-none">—</p>
+                <p className="text-[10px] text-gray-400 mt-1 leading-snug">
+                    {tienePoligono
+                        ? "Sin datos de Agromonitoring"
+                        : "Sin polígono. Dibujá el lote para datos de suelo."
+                    }
+                </p>
+                <div className="mt-1.5 pt-1.5 border-t border-sky-100">
+                    <p className="text-[9px] text-sky-600 font-bold">
+                        Humedad aire: {current.relative_humidity_2m}%
+                    </p>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -154,7 +225,7 @@ export default function ClimaLotePanel({ lote }) {
                     <div>
                         <h3 className="font-black text-[13px] text-gray-900">Clima & Suelo en tiempo real</h3>
                         <p className="text-[10px] text-gray-400">
-                            Open-Meteo · {desc}{tienePoligono ? " · Suelo via Agromonitoring" : ""}
+                            Open-Meteo · {desc}{sueloData ? " · Suelo vía Agromonitoring" : ""}
                         </p>
                     </div>
                 </div>
@@ -191,27 +262,7 @@ export default function ClimaLotePanel({ lote }) {
                     value={`${Math.round(current.wind_speed_10m)} km/h`}
                     sub={`Prob. lluvia hoy: ${probLluvia}%`}
                 />
-                {/* Suelo: solo si tiene polígono en Agromonitoring */}
-                {loadingSuelo ? (
-                    <div className="rounded-xl border bg-emerald-50 border-emerald-100 p-3 flex items-center justify-center">
-                        <Loader2 size={16} className="animate-spin text-emerald-400" />
-                    </div>
-                ) : sueloData ? (
-                    <MetricCard
-                        icon={<Leaf size={16} className={getSueloIconColor(sueloData.estadoHumedad)} />}
-                        bg={getSueloBg(sueloData.estadoHumedad)}
-                        label="Humedad suelo"
-                        value={sueloData.humedadPct != null ? `${sueloData.humedadPct.toFixed(0)}%` : "—"}
-                        sub={`Estado: ${sueloData.estadoHumedad ?? "—"} · ${sueloData.temp10cmC != null ? `${sueloData.temp10cmC.toFixed(1)}°C a 10cm` : ""}`}
-                        badge={sueloData.estadoHumedad}
-                    />
-                ) : (
-                    <div className="rounded-xl border bg-gray-50 border-gray-100 p-3 flex flex-col justify-center">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Humedad suelo</p>
-                        <p className="text-sm font-black text-gray-300">—</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{tienePoligono ? "Cargando..." : "Sin polígono"}</p>
-                    </div>
-                )}
+                {renderHumedadCard()}
             </div>
 
             {/* ── Recomendación de riego ── */}
@@ -222,11 +273,11 @@ export default function ClimaLotePanel({ lote }) {
                 </div>
             )}
 
-            {/* ── Pronóstico 7 días ── */}
+            {/* ── Pronóstico 7 días (clickeable) ── */}
             {daily?.time?.length > 0 && (
                 <div className="px-5 pb-5">
                     <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                        Pronóstico 7 días
+                        Pronóstico 7 días — <span className="text-sky-500 normal-case font-semibold">tocá un día para ver detalles</span>
                     </h4>
                     <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
                         {daily.time.map((iso, i) => (
@@ -239,9 +290,66 @@ export default function ClimaLotePanel({ lote }) {
                                 mm={daily.precipitation_sum?.[i]}
                                 prob={daily.precipitation_probability_max?.[i]}
                                 isToday={i === 0}
+                                isSelected={diaSeleccionado === i}
+                                onClick={() => setDiaSeleccionado(prev => prev === i ? null : i)}
                             />
                         ))}
                     </div>
+
+                    {/* ── Panel de detalle del día seleccionado ── */}
+                    {diaDetalle && (
+                        <div className="mt-3 bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-2xl">{getWeatherInfo(diaDetalle.code).emoji}</span>
+                                    <div>
+                                        <p className="font-black text-[14px] text-gray-900">
+                                            {diaSeleccionado === 0
+                                                ? "Hoy"
+                                                : new Date(`${diaDetalle.iso}T12:00:00`).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })
+                                            }
+                                        </p>
+                                        <p className="text-[11px] text-gray-500">{getWeatherInfo(diaDetalle.code).desc}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setDiaSeleccionado(null)}
+                                    className="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    <X size={13} />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <DetalleItem
+                                    icon={<Thermometer size={13} className="text-orange-500" />}
+                                    label="Temperatura"
+                                    value={`${Math.round(diaDetalle.tMax)}° / ${Math.round(diaDetalle.tMin)}°`}
+                                    sub="Máx / Mín"
+                                />
+                                <DetalleItem
+                                    icon={<Droplets size={13} className="text-sky-500" />}
+                                    label="Humedad"
+                                    value={diaDetalle.humedadMax != null ? `${Math.round(diaDetalle.humedadMax)}%` : "—"}
+                                    sub={diaDetalle.humedadMin != null ? `Mín: ${Math.round(diaDetalle.humedadMin)}%` : ""}
+                                />
+                                <DetalleItem
+                                    icon={<CloudRain size={13} className="text-violet-500" />}
+                                    label="Lluvia"
+                                    value={diaDetalle.mm != null && diaDetalle.mm > 0
+                                        ? `${diaDetalle.mm < 10 ? diaDetalle.mm.toFixed(1) : Math.round(diaDetalle.mm)} mm`
+                                        : "Sin lluvia"
+                                    }
+                                    sub={diaDetalle.prob != null && diaDetalle.prob > 0 ? `Prob: ${Math.round(diaDetalle.prob)}%` : "0% prob."}
+                                />
+                                <DetalleItem
+                                    icon={<Wind size={13} className="text-slate-500" />}
+                                    label="Viento máx."
+                                    value={diaDetalle.viento != null ? `${Math.round(diaDetalle.viento)} km/h` : "—"}
+                                    sub="Vel. máxima"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -263,22 +371,54 @@ function MetricCard({ icon, bg, label, value, sub }) {
     );
 }
 
-function DiaDaysCard({ iso, code, tMax, tMin, mm, prob, isToday }) {
+function DiaDaysCard({ iso, code, tMax, tMin, mm, prob, isToday, isSelected, onClick }) {
     const { emoji } = getWeatherInfo(code);
     const label = isToday ? "Hoy" : new Date(`${iso}T12:00:00`).toLocaleDateString("es-AR", { weekday: "short" });
 
     return (
-        <div className={`rounded-xl p-2 text-center border transition-colors ${isToday ? "bg-sky-50 border-sky-200" : "bg-gray-50 border-gray-100 hover:border-sky-200 hover:bg-sky-50"}`}>
-            <p className={`text-[9px] font-black uppercase ${isToday ? "text-sky-600" : "text-gray-400"}`}>{label}</p>
+        <button
+            onClick={onClick}
+            className={`rounded-xl p-2 text-center border transition-all cursor-pointer w-full focus:outline-none focus:ring-2 focus:ring-sky-300 ${
+                isSelected
+                    ? "bg-sky-500 border-sky-600 shadow-md shadow-sky-200 scale-105"
+                    : isToday
+                        ? "bg-sky-50 border-sky-200 hover:border-sky-300 hover:shadow-sm"
+                        : "bg-gray-50 border-gray-100 hover:border-sky-200 hover:bg-sky-50 hover:shadow-sm"
+            }`}
+        >
+            <p className={`text-[9px] font-black uppercase ${isSelected ? "text-white" : isToday ? "text-sky-600" : "text-gray-400"}`}>
+                {label}
+            </p>
             <span className="text-xl block my-1">{emoji}</span>
-            <p className="text-[11px] font-black text-gray-800">{tMax != null ? `${Math.round(tMax)}°` : "—"}</p>
-            <p className="text-[10px] text-gray-400">{tMin != null ? `${Math.round(tMin)}°` : "—"}</p>
+            <p className={`text-[11px] font-black ${isSelected ? "text-white" : "text-gray-800"}`}>
+                {tMax != null ? `${Math.round(tMax)}°` : "—"}
+            </p>
+            <p className={`text-[10px] ${isSelected ? "text-sky-100" : "text-gray-400"}`}>
+                {tMin != null ? `${Math.round(tMin)}°` : "—"}
+            </p>
             {mm > 0 && (
-                <p className="text-[9px] font-bold text-sky-500 mt-0.5">{mm < 10 ? mm.toFixed(1) : Math.round(mm)}mm</p>
+                <p className={`text-[9px] font-bold mt-0.5 ${isSelected ? "text-white" : "text-sky-500"}`}>
+                    {mm < 10 ? mm.toFixed(1) : Math.round(mm)}mm
+                </p>
             )}
             {prob > 0 && (
-                <p className="text-[9px] text-violet-500 font-bold">{Math.round(prob)}%</p>
+                <p className={`text-[9px] font-bold ${isSelected ? "text-sky-100" : "text-violet-500"}`}>
+                    {Math.round(prob)}%
+                </p>
             )}
+        </button>
+    );
+}
+
+function DetalleItem({ icon, label, value, sub }) {
+    return (
+        <div className="bg-white/70 rounded-xl p-3 border border-sky-100">
+            <div className="flex items-center gap-1.5 mb-1">
+                {icon}
+                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{label}</span>
+            </div>
+            <p className="text-[14px] font-black text-gray-900">{value}</p>
+            {sub && <p className="text-[9px] text-gray-400 mt-0.5">{sub}</p>}
         </div>
     );
 }
@@ -298,7 +438,6 @@ function getWeatherInfo(code) {
 }
 
 function generarRecomendacion(suelo, lluviaManana, probLluvia) {
-    // Con datos de suelo de Agromonitoring
     if (suelo?.humedadPct != null) {
         const h = suelo.humedadPct;
         if (h > 60) return `🟢 Suelo saturado (${Math.round(h)}%). Suspender riego. Revisar drenaje.`;
@@ -313,7 +452,6 @@ function generarRecomendacion(suelo, lluviaManana, probLluvia) {
         }
         return `🔴 Humedad crítica (${Math.round(h)}%). ¡Riego urgente! Riesgo de estrés hídrico.`;
     }
-    // Sin datos de suelo: solo clima
     if (probLluvia >= 70 || lluviaManana >= 10)
         return `🌧️ Alta probabilidad de lluvia (${probLluvia}%). Suspender riego planificado.`;
     if (probLluvia >= 40)

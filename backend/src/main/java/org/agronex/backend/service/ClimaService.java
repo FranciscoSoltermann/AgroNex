@@ -225,6 +225,34 @@ public class ClimaService {
                 .build();
     }
 
+    @Transactional
+    public RegistroClimaResponse actualizarRegistroClima(UUID idRegistro, BigDecimal mm, BigDecimal tempMin, BigDecimal tempMax, UUID idUsuarioToken) {
+        RegistroClima registro = climaRepository.findById(idRegistro)
+                .orElseThrow(() -> new EntityNotFoundException("Registro de clima no encontrado"));
+
+        if (!registro.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("No tenés permiso para modificar este registro.");
+        }
+
+        if (mm != null) registro.setPrecipitacionesMm(mm);
+        if (tempMin != null) registro.setTempMin(tempMin);
+        if (tempMax != null) registro.setTempMax(tempMax);
+
+        return mapToResponse(climaRepository.save(registro));
+    }
+
+    @Transactional
+    public void eliminarRegistroClima(UUID idRegistro, UUID idUsuarioToken) {
+        RegistroClima registro = climaRepository.findById(idRegistro)
+                .orElseThrow(() -> new EntityNotFoundException("Registro de clima no encontrado"));
+
+        if (!registro.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            throw new AccessDeniedException("No tenés permiso para eliminar este registro.");
+        }
+
+        climaRepository.delete(registro);
+    }
+
     private RegistroClimaResponse mapToResponse(RegistroClima r) {
         return RegistroClimaResponse.builder()
                 .idRegistro(r.getIdRegistro())
