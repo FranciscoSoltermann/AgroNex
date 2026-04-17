@@ -146,7 +146,7 @@ export default function AuthPage() {
     };
 
     return (
-        <div className="h-screen flex flex-col bg-[#F9FBFA] overflow-hidden font-sans selection:bg-green-100 antialiased">
+        <div className="min-h-screen flex flex-col bg-[#F9FBFA] font-sans selection:bg-green-100 antialiased">
             <Navbar />
             <div className="flex-1 flex overflow-hidden relative group">
                 <div className="hidden md:block absolute inset-0">
@@ -166,7 +166,7 @@ export default function AuthPage() {
                     </div>
                 </div>
 
-                <div className="w-full md:w-2/5 md:ml-auto flex flex-col justify-center items-center p-6 bg-[#F9FBFA] md:bg-transparent relative perspective-1000 z-10">
+                <div className="w-full md:w-2/5 md:ml-auto flex flex-col justify-center items-center p-4 sm:p-6 bg-[#F9FBFA] md:bg-transparent relative perspective-1000 z-10 overflow-y-auto">
                     <div className="flex flex-col items-center mb-6 z-20">
                         <div className="flex bg-white/25 p-1.5 rounded-[999px] mb-5 border border-white/50 backdrop-blur-md shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
                             <button onClick={() => setIsLogin(true)} className={`min-w-[170px] px-7 py-2.5 rounded-[999px] text-xs font-black uppercase tracking-widest transition-all duration-300 ${isLogin ? "bg-white text-[#2D6A4F] shadow-sm" : "text-white/90 hover:text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"}`}>Iniciar Sesión</button>
@@ -174,8 +174,8 @@ export default function AuthPage() {
                         </div>
                     </div>
 
-                    {/* AJUSTE DE ALTURA h-[620px] para que entre todo */}
-                    <div className={`relative w-full max-w-[420px] h-[620px] transition-all duration-1000 preserve-3d ${!isLogin ? "is-flipped" : ""}`}>
+                    {/* Card 3D flip */}
+                    <div className={`relative w-full max-w-[420px] h-auto min-h-[520px] sm:h-[620px] transition-all duration-1000 preserve-3d ${!isLogin ? "is-flipped" : ""}`}>
 
                         {/* CARA FRONT: LOGIN */}
                         <div className="card-face absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2.5rem] p-10 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)]">

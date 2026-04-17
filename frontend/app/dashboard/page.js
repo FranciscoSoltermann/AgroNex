@@ -213,7 +213,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 <StatCard
                     label="Total Ha"
                     value={Number(stats.hectareasTotales).toLocaleString("es-AR", { maximumFractionDigits: 1 }) || "0"}
@@ -247,9 +247,9 @@ export default function DashboardHome() {
             </div>
 
             {/* Gráfico + Actividades */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3 sm:gap-4">
                 {/* Gráfico */}
-                <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100">
                     <div className="flex items-start justify-between mb-1">
                         <div>
                             <h3 className="text-[14px] font-bold text-gray-900">Crecimiento: Costos vs Cosechas</h3>
@@ -261,7 +261,8 @@ export default function DashboardHome() {
                             ))}
                         </div>
                     </div>
-                    <div className="mt-6 flex items-end justify-between gap-3 h-40">
+                    <div className="mt-4 sm:mt-6 overflow-x-auto">
+                    <div className="min-w-[280px] flex items-end justify-between gap-3 h-32 sm:h-40">
                         {dynChartData.map((d, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-1">
                                 <div className="w-full flex gap-1 items-end" style={{ height: "120px" }}>
@@ -272,7 +273,8 @@ export default function DashboardHome() {
                             </div>
                         ))}
                     </div>
-                    <div className="flex gap-5 mt-3">
+                    </div>
+                    <div className="flex flex-wrap gap-3 sm:gap-5 mt-3">
                         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C1DDD1] inline-block" /><span className="text-[10px] font-semibold text-gray-500">Costos Acumulados</span></div>
                         <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500">Rendimiento de Cosecha (kg)</span></div>
                     </div>
@@ -307,7 +309,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Alertas de Inventario + Gastos por Categoría */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 {/* Alertas de Inventario */}
                 <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
@@ -373,7 +375,7 @@ export default function DashboardHome() {
                             No hay gastos registrados.
                         </div>
                     ) : (
-                        <div className="flex items-center gap-6">
+                        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
                             <PieChartSVG data={gastosPorCategoria} />
                             <div className="flex-1 space-y-2">
                                 {gastosPorCategoria.map((cat, i) => {
@@ -438,12 +440,12 @@ function PieChartSVG({ data }) {
 
 function StatCard({ label, value, sub, subColor = "text-gray-400", icon, iconBg }) {
     return (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between mb-2 sm:mb-3">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-tight">{label}</p>
                 <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>{icon}</div>
             </div>
-            <p className="text-[28px] font-black text-gray-900 leading-none tracking-tight">{value}</p>
+            <p className="text-2xl sm:text-[28px] font-black text-gray-900 leading-none tracking-tight">{value}</p>
             <div className={`text-[10px] font-semibold mt-1.5 ${subColor}`}>{sub}</div>
         </div>
     );

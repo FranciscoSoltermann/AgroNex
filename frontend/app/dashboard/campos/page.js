@@ -200,18 +200,18 @@ export default function CamposPage() {
     };
 
     if (loading) return (
-        <div className="space-y-6 max-w-6xl mx-auto p-2">
+        <div className="space-y-5 sm:space-y-6 max-w-6xl mx-auto p-2">
             {/* Header Skeleton */}
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col sm:flex-row justify-between gap-3">
                 <div className="space-y-3">
                     <div className="h-3 w-24 bg-gray-200 rounded-md animate-pulse"></div>
-                    <div className="h-8 w-64 bg-gray-200 rounded-md animate-pulse"></div>
-                    <div className="h-4 w-48 bg-gray-200 rounded-md animate-pulse"></div>
+                    <div className="h-8 w-48 sm:w-64 bg-gray-200 rounded-md animate-pulse"></div>
+                    <div className="h-4 w-36 sm:w-48 bg-gray-200 rounded-md animate-pulse"></div>
                 </div>
-                <div className="h-10 w-40 bg-gray-200 rounded-xl animate-pulse"></div>
+                <div className="h-10 w-36 sm:w-40 bg-gray-200 rounded-xl animate-pulse self-start"></div>
             </div>
             {/* Stats Skeleton */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 {[1, 2, 3].map(i => (
                     <div key={i} className="bg-white rounded-2xl p-5 border border-gray-100 flex flex-col gap-3 h-32 animate-pulse">
                         <div className="h-3 w-28 bg-gray-200 rounded-md"></div>
@@ -221,9 +221,9 @@ export default function CamposPage() {
                 ))}
             </div>
             {/* Cards Skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
                 {[1, 2, 3].map(i => (
-                    <div key={i} className="h-[280px] bg-gray-100 rounded-2xl animate-pulse"></div>
+                    <div key={i} className="h-[240px] sm:h-[280px] bg-gray-100 rounded-2xl animate-pulse"></div>
                 ))}
             </div>
         </div>
@@ -232,15 +232,15 @@ export default function CamposPage() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start gap-3 justify-between">
                 <div>
                     <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Campos y Lotes</p>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tight">Resumen de la Estancia</h1>
+                    <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Resumen de la Estancia</h1>
                     <p className="text-[13px] text-gray-500 mt-1">Gestioná tus zonas de cultivo y unidades de producción.</p>
                 </div>
                 <button
                     onClick={() => { setShowModalCampo(true); setSubmitError(null); setSubmitSuccess(null); }}
-                    className="flex items-center gap-2 bg-[#2D6A4F] text-white px-4 py-2.5 rounded-xl text-[12px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/20"
+                    className="flex items-center gap-2 bg-[#2D6A4F] text-white px-4 py-2.5 rounded-xl text-[12px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/20 self-start sm:self-auto whitespace-nowrap"
                 >
                     <Plus size={15} /> Agregar Campo/Lote
                 </button>
@@ -255,7 +255,7 @@ export default function CamposPage() {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Superficie Total</p>
                     <p className="text-3xl font-black text-gray-900">{Number(stats.totalHa).toLocaleString("es-AR", { maximumFractionDigits: 1 })} <span className="text-lg font-semibold text-gray-400">Ha</span></p>
@@ -497,8 +497,8 @@ const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py
 
 function Modal({ titulo, onClose, children }) {
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md p-5 sm:p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-5">
                     <h3 className="text-[16px] font-black text-gray-900">{titulo}</h3>
                     <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors"><X size={16} /></button>
