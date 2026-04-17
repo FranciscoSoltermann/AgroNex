@@ -207,7 +207,7 @@ export default function FinanzasPage() {
     };
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
+        <div className="space-y-6 animate-in fade-in duration-500">
             <div>
                 <h1 className="text-2xl font-black text-gray-900 tracking-tight">Finanzas y Rendimiento</h1>
                 <p className="text-[13px] text-gray-500 mt-1">Costos por hectárea, cosecha y margen al cerrar cada campaña.</p>

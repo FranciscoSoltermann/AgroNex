@@ -11,7 +11,6 @@ import dynamic from 'next/dynamic';
 import { toast } from "sonner";
 
 const MonitoreoSatelitalViewer = dynamic(() => import('@/components/features/dashboard/lotes/MonitoreoSatelitalViewer'), { ssr: false });
-const ClimaLotePanel = dynamic(() => import('@/components/features/dashboard/lotes/ClimaLotePanel'), { ssr: false });
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
@@ -289,7 +288,7 @@ export default function CiclosPage() {
 
     if (loading) {
         return (
-            <div className="space-y-6 max-w-6xl mx-auto p-2">
+            <div className="space-y-6 p-2">
                 <div className="flex justify-between items-start">
                     <div className="space-y-3">
                         <div className="h-4 w-40 bg-gray-200 rounded-md animate-pulse"></div>
@@ -310,7 +309,7 @@ export default function CiclosPage() {
     }
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500 max-w-6xl mx-auto">
+        <div className="space-y-6 animate-in fade-in duration-500">
             <div>
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ciclos de producción</p>
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -448,8 +447,6 @@ export default function CiclosPage() {
             {/* Monitoreo Satelital */}
             {loteActual && <MonitoreoSatelitalViewer lote={loteActual} />}
 
-            {/* Clima, Suelo y Pronóstico */}
-            {loteActual && <ClimaLotePanel lote={loteActual} />}
 
             <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
                 <div className="space-y-3">

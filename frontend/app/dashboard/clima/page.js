@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
@@ -15,6 +15,11 @@ const ClimaBarsChart = dynamic(() => import("@/components/features/dashboard/cha
     ssr: false,
     loading: () => <div className="h-full w-full bg-blue-50 rounded-xl animate-pulse" />,
 });
+
+const ClimaLotePanel = dynamic(
+    () => import("@/components/features/dashboard/lotes/ClimaLotePanel"),
+    { ssr: false }
+);
 
 // ──────────────────────────────────────────────
 // FENOLOGY STAGES CONFIG
@@ -54,12 +59,17 @@ export default function ClimaPage() {
     const [loading, setLoading] = useState(true);
     const [fetchingGdd, setFetchingGdd] = useState(false);
     const [error, setError] = useState(null);
+    const [lotes, setLotes] = useState([]);
+    const [idLoteClima, setIdLoteClima] = useState("");
 
     const fetchData = useCallback(async () => {
         try {
             const bootstrap = await getDashboardBootstrapData();
             setCampos(bootstrap.campos || []);
             setCampanias(bootstrap.campanias || []);
+            const lotesData = bootstrap.lotes || [];
+            setLotes(lotesData);
+            if (lotesData.length > 0 && !idLoteClima) setIdLoteClima(lotesData[0].idLote);
         } catch {
             setError("Error al cargar datos del establecimiento.");
         } finally {
@@ -179,6 +189,33 @@ export default function ClimaPage() {
                     campoId={seleccion.campoId}
                     onDataChange={() => seleccion.campaniaId && cargarResumen(seleccion.campaniaId)}
                 />
+            )}
+
+            {/* ── Clima en tiempo real (widget por lote) ── */}
+            {lotes.length > 0 && (
+                <div className="space-y-4">
+                    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm">
+                        <div className="max-w-md">
+                            <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
+                                Lote para clima en tiempo real
+                            </label>
+                            <select
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
+                                value={idLoteClima}
+                                onChange={(e) => setIdLoteClima(e.target.value)}
+                            >
+                                {lotes.map((l) => (
+                                    <option key={l.idLote} value={l.idLote}>
+                                        {l.nombre} — {l.superficie} Ha · {l.nombreCampo}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    {lotes.find((l) => l.idLote === idLoteClima) && (
+                        <ClimaLotePanel lote={lotes.find((l) => l.idLote === idLoteClima)} />
+                    )}
+                </div>
             )}
         </div>
     );

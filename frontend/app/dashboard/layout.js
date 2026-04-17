@@ -12,7 +12,7 @@ import {
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import NotificationBell from "@/components/shared/notifications/NotificationBell";
-import SiteFooter from "@/components/shared/layout/SiteFooter";
+
 
 export default function DashboardLayout({ children }) {
     const pathname = usePathname();
@@ -20,33 +20,15 @@ export default function DashboardLayout({ children }) {
     const [userName, setUserName] = useState("Usuario");
 
     useEffect(() => {
-        const displayNameFromUser = (user) => {
-            if (!user) return "Usuario";
-            const meta = user.user_metadata || {};
-            const razonSocial = meta.razonSocial?.trim();
-            const nombre = meta.nombre?.trim();
-            const apellido = meta.apellido?.trim();
-            const fullName = meta.full_name?.trim();
-            const name = meta.name?.trim();
-            return (
-                razonSocial ||
-                [nombre, apellido].filter(Boolean).join(" ") ||
-                fullName ||
-                name ||
-                user.email?.split("@")[0] ||
-                "Usuario"
-            );
-        };
-
         const syncUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 try {
                     const { data: { session } } = await supabase.auth.getSession();
 
-                    // Si todavía no hay sesión/token, no intentamos validar contra backend.
+                    // Si todavía no hay sesión/token, usamos fallback básico.
                     if (!session?.access_token) {
-                        setUserName(displayNameFromUser(user));
+                        setUserName("Usuario");
                         return;
                     }
 
@@ -62,20 +44,35 @@ export default function DashboardLayout({ children }) {
                         router.push("/login");
                         return;
                     }
+
+                    // Obtenemos el nombre real desde el backend (nombre/apellido o razón social).
+                    const settingsRes = await apiClient.get("/usuarios/settings", { timeout: 4000 });
+                    const nombreMostrar = settingsRes?.data?.nombreMostrar;
+                    if (nombreMostrar && nombreMostrar.trim()) {
+                        setUserName(nombreMostrar.trim());
+                    } else {
+                        setUserName("Usuario");
+                    }
+                    return;
                 } catch (err) {
                     // Backend apagado o red caída: no bloqueamos la UI del dashboard.
                     if (process.env.NODE_ENV === "development") {
-                        console.warn("No se pudo validar registro contra backend", err?.message || err);
+                        console.warn("No se pudo obtener nombre desde backend", err?.message || err);
                     }
                 }
-                setUserName(displayNameFromUser(user));
+                setUserName("Usuario");
             }
         };
 
         syncUser();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUserName(displayNameFromUser(session?.user ?? null));
+            if (session?.user) {
+                // Re-fetch del nombre desde el backend al cambiar de sesión.
+                syncUser();
+            } else {
+                setUserName("Usuario");
+            }
         });
 
         return () => subscription.unsubscribe();
@@ -176,9 +173,8 @@ export default function DashboardLayout({ children }) {
                 </header>
 
                 {/* Página */}
-                <main className="flex-1 overflow-y-auto p-6 flex flex-col">
-                    <div className="flex-1">{children}</div>
-                    <SiteFooter compact />
+                <main className="flex-1 overflow-y-auto p-6">
+                    {children}
                 </main>
             </div>
         </div>

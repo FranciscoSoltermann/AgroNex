@@ -1,14 +1,17 @@
 "use client";
-import ClimaCarrusel from "@/components/features/dashboard/clima/ClimaCarousel";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
 import {
     Loader2, TrendingUp, Grid2x2, DollarSign, RefreshCw,
-    Sprout, Droplets, ChevronRight,
-    FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers
+    Sprout, Droplets, ChevronRight, AlertTriangle, PieChart,
+    FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers, Package
 } from "lucide-react";
+
+const UNIDAD_LABEL = { UNIDADES: "und", LITROS: "L", KILOGRAMOS: "kg", TONELADAS: "tn" };
+const getUnidadLabel = (u) => UNIDAD_LABEL[u] ?? "und";
+const PIE_COLORS = ["#2D6A4F", "#52B788", "#74C69D", "#B7E4C7", "#D8F3DC"];
 
 const getActividadConfig = (tipo) => {
     const t = tipo?.toLowerCase() || "";
@@ -56,7 +59,9 @@ export default function DashboardHome() {
     const [dynChartData, setDynChartData] = useState([{ mes: "MAR", costos: 0, cosecha: 0 }]);
     const [dynMaxVal, setDynMaxVal] = useState(100);
 
-    const [campos, setCampos] = useState([]); // Asegurate de tener este estado declarado
+    const [campos, setCampos] = useState([]);
+    const [lowStockItems, setLowStockItems] = useState([]);
+    const [gastosPorCategoria, setGastosPorCategoria] = useState([]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -68,12 +73,13 @@ export default function DashboardHome() {
                     try {
                         const t = new Date().getTime();
                         // 1. Añadimos resCampos a la carga masiva
-                        const [bootstrap, resStats, resActs, resGastos, resCosechas] = await Promise.all([
+                        const [bootstrap, resStats, resActs, resGastos, resCosechas, resInsumos] = await Promise.all([
                             getDashboardBootstrapData(),
                             apiClient.get(`/campos/stats?t=${t}`).catch(() => ({ data: {} })),
                             apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/gastos?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] })),
+                            apiClient.get(`/insumos?t=${t}`).catch(() => ({ data: [] })),
                         ]);
                         
                         const actos = resActs.data || [];
@@ -94,7 +100,29 @@ export default function DashboardHome() {
                         });
                         
                         setActividades(actos);
-                        setCampos(listaCampos); // <--- GUARDAMOS LOS CAMPOS REALES
+                        setCampos(listaCampos);
+
+                        // Inventario: 3 items con menor stock
+                        const allInsumos = resInsumos.data || [];
+                        const sorted = [...allInsumos]
+                            .filter(i => i.cantidad != null)
+                            .sort((a, b) => Number(a.cantidad) - Number(b.cantidad))
+                            .slice(0, 3);
+                        setLowStockItems(sorted);
+
+                        // Gastos por categoría para pie chart
+                        const catMap = {};
+                        gast.forEach(g => {
+                            const cat = g.categoria || "Otros";
+                            catMap[cat] = (catMap[cat] || 0) + (g.montoTotal || 0);
+                        });
+                        // Also add activity costs as "Servicios de campo"
+                        const actCosts = actos.reduce((s, a) => s + (a.costoServicio || 0), 0);
+                        if (actCosts > 0) catMap["Servicios de campo"] = (catMap["Servicios de campo"] || 0) + actCosts;
+                        const catArr = Object.entries(catMap)
+                            .map(([name, value]) => ({ name, value }))
+                            .sort((a, b) => b.value - a.value);
+                        setGastosPorCategoria(catArr);
 
                         // Lógica de Gráfico (Se mantiene igual)
                         const finalChartData = [];
@@ -277,11 +305,134 @@ export default function DashboardHome() {
                     </a>
                 </div>
             </div>
-            {/* --- SECCIÓN CLIMA --- */}
-            <div className="w-full">
-                <ClimaCarrusel campos={campos} />
+
+            {/* Alertas de Inventario + Gastos por Categoría */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Alertas de Inventario */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+                                <AlertTriangle size={16} className="text-orange-500" />
+                            </div>
+                            <h3 className="text-[14px] font-bold text-gray-900">Alertas de Inventario</h3>
+                        </div>
+                        <a href="/dashboard/inventario" className="text-[11px] font-bold text-[#2D6A4F] hover:underline flex items-center gap-1">
+                            Ver todo <ChevronRight size={12} />
+                        </a>
+                    </div>
+                    {lowStockItems.length === 0 ? (
+                        <div className="text-center py-6 text-gray-400 text-xs font-medium">
+                            <Package size={24} className="mx-auto mb-2 text-gray-300" />
+                            No hay insumos registrados.
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {lowStockItems.map((item) => {
+                                const qty = Number(item.cantidad || 0);
+                                const ini = Number(item.cantidadInicial || 0);
+                                const pct = ini > 0 ? (qty / ini) * 100 : (qty <= 0 ? 0 : 100);
+                                const isCritical = qty <= 0 || pct < 20;
+                                const isLow = pct < 40;
+                                const barColor = isCritical ? "bg-red-500" : isLow ? "bg-orange-400" : "bg-emerald-400";
+                                const textColor = isCritical ? "text-red-600" : isLow ? "text-orange-600" : "text-gray-700";
+                                return (
+                                    <div key={item.idInsumo} className="flex items-center gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <p className="text-[12px] font-bold text-gray-900 truncate">{item.nombre}</p>
+                                                <span className={`text-[12px] font-black ${textColor} flex-shrink-0 ml-2`}>
+                                                    {qty.toLocaleString("es-AR")}{getUnidadLabel(item.unidad)} restantes
+                                                </span>
+                                            </div>
+                                            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                                                    style={{ width: `${Math.max(2, Math.min(100, pct))}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+
+                {/* Gastos por Categoría — Pie Chart */}
+                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
+                            <PieChart size={16} className="text-violet-500" />
+                        </div>
+                        <h3 className="text-[14px] font-bold text-gray-900">Gastos por Categoría</h3>
+                    </div>
+                    {gastosPorCategoria.length === 0 ? (
+                        <div className="text-center py-6 text-gray-400 text-xs font-medium">
+                            <DollarSign size={24} className="mx-auto mb-2 text-gray-300" />
+                            No hay gastos registrados.
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-6">
+                            <PieChartSVG data={gastosPorCategoria} />
+                            <div className="flex-1 space-y-2">
+                                {gastosPorCategoria.map((cat, i) => {
+                                    const total = gastosPorCategoria.reduce((s, c) => s + c.value, 0);
+                                    const pct = total > 0 ? ((cat.value / total) * 100).toFixed(1) : 0;
+                                    return (
+                                        <div key={cat.name} className="flex items-center gap-2">
+                                            <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                                            <span className="text-[11px] font-semibold text-gray-700 flex-1 truncate">{cat.name}</span>
+                                            <span className="text-[11px] font-black text-gray-900">{pct}%</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
+
         </div>
+    );
+}
+
+function PieChartSVG({ data }) {
+    let cumulativePercent = 0;
+    const total = data.reduce((sum, item) => sum + item.value, 0);
+
+    const getCoordinatesForPercent = (percent) => {
+        const x = Math.cos(2 * Math.PI * percent);
+        const y = Math.sin(2 * Math.PI * percent);
+        return [x, y];
+    };
+
+    return (
+        <svg viewBox="-1 -1 2 2" className="w-24 h-24 transform -rotate-90">
+            {data.map((slice, i) => {
+                const startPercent = cumulativePercent;
+                cumulativePercent += slice.value / total;
+                const endPercent = cumulativePercent;
+                
+                const [startX, startY] = getCoordinatesForPercent(startPercent);
+                const [endX, endY] = getCoordinatesForPercent(endPercent);
+                const largeArcFlag = endPercent - startPercent > 0.5 ? 1 : 0;
+                
+                const pathData = [
+                    `M ${startX} ${startY}`,
+                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
+                    `L 0 0`,
+                ].join(" ");
+                
+                return (
+                    <path
+                        key={slice.name}
+                        d={pathData}
+                        fill={PIE_COLORS[i % PIE_COLORS.length]}
+                    />
+                );
+            })}
+        </svg>
     );
 }
 

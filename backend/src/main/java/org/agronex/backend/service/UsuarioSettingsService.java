@@ -99,7 +99,7 @@ public class UsuarioSettingsService {
             rol = "Administrador de Campo";
             nombre = pf.getNombre();
             apellido = pf.getApellido();
-            nombreMostrar = ((pf.getNombre() != null ? pf.getNombre() : "") + " " + (pf.getApellido() != null ? pf.getApellido() : "")).trim();
+            nombreMostrar = pf.getNombre() != null ? pf.getNombre().trim() : "";
         } else if (usuario instanceof PersonaJuridica pj) {
             tipoPersona = "JURIDICA";
             rol = "Administrador Empresarial";
