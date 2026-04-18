@@ -25,13 +25,13 @@ const ClimaLotePanel = dynamic(
 // FENOLOGY STAGES CONFIG
 // ──────────────────────────────────────────────
 const FENOLOGY_STAGES = [
-    { label: "Siembra",        gddMin: 0,   gddMax: 50,   pct: 8 },
-    { label: "Emergencia (VE)",gddMin: 50,  gddMax: 150,  pct: 20 },
-    { label: "Veg. Temprana",  gddMin: 150, gddMax: 400,  pct: 38 },
-    { label: "Floración",      gddMin: 400, gddMax: 700,  pct: 58 },
-    { label: "Llenado grano",  gddMin: 700, gddMax: 1000, pct: 78 },
-    { label: "Madurez",        gddMin: 1000,gddMax: 1300, pct: 92 },
-    { label: "Cosecha",        gddMin: 1300,gddMax: 99999,pct: 100 },
+    { label: "Siembra", gddMin: 0, gddMax: 50, pct: 8 },
+    { label: "Emergencia (VE)", gddMin: 50, gddMax: 150, pct: 20 },
+    { label: "Veg. Temprana", gddMin: 150, gddMax: 400, pct: 38 },
+    { label: "Floración", gddMin: 400, gddMax: 700, pct: 58 },
+    { label: "Llenado grano", gddMin: 700, gddMax: 1000, pct: 78 },
+    { label: "Madurez", gddMin: 1000, gddMax: 1300, pct: 92 },
+    { label: "Cosecha", gddMin: 1300, gddMax: 99999, pct: 100 },
 ];
 
 function getFenologyPct(gdd) {
@@ -114,14 +114,6 @@ export default function ClimaPage() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* ── Header ── */}
-            <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Clima y Fenología</p>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tight">Grados Día y Predicción</h1>
-                <p className="text-[13px] text-gray-500 mt-1">
-                    Calculá el progreso fenológico del cultivo y visualizá los Grados Día Desarrollo (GDD).
-                </p>
-            </div>
-
             {error && (
                 <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
                     <AlertCircle size={16} /> {error}
@@ -129,7 +121,7 @@ export default function ClimaPage() {
             )}
 
             {/* ── Selectores ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-[#1a1f25] p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div>
                     <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2">
                         1. Seleccioná el Campo
@@ -165,7 +157,7 @@ export default function ClimaPage() {
 
             {/* ── GDD Report ── */}
             {fetchingGdd ? (
-                <div className="bg-white rounded-2xl p-16 border border-gray-100 flex flex-col items-center justify-center text-gray-400">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-16 border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center text-gray-400">
                     <Loader2 size={32} className="animate-spin text-[#2D6A4F] mb-4" />
                     <p className="font-bold text-sm tracking-widest uppercase">Calculando Modelos Fenológicos...</p>
                 </div>
@@ -175,7 +167,7 @@ export default function ClimaPage() {
                     onRefresh={() => cargarResumen(seleccion.campaniaId)}
                 />
             ) : (
-                <div className="bg-white rounded-2xl p-16 border-2 border-dashed border-gray-200 text-center">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-16 border-2 border-dashed border-gray-200 dark:border-gray-700 text-center">
                     <Leaf size={32} className="text-gray-300 mx-auto mb-3" />
                     <p className="text-gray-400 font-medium text-sm">
                         Seleccioná un campo y una campaña para ver el reporte biológico avanzado de GDD.
@@ -194,7 +186,7 @@ export default function ClimaPage() {
             {/* ── Clima en tiempo real (widget por lote) ── */}
             {lotes.length > 0 && (
                 <div className="space-y-4">
-                    <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
                         <div className="max-w-md">
                             <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
                                 Lote para clima en tiempo real
@@ -226,7 +218,7 @@ export default function ClimaPage() {
 // ──────────────────────────────────────────────
 function ResumenPanel({ resumen, onRefresh }) {
     const gdd = resumen.gradosDiaDesarrollo ? Number(resumen.gradosDiaDesarrollo) : 0;
-    const mm  = resumen.mmLlovidosAcumulados ? Number(resumen.mmLlovidosAcumulados) : 0;
+    const mm = resumen.mmLlovidosAcumulados ? Number(resumen.mmLlovidosAcumulados) : 0;
     const pct = getFenologyPct(gdd);
 
     const diasCiclo = resumen.fechaInicio
@@ -448,15 +440,15 @@ function ModuloLluvias({ campoId, onDataChange }) {
     };
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 border-b border-gray-100 gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800 gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
                         <Droplets size={20} className="text-blue-500" />
                     </div>
                     <div>
-                        <h3 className="text-base font-black text-gray-900">Registros Climáticos</h3>
+                        <h3 className="text-base font-black text-gray-900 dark:text-gray-100">Registros Climáticos</h3>
                         <p className="text-[12px] text-gray-400">Precipitaciones y temperaturas registradas</p>
                     </div>
                 </div>
@@ -470,7 +462,7 @@ function ModuloLluvias({ campoId, onDataChange }) {
 
             {/* Add form */}
             {showForm && (
-                <form onSubmit={handleGuardar} className="p-5 bg-gray-50 border-b border-gray-100">
+                <form onSubmit={handleGuardar} className="p-5 bg-gray-50 dark:bg-[#151a20] border-b border-gray-100 dark:border-gray-800">
                     <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-3">Agregar nuevo registro</p>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div>
@@ -552,7 +544,7 @@ function ModuloLluvias({ campoId, onDataChange }) {
                 ) : (
                     <table className="w-full text-left">
                         <thead>
-                            <tr className="border-t border-gray-100 bg-gray-50/60">
+                            <tr className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/50">
                                 <th className="px-6 py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fecha</th>
                                 <th className="px-4 py-3 text-[10px] font-bold text-blue-500 uppercase tracking-widest">Lluvia (mm)</th>
                                 <th className="px-4 py-3 text-[10px] font-bold text-orange-500 uppercase tracking-widest">T. Mín (°C)</th>
@@ -569,8 +561,8 @@ function ModuloLluvias({ campoId, onDataChange }) {
                                     : "—";
 
                                 return (
-                                    <tr key={row.id} className={`group transition-colors ${isEditing ? "bg-amber-50" : "hover:bg-gray-50/60"}`}>
-                                        <td className="px-6 py-3.5 text-[13px] font-semibold text-gray-700">{row.fechaLabel}</td>
+                                    <tr key={row.id} className={`group transition-colors ${isEditing ? "bg-amber-50 dark:bg-amber-900/20" : "hover:bg-gray-50/60 dark:hover:bg-gray-800/50"}`}>
+                                        <td className="px-6 py-3.5 text-[13px] font-semibold text-gray-700 dark:text-gray-300">{row.fechaLabel}</td>
 
                                         {/* mm */}
                                         <td className="px-4 py-3.5">
@@ -579,10 +571,10 @@ function ModuloLluvias({ campoId, onDataChange }) {
                                                     type="number" step="0.1" min="0"
                                                     value={editForm.mm}
                                                     onChange={e => setEditForm(p => ({ ...p, mm: e.target.value }))}
-                                                    className="w-20 border border-blue-300 rounded-lg px-2 py-1 text-[12px] font-bold focus:outline-blue-400"
+                                                    className="w-20 border border-blue-300 dark:border-blue-700 rounded-lg px-2 py-1 text-[12px] font-bold focus:outline-blue-400 dark:bg-gray-800 dark:text-white"
                                                 />
                                             ) : (
-                                                <span className={`inline-flex items-center gap-1 text-[13px] font-bold ${row.mm > 0 ? "text-blue-700" : "text-gray-400"}`}>
+                                                <span className={`inline-flex items-center gap-1 text-[13px] font-bold ${row.mm > 0 ? "text-blue-700 dark:text-blue-400" : "text-gray-400"}`}>
                                                     {row.mm > 0 && <Droplets size={12} />}
                                                     {row.mm.toFixed(1)}
                                                 </span>
@@ -596,11 +588,11 @@ function ModuloLluvias({ campoId, onDataChange }) {
                                                     type="number" step="0.1"
                                                     value={editForm.tempMin}
                                                     onChange={e => setEditForm(p => ({ ...p, tempMin: e.target.value }))}
-                                                    className="w-20 border border-orange-300 rounded-lg px-2 py-1 text-[12px] font-bold focus:outline-orange-400"
+                                                    className="w-20 border border-orange-300 dark:border-orange-700 rounded-lg px-2 py-1 text-[12px] font-bold focus:outline-orange-400 dark:bg-gray-800 dark:text-white"
                                                 />
                                             ) : (
-                                                <span className="text-[13px] font-semibold text-orange-700">
-                                                    {row.tempMin !== null ? `${row.tempMin.toFixed(1)}°` : <span className="text-gray-300">—</span>}
+                                                <span className={`text-[13px] font-semibold ${row.tempMin !== null ? "text-orange-700 dark:text-orange-400" : "text-gray-400"}`}>
+                                                    {row.tempMin !== null ? `${row.tempMin.toFixed(1)}°` : "—"}
                                                 </span>
                                             )}
                                         </td>
@@ -612,48 +604,42 @@ function ModuloLluvias({ campoId, onDataChange }) {
                                                     type="number" step="0.1"
                                                     value={editForm.tempMax}
                                                     onChange={e => setEditForm(p => ({ ...p, tempMax: e.target.value }))}
-                                                    className="w-20 border border-red-300 rounded-lg px-2 py-1 text-[12px] font-bold focus:outline-red-400"
+                                                    className="w-20 border border-red-300 dark:border-red-700 rounded-lg px-2 py-1 text-[12px] font-bold focus:outline-red-400 dark:bg-gray-800 dark:text-white"
                                                 />
                                             ) : (
-                                                <span className="text-[13px] font-semibold text-red-600">
-                                                    {row.tempMax !== null ? `${row.tempMax.toFixed(1)}°` : <span className="text-gray-300">—</span>}
+                                                <span className={`text-[13px] font-semibold ${row.tempMax !== null ? "text-red-600 dark:text-red-400" : "text-gray-400"}`}>
+                                                    {row.tempMax !== null ? `${row.tempMax.toFixed(1)}°` : "—"}
                                                 </span>
                                             )}
                                         </td>
 
                                         {/* GDD diario calculado */}
-                                        <td className="px-4 py-3.5 text-[13px] font-semibold text-emerald-700">{gddDia}</td>
+                                        <td className={`px-4 py-3.5 text-[13px] font-semibold ${gddDia !== "—" ? "text-emerald-700 dark:text-emerald-500" : "text-gray-400"}`}>{gddDia}</td>
 
                                         {/* Actions */}
                                         <td className="px-6 py-3.5 text-right">
                                             {isEditing ? (
-                                                <div className="flex items-center justify-end gap-2">
+                                                <div className="flex items-center justify-end gap-1">
                                                     <button
                                                         onClick={() => handleSaveEdit(row)}
-                                                        className="flex items-center gap-1 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded-lg transition-colors"
+                                                        className="p-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
                                                     >
-                                                        <CheckCircle2 size={12} /> Guardar
+                                                        <CheckCircle2 size={16} />
                                                     </button>
                                                     <button
                                                         onClick={() => setEditingId(null)}
-                                                        className="flex items-center gap-1 text-[11px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg transition-colors"
+                                                        className="p-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                                                     >
-                                                        <XCircle size={12} /> Cancelar
+                                                        <XCircle size={16} />
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button
-                                                        onClick={() => startEdit(row)}
-                                                        className="flex items-center gap-1 text-[11px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
-                                                    >
-                                                        <Pencil size={11} /> Editar
+                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => startEdit(row)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
+                                                        <Pencil size={16} />
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleDelete(row.id)}
-                                                        className="flex items-center gap-1 text-[11px] font-bold text-red-500 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
-                                                    >
-                                                        <Trash2 size={11} /> Eliminar
+                                                    <button onClick={() => handleDelete(row.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                                                        <Trash2 size={16} />
                                                     </button>
                                                 </div>
                                             )}

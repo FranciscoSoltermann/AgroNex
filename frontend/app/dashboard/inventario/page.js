@@ -101,7 +101,7 @@ export default function InventarioPage() {
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
             {/* Barra de Filtros y Búsqueda */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-[#1a1f25] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="relative w-full max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                     <input
@@ -126,17 +126,12 @@ export default function InventarioPage() {
                 </div>
             </div>
 
-            {/* Header de la Página - YA MODIFICADO ARRIBA, PERO CONTINÚO DESDE AHÍ */}
+            {/* Header de la Página */}
             <div className="flex items-end justify-between mt-2">
-                <div>
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                        Catálogo e Inventario
-                    </h1>
-                    <div className="flex items-center gap-3 text-sm text-gray-500 mt-2 font-medium">
-                        <span className="flex items-center gap-1.5"><Package size={14} className="text-[#2D6A4F]" /> {displayInsumos.length} Artículos en vista</span>
-                        <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Estado: Operativo</span>
-                    </div>
+                <div className="flex items-center gap-3 text-sm text-gray-500 font-medium">
+                    <span className="flex items-center gap-1.5"><Package size={14} className="text-[#2D6A4F]" /> {displayInsumos.length} Artículos en vista</span>
+                    <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Estado: Operativo</span>
                 </div>
                 <button
                     onClick={() => setShowModal(true)}
@@ -152,9 +147,9 @@ export default function InventarioPage() {
                 <>
                     {/* Tarjetas de Estadísticas (Stats Cards) */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm relative overflow-hidden">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Valor Total del Inventario</p>
-                            <p className="text-4xl font-black text-gray-900 tracking-tight">${valorTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Valor Total del Inventario</p>
+                            <p className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">${valorTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             <p className="text-[13px] font-bold text-green-600 mt-2 flex items-center gap-1">
                                 <TrendingUp size={16} /> Precio unitario × stock actual
                             </p>
@@ -171,13 +166,13 @@ export default function InventarioPage() {
                             </p>
                         </div>
 
-                        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Artículos Disponibles</p>
+                        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                            <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Artículos Disponibles</p>
                             <div className="flex items-baseline gap-2">
-                                <p className="text-4xl font-black text-gray-900 tracking-tight">{itemsDisponibles}</p>
+                                <p className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{itemsDisponibles}</p>
                                 <p className="text-sm font-bold text-gray-400">/ {displayInsumos.length}</p>
                             </div>
-                            <div className="mt-4 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="mt-4 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-[#2D6A4F] rounded-full transition-all duration-500"
                                     style={{ width: displayInsumos.length > 0 ? `${(itemsDisponibles / displayInsumos.length) * 100}%` : '0%' }}
@@ -187,15 +182,15 @@ export default function InventarioPage() {
                     </div>
 
                     {/* Contenedor Principal de la Tabla */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                         
-                        <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-b border-gray-100 gap-4">
-                            <div className="flex bg-gray-50 p-1 rounded-xl">
+                        <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 gap-4">
+                            <div className="flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl">
                                 {["Todos", "Fertilizante", "Semilla", "Herbicida"].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setFiltroActivo(tab)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filtroActivo === tab ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                                     >
                                         {tab}
                                     </button>
@@ -207,7 +202,7 @@ export default function InventarioPage() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-gray-100 bg-gray-50/50">
+                                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Artículo / Campo</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio Unit.</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Stock Actual</th>
@@ -218,32 +213,32 @@ export default function InventarioPage() {
                                 </thead>
                                 <tbody>
                                     {displayInsumos.map((item) => (
-                                        <tr key={item.idInsumo} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
+                                        <tr key={item.idInsumo} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors group">
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-700 shrink-0">
+                                                    <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-700 dark:text-green-500 shrink-0">
                                                         {item.nombre.toLowerCase().includes("semilla") ? <Wheat size={18} /> :
                                                             item.nombre.toLowerCase().includes("ferti") ? <Droplets size={18} /> :
                                                                 item.nombre.toLowerCase().includes("herbici") ? <BugOff size={18} /> : <Tractor size={18} />}
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-gray-900 text-sm">{item.nombre}</p>
-                                                        <p className="text-[11px] text-gray-400 font-bold uppercase">{item.nombreCampo || "Sin campo"}</p>
+                                                        <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{item.nombre}</p>
+                                                        <p className="text-[11px] text-gray-400 dark:text-gray-500 font-bold uppercase">{item.nombreCampo || "Sin campo"}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             {/* Precio unitario (precio de referencia por unidad) */}
-                                            <td className="p-4 text-sm text-gray-500 font-semibold text-right">
+                                            <td className="p-4 text-sm text-gray-500 dark:text-gray-400 font-semibold text-right">
                                                 ${Number(item.precioUnitario).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                                             </td>
                                             {/* Stock con barra de progreso */}
                                             <td className="p-4">
                                                 <div className="flex flex-col items-center gap-1">
-                                                    <div className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-50 border border-gray-100 text-sm font-black text-gray-900">
+                                                    <div className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-sm font-black text-gray-900 dark:text-gray-100">
                                                         {Number(item.cantidad || 0).toLocaleString("es-AR")}
                                                     </div>
                                                     {item.cantidadInicial && Number(item.cantidadInicial) > 0 && (
-                                                        <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div className="w-16 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                                             <div
                                                                 className={`h-full rounded-full ${
                                                                     (Number(item.cantidad) / Number(item.cantidadInicial)) > 0.4
@@ -259,7 +254,7 @@ export default function InventarioPage() {
                                                 </div>
                                             </td>
                                             {/* Valor total = precio unitario × stock actual */}
-                                            <td className="p-4 text-sm font-black text-gray-900 text-right">
+                                            <td className="p-4 text-sm font-black text-gray-900 dark:text-gray-100 text-right">
                                                 ${(Number(item.precioUnitario) * Number(item.cantidad || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="p-4">
@@ -283,10 +278,10 @@ export default function InventarioPage() {
 
             {showModal && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-lg font-black text-gray-900">Registrar Nuevo Insumo</h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:bg-gray-100 p-1.5 rounded-lg"><X size={18} /></button>
+                            <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">Registrar Nuevo Insumo</h3>
+                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-lg"><X size={18} /></button>
                         </div>
                         <form onSubmit={handleRegistrarInsumo} className="space-y-4">
                             <div>

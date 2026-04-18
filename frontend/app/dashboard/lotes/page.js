@@ -310,20 +310,6 @@ export default function CiclosPage() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ciclos de producción</p>
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-black text-gray-900 tracking-tight">Aplicaciones y campañas por lote</h1>
-                        <p className="text-[13px] text-gray-500 mt-1 max-w-2xl">
-                            Elegí el <strong>lote</strong> y la <strong>campaña</strong>. Registrá cada aplicación con{" "}
-                            <strong>hectáreas tratadas</strong> (parcial o total), dosis de insumos por hectárea y costo de
-                            servicio. Queda vinculado al lote vía la campaña.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             {error && (
                 <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
                     <AlertCircle size={16} />
@@ -331,7 +317,7 @@ export default function CiclosPage() {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end relative">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end relative">
                 <div className="flex-1 min-w-[200px]">
                     <div className="flex items-center justify-between mb-1.5">
                         <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest">
@@ -409,9 +395,9 @@ export default function CiclosPage() {
                 )}
             </div>
 
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-[14px] font-bold text-gray-900">Progreso del ciclo</h2>
+                    <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Progreso del ciclo</h2>
                     <button
                         type="button"
                         onClick={() => setShowModalCampania(true)}
@@ -450,9 +436,9 @@ export default function CiclosPage() {
 
             <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
                 <div className="space-y-3">
-                    <h2 className="text-[14px] font-bold text-gray-900">Actividades de la campaña seleccionada</h2>
+                    <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Actividades de la campaña seleccionada</h2>
                     {actividadesFiltradas.length === 0 ? (
-                        <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center text-gray-400 text-sm shadow-sm">
+                        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 p-8 text-center text-gray-400 text-sm shadow-sm">
                             <Leaf size={28} className="mx-auto mb-2 text-gray-300" />
                             No hay actividades para esta campaña.
                         </div>
@@ -662,13 +648,13 @@ export default function CiclosPage() {
 
             {showModalCampania && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1100] p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="font-black text-[16px] text-gray-900">Nueva campaña</h3>
+                            <h3 className="font-black text-[16px] text-gray-900 dark:text-gray-100">Nueva campaña</h3>
                             <button
                                 type="button"
                                 onClick={() => setShowModalCampania(false)}
-                                className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400"
+                                className="w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-400"
                             >
                                 <X size={16} />
                             </button>
@@ -762,7 +748,7 @@ function ActividadCard({ actividad, onEliminar }) {
     const insumos = actividad.insumos || [];
 
     return (
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative group">
+        <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow relative group">
             <button
                 onClick={() => onEliminar && onEliminar(actividad.idActividad)}
                 className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all font-bold text-[10px] flex items-center gap-1 bg-red-50 px-2 py-1 rounded-md"

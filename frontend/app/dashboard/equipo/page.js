@@ -47,11 +47,6 @@ export default function EquipoPage() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Gestion de Talento</p>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tight">Gestion de Equipo</h1>
-                    <p className="text-[13px] text-gray-500 mt-1">Administra roles, accesos y presencia de tus colaboradores en campo y almacen.</p>
-                </div>
                 <button className="inline-flex items-center justify-center gap-2 bg-[#2D6A4F] hover:bg-[#24573f] transition-colors text-white px-5 py-3 rounded-xl text-[12px] font-black uppercase tracking-wide shadow-lg shadow-green-900/10">
                     <UserPlus size={16} />
                     Dar de Alta Nuevo Empleado
@@ -59,8 +54,8 @@ export default function EquipoPage() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-6">
-                <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 h-fit">
-                    <h2 className="text-[17px] font-black text-gray-900">Registro de Personal</h2>
+                <section className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5 h-fit">
+                    <h2 className="text-[17px] font-black text-gray-900 dark:text-gray-100">Registro de Personal</h2>
                     <p className="text-[12px] text-gray-500 mt-1 mb-4">Configura el perfil de acceso inicial.</p>
 
                     <div className="space-y-3">
@@ -95,14 +90,14 @@ export default function EquipoPage() {
                     </div>
                 </section>
 
-                <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                    <h2 className="text-[17px] font-black text-gray-900">Colaboradores Activos</h2>
+                <section className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm p-5">
+                    <h2 className="text-[17px] font-black text-gray-900 dark:text-gray-100">Colaboradores Activos</h2>
                     <p className="text-[12px] text-gray-500 mt-1 mb-4">Listado completo del equipo y niveles de acceso.</p>
 
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[720px]">
                             <thead>
-                                <tr className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100">
+                                <tr className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-800">
                                     <th className="pb-3">Empleado</th>
                                     <th className="pb-3">Rol</th>
                                     <th className="pb-3">Estado</th>
@@ -112,14 +107,14 @@ export default function EquipoPage() {
                             </thead>
                             <tbody>
                                 {colaboradores.map((c) => (
-                                    <tr key={c.usuario} className="border-b border-gray-50">
+                                    <tr key={c.usuario} className="border-b border-gray-50 dark:border-gray-800">
                                         <td className="py-3">
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black ${c.color}`}>
                                                     {c.id}
                                                 </div>
                                                 <div>
-                                                    <p className="text-[13px] font-bold text-gray-900 leading-tight">{c.nombre}</p>
+                                                    <p className="text-[13px] font-bold text-gray-900 dark:text-gray-100 leading-tight">{c.nombre}</p>
                                                     <p className="text-[11px] font-semibold text-gray-400">@{c.usuario}</p>
                                                 </div>
                                             </div>
@@ -198,9 +193,9 @@ function Input({ label, value, type = "text" }) {
 
 function InfoCard({ icon, title, description }) {
     return (
-        <div className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm">
+        <div className="rounded-2xl bg-white dark:bg-[#1a1f25] border border-gray-100 dark:border-gray-800 p-5 shadow-sm">
             <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center mb-3">{icon}</div>
-            <h3 className="text-[16px] font-black text-gray-900">{title}</h3>
+            <h3 className="text-[16px] font-black text-gray-900 dark:text-gray-100">{title}</h3>
             <p className="text-[12px] text-gray-500 mt-1 leading-relaxed">{description}</p>
         </div>
     );

@@ -63,13 +63,13 @@ export default function CamposPage() {
             return null;
         }
     }, []);
-    
+
     const fetchData = useCallback(async (_uid, options = {}) => {
         try {
             const bootstrap = await getDashboardBootstrapData({ forceRefresh: !!options.forceRefresh });
             const cList = bootstrap.campos || [];
             const lList = bootstrap.lotes || [];
-            
+
             setCampos(cList);
 
             const totalHa = cList.reduce((acc, val) => acc + val.superficieTotal, 0);
@@ -113,13 +113,13 @@ export default function CamposPage() {
 
     const handleCrearCampo = async (e) => {
         e.preventDefault();
-        
+
         // Validación de seguridad: si no hay coordenadas, avisamos
         if (formCampo.latitud == null || formCampo.longitud == null) {
             setSubmitError("Por favor, seleccioná una ubicación válida de la lista.");
             return;
         }
-    
+
         setSubmitLoading(true);
         try {
             const res = await apiClient.post("/campos", {
@@ -129,16 +129,16 @@ export default function CamposPage() {
                 latitud: formCampo.latitud,   // Se envía automáticamente
                 longitud: formCampo.longitud  // Se envía automáticamente
             });
-    
+
             setSubmitSuccess("¡Campo registrado con éxito!");
             toast.success("¡Campo registrado con éxito!");
-            
+
             // Limpiamos todo
             setFormCampo({ nombre: "", ubicacion: "", superficieTotal: "", latitud: null, longitud: null });
             invalidateDashboardBootstrapCache();
             await fetchData(userId, { forceRefresh: true });
             setTimeout(() => setShowModalCampo(false), 800);
-    
+
         } catch (err) {
             let errMsg = "Error al conectar con el servidor.";
             const data = err.response?.data;
@@ -154,7 +154,7 @@ export default function CamposPage() {
 
     const handleCrearLote = async (e) => {
         e.preventDefault();
-        
+
         if (!formLote.coordenadasGeoJson) {
             setSubmitError("Debes dibujar el polígono del lote en el mapa.");
             return;
@@ -232,12 +232,7 @@ export default function CamposPage() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-start gap-3 justify-between">
-                <div>
-                    <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Campos y Lotes</p>
-                    <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Resumen de la Estancia</h1>
-                    <p className="text-[13px] text-gray-500 mt-1">Gestioná tus zonas de cultivo y unidades de producción.</p>
-                </div>
+            <div className="flex items-start justify-between">
                 <button
                     onClick={() => { setShowModalCampo(true); setSubmitError(null); setSubmitSuccess(null); }}
                     className="flex items-center gap-2 bg-[#2D6A4F] text-white px-4 py-2.5 rounded-xl text-[12px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/20 self-start sm:self-auto whitespace-nowrap"
@@ -256,24 +251,24 @@ export default function CamposPage() {
 
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Superficie Total</p>
-                    <p className="text-3xl font-black text-gray-900">{Number(stats.totalHa).toLocaleString("es-AR", { maximumFractionDigits: 1 })} <span className="text-lg font-semibold text-gray-400">Ha</span></p>
-                    <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Superficie Total</p>
+                    <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{Number(stats.totalHa).toLocaleString("es-AR", { maximumFractionDigits: 1 })} <span className="text-lg font-semibold text-gray-400">Ha</span></p>
+                    <div className="mt-3 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                         <div className="h-full bg-[#2D6A4F] rounded-full" style={{ width: `${stats.capacidadRatio}%` }} />
                     </div>
                     <p className="text-[10px] text-gray-400 mt-1.5 font-medium">{stats.capacidadRatio}% de la capacidad en producción</p>
                 </div>
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Campos Activos</p>
-                    <p className="text-3xl font-black text-gray-900">{stats.camposActivos}</p>
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Campos Activos</p>
+                    <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{stats.camposActivos}</p>
                     <p className="text-[11px] text-green-600 font-bold mt-2 flex items-center gap-1">
                         <CheckCircle2 size={11} /> Todos los sistemas normales
                     </p>
                 </div>
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Lotes de Producción</p>
-                    <p className="text-3xl font-black text-gray-900">{stats.lotesTotales}</p>
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Lotes de Producción</p>
+                    <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{stats.lotesTotales}</p>
                     <p className="text-[11px] text-gray-400 font-medium mt-2">Del total de campos registrados</p>
                 </div>
             </div>
@@ -281,15 +276,15 @@ export default function CamposPage() {
             {/* Campos list */}
             <div>
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-[14px] font-bold text-gray-900">Campos de Cultivo Activos</h2>
-                    <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
-                        <button onClick={() => setVista("grid")} className={`p-1.5 rounded-md transition-all ${vista === "grid" ? "bg-white shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><LayoutGrid size={14} /></button>
-                        <button onClick={() => setVista("lista")} className={`p-1.5 rounded-md transition-all ${vista === "lista" ? "bg-white shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><List size={14} /></button>
+                    <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Campos de Cultivo Activos</h2>
+                    <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                        <button onClick={() => setVista("grid")} className={`p-1.5 rounded-md transition-all ${vista === "grid" ? "bg-white dark:bg-gray-700 shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><LayoutGrid size={14} /></button>
+                        <button onClick={() => setVista("lista")} className={`p-1.5 rounded-md transition-all ${vista === "lista" ? "bg-white dark:bg-gray-700 shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><List size={14} /></button>
                     </div>
                 </div>
 
                 {campos.length === 0 ? (
-                    <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-12 text-center">
                         <p className="text-gray-400 font-medium text-sm">No tenés campos registrados todavía.</p>
                         <button onClick={() => setShowModalCampo(true)} className="mt-4 text-[#2D6A4F] font-bold text-sm hover:underline">+ Crear tu primer campo</button>
                     </div>
@@ -322,13 +317,13 @@ export default function CamposPage() {
                         {vista === "grid" && (
                             <button
                                 onClick={() => setShowModalCampo(true)}
-                                className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-8 flex flex-col items-center justify-center gap-3 hover:border-[#2D6A4F] hover:bg-green-50/30 transition-all group min-h-[280px]"
+                                className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 flex flex-col items-center justify-center gap-3 hover:border-[#2D6A4F] hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-all group min-h-[280px]"
                             >
                                 <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
                                     <Plus size={22} className="text-[#2D6A4F]" />
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-[13px] font-bold text-gray-700">Definir Nuevo Territorio</p>
+                                    <p className="text-[13px] font-bold text-gray-700 dark:text-gray-300">Definir Nuevo Territorio</p>
                                     <p className="text-[11px] text-gray-400 mt-1">Registrá un nuevo límite de campo y perfil de suelo.</p>
                                 </div>
                             </button>
@@ -345,23 +340,23 @@ export default function CamposPage() {
                             <input type="text" required value={formCampo.nombre} onChange={e => setFormCampo(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Sunset Ridge" />
                         </FormField>
                         <FormField label="Referencia de ubicación">
-                            <SelectorUbicacion 
+                            <SelectorUbicacion
                                 onSelect={(data) => {
-                                    setFormCampo(p => ({ 
-                                        ...p, 
-                                        ubicacion: data.nombre, 
-                                        latitud: data.lat, 
-                                        longitud: data.lon 
+                                    setFormCampo(p => ({
+                                        ...p,
+                                        ubicacion: data.nombre,
+                                        latitud: data.lat,
+                                        longitud: data.lon
                                     }));
-                                }} 
+                                }}
                             />
                             {/* Un pequeño indicador visual (opcional) para dar confianza */}
-                                {formCampo.latitud && (
-                                    <div className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
-                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden />
-                                        UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
-                                    </div>
-                                )}
+                            {formCampo.latitud && (
+                                <div className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden />
+                                    UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
+                                </div>
+                            )}
                             {/* Feedback visual para el usuario */}
                             {formCampo.latitud && (
                                 <div className="flex items-center gap-1 mt-1 text-green-600 animate-in fade-in slide-in-from-top-1">
@@ -395,7 +390,7 @@ export default function CamposPage() {
 
                         {!formLote.coordenadasGeoJson && (
                             <FormField label="Dibujá el lote en el mapa">
-                                <LoteDrawer 
+                                <LoteDrawer
                                     key={`${campoSeleccionado?.idCampo}-map`}
                                     initialCenter={loteInitialCenter}
                                     onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
@@ -438,17 +433,17 @@ export default function CamposPage() {
 function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo, resolvingCenter }) {
     if (vista === "lista") {
         return (
-            <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
                 <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }} />
                 <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-900 text-[13px] truncate">{campo.nombre}</p>
+                    <p className="font-bold text-gray-900 dark:text-gray-100 text-[13px] truncate">{campo.nombre}</p>
                     {campo.ubicacion && <p className="text-[11px] text-gray-400 flex items-center gap-1"><MapPin size={10} />{campo.ubicacion}</p>}
                 </div>
                 <div className="text-right flex-shrink-0">
-                    <p className="font-black text-gray-900">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
+                    <p className="font-black text-gray-900 dark:text-gray-100">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
                     <p className="text-[10px] text-gray-400">{campo.cantidadLotes} lotes</p>
                 </div>
-                <button onClick={onAgregarLote} disabled={resolvingCenter} className="ml-2 p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 disabled:opacity-60">
+                <button onClick={onAgregarLote} disabled={resolvingCenter} className="ml-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 disabled:opacity-60">
                     {resolvingCenter ? <Loader2 size={14} className="animate-spin" /> : <MoreVertical size={14} />}
                 </button>
             </div>
@@ -456,7 +451,7 @@ function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo, resol
     }
 
     return (
-        <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow">
             <div className="h-36 relative" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }}>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 <div className="absolute bottom-0 left-0 p-4 text-white">
@@ -468,14 +463,14 @@ function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo, resol
                 <div className="grid grid-cols-2 gap-3 mb-3">
                     <div>
                         <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest">Superficie</p>
-                        <p className="font-black text-gray-900">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
+                        <p className="font-black text-gray-900 dark:text-gray-100">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
                     </div>
                     <div>
                         <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest">Lotes</p>
-                        <p className="font-black text-gray-900">{campo.cantidadLotes} Unidades</p>
+                        <p className="font-black text-gray-900 dark:text-gray-100">{campo.cantidadLotes} Unidades</p>
                     </div>
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700">
                     <button onClick={() => onEliminarCampo && onEliminarCampo(campo)} className="text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
                         Eliminar
                     </button>
@@ -498,10 +493,10 @@ const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py
 function Modal({ titulo, onClose, children }) {
     return (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-            <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md p-5 sm:p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md p-5 sm:p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
                 <div className="flex items-center justify-between mb-5">
-                    <h3 className="text-[16px] font-black text-gray-900">{titulo}</h3>
-                    <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors"><X size={16} /></button>
+                    <h3 className="text-[16px] font-black text-gray-900 dark:text-gray-100">{titulo}</h3>
+                    <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors"><X size={16} /></button>
                 </div>
                 {children}
             </div>

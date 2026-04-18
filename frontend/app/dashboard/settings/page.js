@@ -14,7 +14,7 @@ import {
     AlertTriangle,
 } from "lucide-react";
 
-const CARD_CLASS = "bg-white rounded-2xl border border-gray-100 shadow-sm";
+const CARD_CLASS = "bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm";
 const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white transition-colors";
 
 export default function SettingsPage() {
@@ -114,7 +114,7 @@ export default function SettingsPage() {
 
     if (!draft) {
         return (
-            <div className="max-w-4xl mx-auto">
+            <div>
                 <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm font-semibold">
                     No se pudo cargar la configuración del usuario.
                 </div>
@@ -123,12 +123,7 @@ export default function SettingsPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tight">Ajustes del Sistema</h1>
-                <p className="text-[13px] text-gray-500 mt-1">Administrá cuenta, seguridad y alertas. Sincronizado con backend en tiempo real.</p>
-            </div>
-
+        <div className="space-y-6 animate-in fade-in duration-500">
             {error && (
                 <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm font-semibold">
                     <AlertTriangle size={16} />
@@ -150,9 +145,9 @@ export default function SettingsPage() {
                             {initials}
                         </div>
                         <div>
-                            <h2 className="text-[22px] font-black text-gray-900 leading-tight">{draft.nombreMostrar}</h2>
+                            <h2 className="text-[22px] font-black text-gray-900 dark:text-gray-100 leading-tight">{draft.nombreMostrar}</h2>
                             <p className="text-[13px] text-gray-500 font-medium">{draft.rol}</p>
-                            <div className="mt-2 inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg text-[11px] font-bold">
+                            <div className="mt-2 inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg text-[11px] font-bold">
                                 <Mail size={12} />
                                 {draft.email}
                             </div>
@@ -181,14 +176,14 @@ export default function SettingsPage() {
                 </section>
 
                 <section className={`${CARD_CLASS} p-6`}>
-                    <h3 className="text-[18px] font-black text-gray-900 flex items-center gap-2 mb-4">
+                    <h3 className="text-[18px] font-black text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-4">
                         <Shield size={18} className="text-[#b91c1c]" />
                         Seguridad
                     </h3>
 
-                    <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-3">
+                    <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700 p-4 mb-3">
                         <p className="text-[12px] text-gray-500 font-medium">Contraseña</p>
-                        <p className="text-[13px] font-bold text-gray-800">Gestionada por Supabase Auth</p>
+                        <p className="text-[13px] font-bold text-gray-800 dark:text-gray-200">Gestionada por Supabase Auth</p>
                     </div>
 
                     <ToggleRow
@@ -201,7 +196,7 @@ export default function SettingsPage() {
             </div>
 
             <section className={`${CARD_CLASS} p-6`}>
-                <h3 className="text-[18px] font-black text-gray-900 flex items-center gap-2 mb-4">
+                <h3 className="text-[18px] font-black text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-4">
                     <Bell size={18} className="text-[#a16207]" />
                     Alertas y Notificaciones
                 </h3>
@@ -245,7 +240,7 @@ export default function SettingsPage() {
                     type="button"
                     onClick={handleDescartar}
                     disabled={!dirty || saving}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide disabled:opacity-40"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1a1f25] border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide disabled:opacity-40"
                 >
                     <RefreshCcw size={14} />
                     Descartar cambios
@@ -275,9 +270,9 @@ function FormField({ label, children }) {
 
 function ToggleRow({ title, subtitle, enabled, onChange }) {
     return (
-        <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 flex items-center justify-between gap-3">
+        <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between gap-3">
             <div>
-                <p className="text-[14px] font-black text-gray-900">{title}</p>
+                <p className="text-[14px] font-black text-gray-900 dark:text-gray-100">{title}</p>
                 <p className="text-[12px] text-gray-500 font-medium">{subtitle}</p>
             </div>
             <button

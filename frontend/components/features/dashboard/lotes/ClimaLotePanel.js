@@ -114,19 +114,19 @@ export default function ClimaLotePanel({ lote }) {
 
     if (loadingWeather) {
         return (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-sky-100 rounded-full animate-pulse" />
-                    <div className="h-4 w-48 bg-gray-200 rounded animate-pulse" />
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+                    <div className="w-8 h-8 bg-sky-100 dark:bg-sky-900/30 rounded-full animate-pulse" />
+                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 </div>
                 <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {[1, 2, 3, 4].map(i => (
-                        <div key={i} className="h-20 bg-gray-50 rounded-xl animate-pulse border border-gray-100" />
+                        <div key={i} className="h-20 bg-gray-50 dark:bg-gray-800/50 rounded-xl animate-pulse border border-gray-100 dark:border-gray-800" />
                     ))}
                 </div>
                 <div className="px-5 pb-5 grid grid-cols-4 sm:grid-cols-8 gap-2">
                     {[...Array(8)].map((_, i) => (
-                        <div key={i} className="h-20 bg-gray-50 rounded-xl animate-pulse border border-gray-100" />
+                        <div key={i} className="h-20 bg-gray-50 dark:bg-gray-800/50 rounded-xl animate-pulse border border-gray-100 dark:border-gray-800" />
                     ))}
                 </div>
             </div>
@@ -135,7 +135,7 @@ export default function ClimaLotePanel({ lote }) {
 
     if (errorWeather || !weatherData?.current) {
         return (
-            <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3 text-red-700 text-sm">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-4 flex items-center gap-3 text-red-700 dark:text-red-400 text-sm">
                 <AlertTriangle size={16} className="shrink-0" />
                 No se pudo cargar el clima. Verificá tu conexión.
                 <button onClick={handleRefresh} className="ml-auto text-xs font-bold underline">Reintentar</button>
@@ -167,7 +167,7 @@ export default function ClimaLotePanel({ lote }) {
     const renderHumedadCard = () => {
         if (loadingSuelo) {
             return (
-                <div className="rounded-xl border bg-emerald-50 border-emerald-100 p-3 flex flex-col justify-center gap-1.5">
+                <div className="rounded-xl border bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800 p-3 flex flex-col justify-center gap-1.5">
                     <div className="flex items-center gap-1.5">
                         <Loader2 size={14} className="animate-spin text-emerald-400" />
                         <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Humedad suelo</span>
@@ -193,20 +193,20 @@ export default function ClimaLotePanel({ lote }) {
 
         // ⚠️ Sin polígono o API falló → mostrar humedad del aire de Open-Meteo
         return (
-            <div className="rounded-xl border bg-sky-50 border-sky-100 p-3 flex flex-col justify-between">
+            <div className="rounded-xl border bg-sky-50 dark:bg-sky-900/10 border-sky-100 dark:border-sky-800 p-3 flex flex-col justify-between">
                 <div className="flex items-center gap-1.5 mb-1.5">
                     <Droplets size={16} className="text-sky-400" />
                     <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Humedad suelo</span>
                 </div>
-                <p className="text-xl font-black text-gray-900 leading-none">—</p>
-                <p className="text-[10px] text-gray-400 mt-1 leading-snug">
+                <p className="text-xl font-black text-gray-900 dark:text-gray-100 leading-none">—</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 leading-snug">
                     {tienePoligono
                         ? "Sin datos de Agromonitoring"
                         : "Sin polígono. Dibujá el lote para datos de suelo."
                     }
                 </p>
-                <div className="mt-1.5 pt-1.5 border-t border-sky-100">
-                    <p className="text-[9px] text-sky-600 font-bold">
+                <div className="mt-1.5 pt-1.5 border-t border-sky-100 dark:border-sky-800">
+                    <p className="text-[9px] text-sky-600 dark:text-sky-400 font-bold">
                         Humedad aire: {current.relative_humidity_2m}%
                     </p>
                 </div>
@@ -215,16 +215,16 @@ export default function ClimaLotePanel({ lote }) {
     };
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
             {/* ── Header ── */}
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-sky-50 to-blue-50">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/10 dark:to-blue-900/10">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center text-lg">
+                    <div className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-lg">
                         {emoji}
                     </div>
                     <div>
-                        <h3 className="font-black text-[13px] text-gray-900">Clima & Suelo en tiempo real</h3>
-                        <p className="text-[10px] text-gray-400">
+                        <h3 className="font-black text-[13px] text-gray-900 dark:text-gray-100">Clima & Suelo en tiempo real</h3>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
                             Open-Meteo · {desc}{sueloData ? " · Suelo vía Agromonitoring" : ""}
                         </p>
                     </div>
@@ -232,7 +232,7 @@ export default function ClimaLotePanel({ lote }) {
                 <button
                     onClick={handleRefresh}
                     disabled={loadingWeather}
-                    className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-500 hover:text-sky-600 hover:border-sky-300 py-1.5 px-3 rounded-lg text-[11px] font-bold transition-all shadow-sm"
+                    className="flex items-center gap-1.5 bg-white dark:bg-[#1a1f25] border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-sky-600 dark:hover:text-sky-400 hover:border-sky-300 dark:hover:border-sky-700 py-1.5 px-3 rounded-lg text-[11px] font-bold transition-all shadow-sm"
                 >
                     <RefreshCw size={12} className={loadingWeather ? "animate-spin" : ""} />
                     Actualizar
@@ -243,21 +243,21 @@ export default function ClimaLotePanel({ lote }) {
             <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <MetricCard
                     icon={<Thermometer size={16} className="text-orange-500" />}
-                    bg="bg-orange-50 border-orange-100"
+                    bg="bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-800/50"
                     label="Temperatura"
                     value={`${Math.round(current.temperature_2m)}°C`}
                     sub={`Sensación ${Math.round(current.apparent_temperature)}°C`}
                 />
                 <MetricCard
                     icon={<Droplets size={16} className="text-sky-500" />}
-                    bg="bg-sky-50 border-sky-100"
+                    bg="bg-sky-50 dark:bg-sky-900/10 border-sky-100 dark:border-sky-800/50"
                     label="Humedad aire"
                     value={`${current.relative_humidity_2m}%`}
                     sub={`Lluvia actual: ${current.precipitation > 0 ? `${current.precipitation} mm` : "0 mm"}`}
                 />
                 <MetricCard
                     icon={<Wind size={16} className="text-slate-500" />}
-                    bg="bg-slate-50 border-slate-100"
+                    bg="bg-slate-50 dark:bg-slate-900/20 border-slate-100 dark:border-slate-800"
                     label="Viento"
                     value={`${Math.round(current.wind_speed_10m)} km/h`}
                     sub={`Prob. lluvia hoy: ${probLluvia}%`}
@@ -267,9 +267,9 @@ export default function ClimaLotePanel({ lote }) {
 
             {/* ── Recomendación de riego ── */}
             {recomendacion && (
-                <div className="mx-5 mb-4 bg-gradient-to-r from-sky-50 to-blue-50 border border-sky-100 rounded-xl px-4 py-3 flex items-start gap-2.5">
-                    <Droplets size={15} className="text-sky-500 mt-0.5 shrink-0" />
-                    <p className="text-[12px] text-sky-800 font-medium leading-relaxed">{recomendacion}</p>
+                <div className="mx-5 mb-4 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/10 dark:to-blue-900/10 border border-sky-100 dark:border-sky-800 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                    <Droplets size={15} className="text-sky-500 dark:text-sky-400 mt-0.5 shrink-0" />
+                    <p className="text-[12px] text-sky-800 dark:text-sky-200 font-medium leading-relaxed">{recomendacion}</p>
                 </div>
             )}
 
@@ -298,23 +298,23 @@ export default function ClimaLotePanel({ lote }) {
 
                     {/* ── Panel de detalle del día seleccionado ── */}
                     {diaDetalle && (
-                        <div className="mt-3 bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="mt-3 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-900/10 dark:to-blue-900/10 border border-sky-200 dark:border-sky-800 rounded-2xl p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                             <div className="flex items-center justify-between mb-3">
                                 <div className="flex items-center gap-2">
                                     <span className="text-2xl">{getWeatherInfo(diaDetalle.code).emoji}</span>
                                     <div>
-                                        <p className="font-black text-[14px] text-gray-900">
+                                        <p className="font-black text-[14px] text-gray-900 dark:text-gray-100">
                                             {diaSeleccionado === 0
                                                 ? "Hoy"
                                                 : new Date(`${diaDetalle.iso}T12:00:00`).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })
                                             }
                                         </p>
-                                        <p className="text-[11px] text-gray-500">{getWeatherInfo(diaDetalle.code).desc}</p>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400">{getWeatherInfo(diaDetalle.code).desc}</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={() => setDiaSeleccionado(null)}
-                                    className="w-7 h-7 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 transition-colors"
+                                    className="w-7 h-7 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                                 >
                                     <X size={13} />
                                 </button>
@@ -360,13 +360,13 @@ export default function ClimaLotePanel({ lote }) {
 
 function MetricCard({ icon, bg, label, value, sub }) {
     return (
-        <div className={`rounded-xl border p-3 ${bg}`}>
+        <div className={`rounded-xl border p-3 transition-colors ${bg}`}>
             <div className="flex items-center gap-1.5 mb-1.5">
                 {icon}
-                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{label}</span>
+                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{label}</span>
             </div>
-            <p className="text-xl font-black text-gray-900 leading-none">{value}</p>
-            <p className="text-[10px] text-gray-500 mt-1 leading-snug">{sub}</p>
+            <p className="text-xl font-black text-gray-900 dark:text-gray-100 leading-none">{value}</p>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">{sub}</p>
         </div>
     );
 }
@@ -380,20 +380,20 @@ function DiaDaysCard({ iso, code, tMax, tMin, mm, prob, isToday, isSelected, onC
             onClick={onClick}
             className={`rounded-xl p-2 text-center border transition-all cursor-pointer w-full focus:outline-none focus:ring-2 focus:ring-sky-300 ${
                 isSelected
-                    ? "bg-sky-500 border-sky-600 shadow-md shadow-sky-200 scale-105"
+                    ? "bg-sky-500 dark:bg-sky-600 border-sky-600 dark:border-sky-500 shadow-md shadow-sky-200 dark:shadow-none scale-105"
                     : isToday
-                        ? "bg-sky-50 border-sky-200 hover:border-sky-300 hover:shadow-sm"
-                        : "bg-gray-50 border-gray-100 hover:border-sky-200 hover:bg-sky-50 hover:shadow-sm"
+                        ? "bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800 hover:border-sky-300 dark:hover:border-sky-600 hover:shadow-sm"
+                        : "bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800 hover:border-sky-200 dark:hover:border-sky-700 hover:bg-sky-50 dark:hover:bg-sky-900/10 hover:shadow-sm"
             }`}
         >
-            <p className={`text-[9px] font-black uppercase ${isSelected ? "text-white" : isToday ? "text-sky-600" : "text-gray-400"}`}>
+            <p className={`text-[9px] font-black uppercase ${isSelected ? "text-white" : isToday ? "text-sky-600 dark:text-sky-400" : "text-gray-400 dark:text-gray-500"}`}>
                 {label}
             </p>
             <span className="text-xl block my-1">{emoji}</span>
-            <p className={`text-[11px] font-black ${isSelected ? "text-white" : "text-gray-800"}`}>
+            <p className={`text-[11px] font-black ${isSelected ? "text-white" : "text-gray-800 dark:text-gray-200"}`}>
                 {tMax != null ? `${Math.round(tMax)}°` : "—"}
             </p>
-            <p className={`text-[10px] ${isSelected ? "text-sky-100" : "text-gray-400"}`}>
+            <p className={`text-[10px] ${isSelected ? "text-sky-100" : "text-gray-400 dark:text-gray-500"}`}>
                 {tMin != null ? `${Math.round(tMin)}°` : "—"}
             </p>
             {mm > 0 && (
@@ -412,13 +412,13 @@ function DiaDaysCard({ iso, code, tMax, tMin, mm, prob, isToday, isSelected, onC
 
 function DetalleItem({ icon, label, value, sub }) {
     return (
-        <div className="bg-white/70 rounded-xl p-3 border border-sky-100">
+        <div className="bg-white/70 dark:bg-[#1a1f25]/70 rounded-xl p-3 border border-sky-100 dark:border-sky-800">
             <div className="flex items-center gap-1.5 mb-1">
                 {icon}
-                <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{label}</span>
+                <span className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{label}</span>
             </div>
-            <p className="text-[14px] font-black text-gray-900">{value}</p>
-            {sub && <p className="text-[9px] text-gray-400 mt-0.5">{sub}</p>}
+            <p className="text-[14px] font-black text-gray-900 dark:text-gray-100">{value}</p>
+            {sub && <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">{sub}</p>}
         </div>
     );
 }
@@ -466,7 +466,7 @@ function getSueloIconColor(estado) {
 }
 
 function getSueloBg(estado) {
-    if (estado === "SECO") return "bg-orange-50 border-orange-100";
-    if (estado === "SATURADO") return "bg-blue-50 border-blue-100";
-    return "bg-emerald-50 border-emerald-100";
+    if (estado === "SECO") return "bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-800/50";
+    if (estado === "SATURADO") return "bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/50";
+    return "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800/50";
 }

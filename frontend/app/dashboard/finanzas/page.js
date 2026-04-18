@@ -208,11 +208,6 @@ export default function FinanzasPage() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tight">Finanzas y Rendimiento</h1>
-                <p className="text-[13px] text-gray-500 mt-1">Costos por hectárea, cosecha y margen al cerrar cada campaña.</p>
-            </div>
-
             <div className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] rounded-2xl p-6 text-white shadow-lg border border-white/10">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <div className="flex items-center gap-2">
@@ -344,35 +339,35 @@ export default function FinanzasPage() {
             </div>
 
             {/* Resumen Económico */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-6">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm mt-6">
                 <h2 className="text-[16px] font-black text-[#2D6A4F] mb-6 flex items-center gap-2"><BarChart2 size={20} /> Rentabilidad por Campo</h2>
-                
+
                 {resumen.length === 0 ? (
                     <div className="text-center text-gray-400 py-8">No hay datos financieros para mostrar.</div>
                 ) : (
                     <div className="space-y-6">
                         {resumen.map((r, i) => (
-                            <div key={i} className="border border-gray-100 p-5 rounded-xl bg-gray-50 shadow-sm transition-all hover:shadow-md">
+                            <div key={i} className="border border-gray-100 dark:border-gray-800 p-5 rounded-xl bg-gray-50 dark:bg-[#151a20] shadow-sm transition-all hover:shadow-md">
                                 <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold text-gray-900 text-lg">{r.nombreCampo}</h3>
+                                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg">{r.nombreCampo}</h3>
                                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${r.roi > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                         ROI: {r.roi > 0 ? '+' : ''}{r.roi}%
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="bg-white p-3 rounded-lg border border-gray-100">
+                                    <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Ingresos Totales</p>
                                         <p className="text-green-600 font-black text-sm">{formatCurrency(r.ingresos)}</p>
                                     </div>
-                                    <div className="bg-white p-3 rounded-lg border border-gray-100">
+                                    <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Gasto Operativo (Var)</p>
                                         <p className="text-orange-500 font-black text-sm">{formatCurrency(r.costosVariables)}</p>
                                     </div>
-                                    <div className="bg-white p-3 rounded-lg border border-gray-100">
+                                    <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Costo Estructural (Fijo)</p>
                                         <p className="text-orange-500 font-black text-sm">{formatCurrency(r.costosFijos)}</p>
                                     </div>
-                                    <div className="bg-white p-3 rounded-lg border border-gray-100">
+                                    <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Margen Bruto</p>
                                         <p className={`font-black text-sm ${r.margenBruto >= 0 ? 'text-gray-900' : 'text-red-500'}`}>{formatCurrency(r.margenBruto)}</p>
                                     </div>
@@ -383,9 +378,9 @@ export default function FinanzasPage() {
                                     <div className="flex w-full h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">
                                         {r.ingresos > 0 || r.costosVariables > 0 || r.costosFijos > 0 ? (
                                             <>
-                                                <div style={{width: `${(r.ingresos / (r.ingresos + r.costosVariables + r.costosFijos)) * 100}%`}} className="bg-green-500"></div>
-                                                <div style={{width: `${(r.costosVariables / (r.ingresos + r.costosVariables + r.costosFijos)) * 100}%`}} className="bg-orange-400"></div>
-                                                <div style={{width: `${(r.costosFijos / (r.ingresos + r.costosVariables + r.costosFijos)) * 100}%`}} className="bg-red-400"></div>
+                                                <div style={{ width: `${(r.ingresos / (r.ingresos + r.costosVariables + r.costosFijos)) * 100}%` }} className="bg-green-500"></div>
+                                                <div style={{ width: `${(r.costosVariables / (r.ingresos + r.costosVariables + r.costosFijos)) * 100}%` }} className="bg-orange-400"></div>
+                                                <div style={{ width: `${(r.costosFijos / (r.ingresos + r.costosVariables + r.costosFijos)) * 100}%` }} className="bg-red-400"></div>
                                             </>
                                         ) : <div className="w-full bg-gray-200"></div>}
                                     </div>
@@ -403,8 +398,8 @@ export default function FinanzasPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Formulario Gasto Fijo */}
-                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                    <h3 className="text-[15px] font-black text-gray-900 mb-4">Ingresar Costo Estructural</h3>
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <h3 className="text-[15px] font-black text-gray-900 dark:text-gray-100 mb-4">Ingresar Costo Estructural</h3>
                     <form onSubmit={handleRegistrarGasto} className="space-y-4">
                         <div className="grid grid-cols-2 gap-3">
                             <FormField label="Campo">
@@ -453,8 +448,8 @@ export default function FinanzasPage() {
                 </div>
 
                 {/* Formulario Cosecha (Ingresos) */}
-                <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-                    <h3 className="text-[15px] font-black text-gray-900 mb-4">Ingresar Ganancias (Cosecha)</h3>
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <h3 className="text-[15px] font-black text-gray-900 dark:text-gray-100 mb-4">Ingresar Ganancias (Cosecha)</h3>
                     <form onSubmit={handleRegistrarCosecha} className="space-y-4">
                         <FormField label="Campaña Origen">
                             <select required value={formCosecha.idCampania} onChange={e => setFormCosecha(p => ({ ...p, idCampania: e.target.value }))} className={INPUT_CLASS}>
@@ -506,10 +501,10 @@ export default function FinanzasPage() {
             </div>
 
             {/* Historial de Gastos Fijos */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm mt-6 overflow-hidden">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm mt-6 overflow-hidden">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[15px] font-black text-gray-900">Historial de Gastos Estructurales Detallados</h3>
-                    <select 
+                    <h3 className="text-[15px] font-black text-gray-900 dark:text-gray-100">Historial de Gastos Estructurales Detallados</h3>
+                    <select
                         className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-[11px] font-bold text-gray-800 focus:outline-none focus:border-[#2D6A4F]"
                         value={filtroCampoId}
                         onChange={e => setFiltroCampoId(e.target.value)}
@@ -521,7 +516,7 @@ export default function FinanzasPage() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-gray-100 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            <tr className="border-b border-gray-100 dark:border-gray-800 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                 <th className="pb-3 pr-4">Fecha</th>
                                 <th className="pb-3 pr-4">Categoría</th>
                                 <th className="pb-3 pr-4">Descripción</th>
@@ -533,7 +528,7 @@ export default function FinanzasPage() {
                         <tbody className="text-[13px] text-gray-800">
                             {gastosFiltrados.length === 0 ? (
                                 <tr><td colSpan="6" className="py-6 text-center text-gray-400">No hay historial de gastos fijos para este filtro.</td></tr>
-                            ) : gastosFiltrados.sort((a,b) => new Date(b.fecha) - new Date(a.fecha)).map(g => (
+                            ) : gastosFiltrados.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).map(g => (
                                 <tr key={g.idGasto} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors group">
                                     <td className="py-3 pr-4 text-gray-500 font-medium whitespace-nowrap">{g.fecha}</td>
                                     <td className="py-3 pr-4 whitespace-nowrap"><span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md font-bold text-[11px]">{g.categoria}</span></td>
@@ -541,7 +536,7 @@ export default function FinanzasPage() {
                                     <td className="py-3 pr-4 text-gray-500">{campos.find(c => c.idCampo === g.idCampo)?.nombre || '-'}</td>
                                     <td className="py-3 pr-4 font-black text-orange-500 text-right whitespace-nowrap">{formatCurrency(g.montoTotal)}</td>
                                     <td className="py-3 text-right relative">
-                                        <button 
+                                        <button
                                             onClick={() => handleEliminarGasto(g.idGasto)}
                                             className="text-[10px] font-bold text-red-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                                         >

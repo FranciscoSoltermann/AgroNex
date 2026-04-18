@@ -15,7 +15,7 @@ export default function AnaliticaPage() {
     const [cosechas, setCosechas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    
+
     // Filtros
     const [seleccionCampo, setSeleccionCampo] = useState("");
     const [seleccionLote, setSeleccionLote] = useState("");
@@ -48,28 +48,28 @@ export default function AnaliticaPage() {
         return { id: id, nombre: lote ? lote.nombreCampo : "Desconocido" };
     });
 
-    const lotesFiltrados = seleccionCampo 
-        ? lotes.filter(l => l.idCampo === seleccionCampo) 
+    const lotesFiltrados = seleccionCampo
+        ? lotes.filter(l => l.idCampo === seleccionCampo)
         : lotes;
 
     const cultivosDisponibles = Array.from(new Set(campanias.map(c => c.cultivo)));
 
     const getChartData = () => {
         let camps = campanias;
-        
+
         if (seleccionCampo) camps = camps.filter(c => c.idCampo === seleccionCampo);
         if (seleccionLote) camps = camps.filter(c => c.idLote === seleccionLote);
         if (seleccionCultivo) camps = camps.filter(c => c.cultivo === seleccionCultivo);
-        
+
         const data = camps.map(c => {
             const cosecha = cosechas.find(h => h.idCampania === c.idCampania);
             const anioInicio = new Date(c.fechaInicio).getFullYear().toString().slice(-2);
             const anioFin = c.fechaFin ? new Date(c.fechaFin).getFullYear().toString().slice(-2) : "Act";
-            
+
             let rindeHa = 0;
             if (cosecha && cosecha.rendimientoTotalQq && c.superficieLoteHa) {
-                 // 1 Quintal = 0.1 Toneladas.
-                 rindeHa = (cosecha.rendimientoTotalQq * 0.1) / c.superficieLoteHa;
+                // 1 Quintal = 0.1 Toneladas.
+                rindeHa = (cosecha.rendimientoTotalQq * 0.1) / c.superficieLoteHa;
             }
 
             return {
@@ -91,7 +91,7 @@ export default function AnaliticaPage() {
                 <div className="h-4 w-40 bg-gray-200 rounded-md animate-pulse"></div>
                 <div className="h-8 w-64 bg-gray-200 rounded-md animate-pulse"></div>
             </div>
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm animate-pulse">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div className="h-14 bg-gray-100 rounded-xl"></div>
                     <div className="h-14 bg-gray-100 rounded-xl"></div>
@@ -109,12 +109,6 @@ export default function AnaliticaPage() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header */}
-            <div>
-                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">Análisis Estratégico</p>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tight">Analítica Comparativa de Campañas</h1>
-                <p className="text-[13px] text-gray-500 mt-1">Compará el rinde a lo largo de distintos años, campos y cultivos para identificar tendencias de productividad.</p>
-            </div>
-
             {error && (
                 <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm font-semibold">
                     <AlertCircle size={16} />
@@ -122,7 +116,7 @@ export default function AnaliticaPage() {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
                         <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2">Filtro por Campo</label>
@@ -184,7 +178,7 @@ export default function AnaliticaPage() {
 
                         <div className="h-[400px] w-full pt-4">
                             <h3 className="text-[13px] font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                <BarChart3 size={16} className="text-[#2D6A4F]"/> Evolución del Rendimiento (Ton/Ha)
+                                <BarChart3 size={16} className="text-[#2D6A4F]" /> Evolución del Rendimiento (Ton/Ha)
                             </h3>
                             <AnaliticaRindeChart data={chartData} />
                         </div>
