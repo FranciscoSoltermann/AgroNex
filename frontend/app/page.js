@@ -1,11 +1,11 @@
 import { Navbar } from '@/components/shared/layout/Navbar';
-import { Hero } from '@/components/features/marketing/Hero';
+import WebGLHero from '@/components/features/marketing/WebGLHero';
 
 export default function Home() {
   return (
-      <main className="min-h-screen bg-white selection:bg-green-200 selection:text-green-900">
+      <main className="min-h-screen bg-[#050f0c] selection:bg-green-200 selection:text-green-900">
         <Navbar />
-        <Hero />
+        <WebGLHero />
       </main>
   );
 }
