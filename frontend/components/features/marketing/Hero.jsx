@@ -125,6 +125,11 @@ export function Hero() {
   const containerRef  = useRef(null);
   const heroBgRef     = useRef(null); // ref para el zoom del fondo del hero
 
+  // Refs para el efecto inmersivo Zoom-Through en Campos y Lotes
+  const camposContainerRef = useRef(null);
+  const camposBgRef        = useRef(null);
+  const camposContentRef   = useRef(null);
+
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ['start start', 'end end'],
@@ -158,6 +163,68 @@ export function Hero() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  /* ─────────────────────────────────────────────────────────────────────────
+     SCROLL ZOOM-THROUGH en §3 (Campos y Lotes)
+     Efecto hiper-inmersivo que escala la imagen hasta transformarla de 1 a 20.
+  ───────────────────────────────────────────────────────────────────────── */
+  useEffect(() => {
+    const container = camposContainerRef.current;
+    const bg = camposBgRef.current;
+    const content = camposContentRef.current;
+    if (!container || !bg || !content) return;
+
+    let rAF;
+    const updateZoom = () => {
+      const rect = container.getBoundingClientRect();
+      const windowH = window.innerHeight;
+      
+      let progress = 0;
+      // Inicia cuando el contenedor se pega en el top de la ventana
+      if (rect.top <= 0) {
+        // La distancia que scrolleamos mientras está sticky
+        const maxScroll = rect.height - windowH;
+        // Evitamos NaN por si el height es menor o igual a windowH (salvaguarda)
+        if (maxScroll > 0) {
+          progress = Math.min(1, Math.max(0, -rect.top / maxScroll));
+        }
+      }
+
+      // El zoom exponencial. Empieza en 1 y escala drásticamente al final (ej., hasta escala 25).
+      // Usamos una curva cuadrática/cúbica para que el comienzo sea suave y el final muy rápido.
+      const scale = 1 + 24 * Math.pow(progress, 3);
+      bg.style.transform = `scale(${scale})`;
+
+      // Fade-out secuencial:
+      // A partir de progress 0.5, empezamos a desvanecer el contenido de los campos
+      let contentOpacity = 1;
+      if (progress > 0.5) {
+        contentOpacity = 1 - (progress - 0.5) / 0.2; // de 0.5 a 0.7 baja de 1 a 0
+      }
+      content.style.opacity = Math.max(0, contentOpacity).toString();
+      
+      // A partir de progress 0.8, empezamos a desvanecer el fondo desenfocado global superpuesto
+      // para revelar visualmente el paso al siguiente bloque (si lo hubiera).
+      let bgOpacity = 1;
+      if (progress > 0.8) {
+        bgOpacity = 1 - (progress - 0.8) / 0.2; // de 0.8 a 1.0 baja de 1 a 0
+      }
+      bg.style.opacity = Math.max(0, bgOpacity).toString();
+    };
+
+    const handleScroll = () => {
+      if (rAF) cancelAnimationFrame(rAF);
+      rAF = requestAnimationFrame(updateZoom);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Llamada inicial para fijar el estado
+    handleScroll();
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rAF) cancelAnimationFrame(rAF);
+    };
+  }, []);
   /* ── parallax transforms por sección ── */
   // NOTA: heroOpacity eliminado — ya NO queremos que el héroe se desvanezca a blanco
   const heroY = useTransform(smoothProgress, [0, 0.2], [0, 60]); // sutil desplazamiento del contenido
@@ -182,7 +249,8 @@ export function Hero() {
       {/* ══════════════════════════════════════════════════════════════════
           § 1 — HERO PRINCIPAL  (h-[200vh] sticky)
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative h-[200vh]">
+      {/* Añadimos margin negativo y lo desplazamos debajo del navbar para aprovechar los 100vh y centrarlo visualmente */}
+      <section className="relative h-[200vh] -mt-[72px]">
         <div className="sticky top-0 h-screen overflow-hidden">
 
           {/* ── Fondo: zoom scroll via ref nativo (NO framer-motion opacity) ── */}
@@ -243,20 +311,22 @@ export function Hero() {
           {/* Contenido — NO se desvanece: solo heroY sutil para profundidad */}
           <motion.div
             style={{ y: heroY }}
-            className="relative z-20 h-full flex flex-col items-center justify-center px-4 sm:px-6 text-center"
+            // Padding superior para compensar el Navbar y centrar el flexbox en el espacio óptico real
+            className="relative z-20 h-full flex flex-col items-center justify-center px-4 sm:px-6 text-center pt-[72px]"
           >
             <motion.div
               initial={{ opacity: 0, y: 50 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="max-w-6xl w-full mx-auto"
+              // Usamos flex con gap y removemos márgenes rígidos (mb-) para mejorar la jerarquía auditada
+              className="max-w-6xl w-full mx-auto flex flex-col items-center justify-center gap-5 sm:gap-7"
             >
               {/* Badge */}
               <motion.div
                 initial={{ scale: 0, rotate: -10 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ duration: 0.8, delay: 0.5, type: 'spring', stiffness: 200 }}
-                className="inline-flex items-center gap-2 mb-4 sm:mb-6 px-4 sm:px-6 py-2 sm:py-3 bg-[#2D6A4F]/30 border border-[#52B788]/60 rounded-full backdrop-blur-md"
+                className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-[#2D6A4F]/30 border border-[#52B788]/60 rounded-full backdrop-blur-md"
               >
                 <Leaf className="w-4 h-4 sm:w-5 sm:h-5 text-[#52B788]" />
                 <span className="text-white uppercase tracking-[0.2em] text-xs sm:text-sm font-semibold">
@@ -269,7 +339,7 @@ export function Hero() {
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="text-5xl sm:text-6xl md:text-7xl lg:text-[7rem] xl:text-[8.5rem] font-extrabold mb-3 sm:mb-5 text-white leading-none tracking-tighter"
+                className="text-5xl sm:text-6xl md:text-7xl lg:text-[7rem] xl:text-[8.5rem] font-extrabold text-white leading-none tracking-tighter"
                 style={{ textShadow: '0 4px 40px rgba(0,0,0,0.6), 0 1px 0 rgba(0,0,0,0.4)' }}
               >
                 AGRONEX
@@ -280,7 +350,7 @@ export function Hero() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 1.2, delay: 0.9 }}
-                className="text-base sm:text-lg md:text-xl text-gray-200/90 max-w-2xl mx-auto mb-5 sm:mb-7 leading-relaxed"
+                className="text-base sm:text-lg md:text-xl text-gray-200/90 max-w-2xl mx-auto leading-relaxed"
               >
                 Monitoreo satelital de cultivos, geolocalización de lotes y análisis
                 climático en tiempo real. Decisiones inteligentes basadas en datos.
@@ -291,7 +361,7 @@ export function Hero() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 1.1 }}
-                className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-5 sm:mb-7"
+                className="flex flex-wrap justify-center gap-2 sm:gap-3"
               >
                 {CLIMATE_CHIPS.map((c, idx) => (
                   <div
@@ -310,7 +380,7 @@ export function Hero() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 1.2 }}
-                className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 max-w-4xl mx-auto mb-5 sm:mb-8"
+                className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 max-w-4xl mx-auto w-full"
               >
                 {HERO_FEATURES.map((feat, idx) => (
                   <motion.div
@@ -332,7 +402,7 @@ export function Hero() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 1.7 }}
-                className="flex flex-col sm:flex-row items-center justify-center gap-4"
+                className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-2"
               >
                 <Link
                   href="/login"
@@ -469,26 +539,29 @@ export function Hero() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          § 3 — CAMPOS Y LOTES  (h-[150vh] sticky, bg claro)
+          § 3 — CAMPOS Y LOTES  (AgTech Premium Overlay)
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative h-[150vh]">
-        <div className="sticky top-0 h-screen overflow-hidden">
-          {/* Fondo */}
+      <section ref={camposContainerRef} className="relative h-[300vh]">
+        <div className="sticky top-0 h-screen overflow-hidden bg-black">
+          {/* Fondo Global Premium Overlay en lugar de fondo gris plano */}
+          {/* Conservamos y y opacity de Framer para la entrada, pero el ZOOM es nativo abajo */}
           <motion.div
-            style={{ y: dashboardY, scale: dashboardScale, opacity: dashboardOpacity }}
+            style={{ y: dashboardY, opacity: dashboardOpacity }}
             className="absolute inset-0"
           >
-            <div className="absolute inset-0 bg-gradient-to-b from-[#F4F6F5]/96 via-white/92 to-[#F4F6F5]/96 z-10" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://images.unsplash.com/photo-1721424759830-e4b892acf1d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwyfHxzdXN0YWluYWJsZSUyMGZhcm1pbmclMjBjcm9wcyUyMGFlcmlhbCUyMHZpZXd8ZW58MXx8fHwxNzc2NDUxOTgzfDA&ixlib=rb-4.1.0&q=80&w=1920"
-              alt="Vista aérea de lotes georreferenciados"
-              className="w-full h-full object-cover opacity-30"
-            />
+            <div ref={camposBgRef} className="absolute inset-0 origin-center will-change-transform">
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0d2b1f]/95 via-[#1B4332]/80 to-[#0d2b1f]/95 z-10" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://images.unsplash.com/photo-1721424759830-e4b892acf1d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwyfHxzdXN0YWluYWJsZSUyMGZhcm1pbmclMjBjcm9wcyUyMGFlcmlhbCUyMHZpZXd8ZW58MXx8fHwxNzc2NDUxOTgzfDA&ixlib=rb-4.1.0&q=80&w=1920"
+                alt="Vista aérea de lotes georreferenciados"
+                className="w-full h-full object-cover opacity-40 mix-blend-overlay"
+              />
+            </div>
           </motion.div>
 
           {/* Contenido */}
-          <div className="relative z-20 h-full flex flex-col items-center justify-center px-6 py-12">
+          <div ref={camposContentRef} className="relative z-20 h-full flex flex-col items-center justify-center px-6 py-12 will-change-[opacity]">
             <ScrollReveal delay={0.2}>
               <div className="max-w-6xl w-full">
                 {/* Header */}
@@ -496,17 +569,17 @@ export function Hero() {
                   <motion.div
                     whileInView={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 0.8, delay: 0.4 }}
-                    className="w-16 h-16 bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] rounded-2xl flex items-center justify-center shadow-2xl flex-shrink-0"
+                    className="w-16 h-16 bg-gradient-to-br from-[#52B788] to-[#2D6A4F] rounded-2xl flex items-center justify-center shadow-2xl flex-shrink-0 border border-white/10"
                   >
                     <Map className="w-8 h-8 text-white" />
                   </motion.div>
                   <div>
-                    <h2 className="text-5xl md:text-6xl font-bold text-[#1B4332] leading-none">Campos y Lotes</h2>
-                    <p className="text-sm text-gray-500 uppercase tracking-[0.2em] mt-1">Gestión del Territorio</p>
+                    <h2 className="text-5xl md:text-6xl font-bold text-white leading-none drop-shadow-md">Campos y Lotes</h2>
+                    <p className="text-sm text-white/70 uppercase tracking-[0.2em] mt-1 font-semibold drop-shadow">Gestión del Territorio</p>
                   </div>
                 </div>
 
-                <p className="text-lg text-gray-700 mb-10 max-w-3xl leading-relaxed">
+                <p className="text-lg text-white/80 mb-10 max-w-3xl leading-relaxed">
                   Registrá tus campos, dibujá lotes directamente en el mapa interactivo y
                   dejá que el sistema calcule automáticamente las superficies georreferenciadas.
                 </p>
@@ -514,18 +587,18 @@ export function Hero() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Mapa simulado */}
                   <ScrollReveal delay={0.4}>
-                    <div className="bg-white border-2 border-[#2D6A4F] rounded-2xl p-6 shadow-2xl">
+                    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xl font-bold text-[#1B4332]">Campo Norte</h3>
-                        <MapPin className="w-5 h-5 text-[#2D6A4F]" />
+                        <h3 className="text-xl font-bold text-white">Campo Norte</h3>
+                        <MapPin className="w-5 h-5 text-[#52B788]" />
                       </div>
-                      {/* Mapa SVG animado */}
-                      <div className="relative h-56 bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl overflow-hidden mb-4 border border-green-200">
+                      {/* Mapa SVG animado refactorizado a modo oscuro */}
+                      <div className="relative h-56 bg-white/5 rounded-xl overflow-hidden mb-4 border border-white/10 shadow-inner">
                         {/* Grid de referencia */}
-                        <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="absolute inset-0 w-full h-full opacity-20" xmlns="http://www.w3.org/2000/svg">
                           <defs>
                             <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1B4332" strokeWidth="0.5"/>
+                              <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#52B788" strokeWidth="0.5"/>
                             </pattern>
                           </defs>
                           <rect width="100%" height="100%" fill="url(#grid)" />
@@ -542,8 +615,8 @@ export function Hero() {
                             <motion.polygon
                               points="40,40 260,50 250,160 50,150"
                               fill="#2D6A4F"
-                              fillOpacity="0.25"
-                              stroke="#1B4332"
+                              fillOpacity="0.4"
+                              stroke="#52B788"
                               strokeWidth="2"
                               strokeLinejoin="round"
                               initial={{ pathLength: 0, opacity: 0 }}
@@ -555,8 +628,8 @@ export function Hero() {
                             <motion.polygon
                               points="80,70 180,75 175,130 75,125"
                               fill="#52B788"
-                              fillOpacity="0.3"
-                              stroke="#2D6A4F"
+                              fillOpacity="0.5"
+                              stroke="#74c69d"
                               strokeWidth="1.5"
                               strokeDasharray="4 2"
                               initial={{ opacity: 0 }}
@@ -565,16 +638,16 @@ export function Hero() {
                               viewport={{ once: false }}
                             />
                             {/* Labels */}
-                            <motion.text x="148" y="98" textAnchor="middle" fill="#1B4332" fontSize="11" fontWeight="bold"
+                            <motion.text x="148" y="98" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="bold"
                               initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 1.8 }} viewport={{ once: false }}>
                               Lote 3
                             </motion.text>
-                            <motion.text x="148" y="112" textAnchor="middle" fill="#2D6A4F" fontSize="9"
+                            <motion.text x="148" y="112" textAnchor="middle" fill="#b7e4c7" fontSize="9"
                               initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} transition={{ delay: 2 }} viewport={{ once: false }}>
                               180 Ha
                             </motion.text>
                             {/* Pin animado */}
-                            <motion.circle cx="148" cy="80" r="5" fill="#1B4332"
+                            <motion.circle cx="148" cy="80" r="5" fill="#ffffff"
                               animate={{ r: [5, 8, 5], opacity: [1, 0.4, 1] }}
                               transition={{ duration: 2, repeat: Infinity }}
                             />
@@ -582,13 +655,13 @@ export function Hero() {
                         </motion.div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-[#F4F6F5] rounded-xl p-4">
-                          <div className="text-2xl font-bold text-[#1B4332] mb-1">450 Ha</div>
-                          <div className="text-xs text-gray-500 uppercase tracking-widest">Superficie</div>
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                          <div className="text-2xl font-bold text-white mb-1">450 Ha</div>
+                          <div className="text-xs text-white/50 uppercase tracking-widest">Superficie</div>
                         </div>
-                        <div className="bg-[#F4F6F5] rounded-xl p-4">
-                          <div className="text-2xl font-bold text-[#2D6A4F] mb-1">85%</div>
-                          <div className="text-xs text-gray-500 uppercase tracking-widest">En Producción</div>
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+                          <div className="text-2xl font-bold text-[#52B788] mb-1">85%</div>
+                          <div className="text-xs text-white/50 uppercase tracking-widest">En Producción</div>
                         </div>
                       </div>
                     </div>
@@ -596,9 +669,9 @@ export function Hero() {
 
                   {/* Lista de campos */}
                   <ScrollReveal delay={0.6}>
-                    <div className="bg-white border border-[#2D6A4F]/20 rounded-2xl p-6 shadow-xl h-full">
-                      <h3 className="text-xl font-bold text-[#1B4332] mb-5">Tus Campos</h3>
-                      <div className="space-y-3">
+                    <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 shadow-xl h-full flex flex-col">
+                      <h3 className="text-xl font-bold text-white mb-5">Tus Campos</h3>
+                      <div className="space-y-3 flex-1">
                         {CAMPOS_LIST.map((campo, idx) => (
                           <motion.div
                             key={idx}
@@ -607,21 +680,21 @@ export function Hero() {
                             transition={{ delay: 0.8 + idx * 0.1 }}
                             viewport={{ once: false }}
                             whileHover={{ scale: 1.02, x: -2 }}
-                            className="bg-[#F4F6F5] rounded-xl p-4 border-l-4 border-[#2D6A4F] cursor-pointer"
+                            className="bg-white/5 border border-white/10 rounded-xl p-4 border-l-4 border-l-[#52B788] cursor-pointer"
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <span className="font-semibold text-[#1B4332]">{campo.name}</span>
-                              <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                              <span className="font-semibold text-white">{campo.name}</span>
+                              <span className={`text-xs px-2 py-1 rounded-full font-bold shadow-sm ${
                                 campo.status === 'Activo'
-                                  ? 'bg-[#2D6A4F] text-white'
-                                  : 'bg-amber-100 text-amber-700'
+                                  ? 'bg-[#52B788]/20 text-[#52B788] border border-[#52B788]/30'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                               }`}>
                                 {campo.status}
                               </span>
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <div className="flex items-center gap-4 text-sm text-white/60 font-medium">
                               <span>{campo.lotes} lotes</span>
-                              <span className="font-semibold text-[#2D6A4F]">{campo.hectareas} Ha</span>
+                              <span className="font-bold text-[#52B788]">{campo.hectareas} Ha</span>
                             </div>
                           </motion.div>
                         ))}
@@ -810,146 +883,159 @@ export function Hero() {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          § 5 — INVENTARIO Y ANALÍTICA  (h-screen sticky)
+          § 5 — INVENTARIO Y ANALÍTICA  (Sticky Header + Scrollable Cards Premium)
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative min-h-screen py-16 sm:py-24">
-        <motion.div style={{ y: ciclosY, opacity: ciclosOpacity }} className="min-h-full relative">
-          <div className="absolute inset-0 bg-gradient-to-b from-[#F4F6F5]/98 via-white/95 to-[#F4F6F5]/98 z-10" />
+      {/* Eliminado min-h-screen/opacity de Framer. Ahora es una sección puramente fluida 
+          con Sticky Header y fondo oscuro premium, arreglando la carta cortada. */}
+      <section className="relative w-full pt-12 pb-32">
+        {/* Fondo Global AgTech Premium Layer */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0d2b1f]/95 via-[#1B4332]/90 to-[#0d2b1f]/95 z-10" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="https://images.unsplash.com/photo-1775931438015-aae2d2e9e9cf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwzfHxzdXN0YWluYWJsZSUyMGZhcm1pbmclMjBjcm9wcyUyMGFlcmlhbCUyMHZpZXd8ZW58MXx8fHwxNzc2NDUxOTgzfDA&ixlib=rb-4.1.0&q=80&w=1920"
-            alt="Análisis de datos de producción agrícola"
-            className="absolute inset-0 w-full h-full object-cover opacity-15"
+            src="https://images.unsplash.com/photo-1592982537447-6f233496bc40?q=80&w=1920&auto=format&fit=crop"
+            alt="Fondo agrícola premium completo"
+            className="w-full h-full object-cover opacity-30 mix-blend-overlay"
           />
+        </div>
 
-          <div className="relative z-20 flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
-            <ScrollReveal delay={0}>
-              <div className="max-w-7xl w-full">
-                <div className="text-center mb-8 sm:mb-10">
-                  <ScrollReveal delay={0.1}>
-                    <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-[#1B4332] mb-3">Gestión Completa</h2>
-                  </ScrollReveal>
-                  <ScrollReveal delay={0.2}>
-                    <p className="text-gray-500 text-base sm:text-lg uppercase tracking-[0.15em]">Inventario · Analítica · Rentabilidad</p>
-                  </ScrollReveal>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-8">
-                  {/* Inventario */}
-                  <ScrollReveal delay={0.2}>
-                    <motion.div whileHover={{ y: -6 }} className="bg-white border-2 border-[#2D6A4F] rounded-3xl p-5 sm:p-8 shadow-2xl h-full">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto">
-                        <Package className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-bold text-[#1B4332] text-center mb-2 uppercase tracking-widest">Inventario</h3>
-                      <p className="text-gray-500 text-center text-sm mb-4 sm:mb-6">
-                        Control de insumos con alertas de stock y descuento automático.
-                      </p>
-                      <div className="space-y-4">
-                        {INVENTORY_ITEMS.map((product, idx) => (
-                          <div key={idx}>
-                            <div className="flex items-center justify-between mb-2 text-sm">
-                              <span className="font-semibold text-[#1B4332]">{product.item}</span>
-                              <span className={`font-bold ${product.stock < 30 ? 'text-red-500' : 'text-[#2D6A4F]'}`}>
-                                {product.stock}%
-                              </span>
-                            </div>
-                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                whileInView={{ width: `${product.stock}%` }}
-                                transition={{ duration: 1.2, delay: 0.4 + idx * 0.15, ease: 'easeOut' }}
-                                viewport={{ once: false }}
-                                className={`h-full rounded-full ${
-                                  product.stock < 30
-                                    ? 'bg-red-400'
-                                    : 'bg-gradient-to-r from-[#2D6A4F] to-[#52B788]'
-                                }`}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  </ScrollReveal>
-
-                  {/* Analítica */}
-                  <ScrollReveal delay={0.35}>
-                    <motion.div whileHover={{ y: -6 }} className="bg-white border-2 border-[#2D6A4F] rounded-3xl p-5 sm:p-8 shadow-2xl h-full">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto">
-                        <TrendingUp className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-bold text-[#1B4332] text-center mb-2 uppercase tracking-widest">Analítica</h3>
-                      <p className="text-gray-500 text-center text-sm mb-4 sm:mb-6">
-                        Evolución de rendimiento y tendencias productivas por campaña.
-                      </p>
-                      <div className="bg-[#F4F6F5] rounded-2xl p-5">
-                        <div className="flex items-end justify-between h-28 gap-2">
-                          {ANALYTICS_HEIGHTS.map((h, idx) => (
-                            <motion.div
-                              key={idx}
-                              initial={{ height: 0 }}
-                              whileInView={{ height: `${h}%` }}
-                              transition={{ duration: 1, delay: 0.5 + idx * 0.08, ease: 'easeOut' }}
-                              viewport={{ once: false }}
-                              className="flex-1 bg-gradient-to-t from-[#1B4332] to-[#52B788] rounded-t-lg"
-                            />
-                          ))}
-                        </div>
-                        <div className="grid grid-cols-6 gap-1 mt-2 text-[10px] text-gray-400 text-center">
-                          {['2021','2022','2023','2024','2025','2026'].map(y => <div key={y}>{y}</div>)}
-                        </div>
-                      </div>
-                      <div className="mt-5 text-center">
-                        <div className="text-3xl font-extrabold text-[#2D6A4F]">4.2 Ton/Ha</div>
-                        <div className="text-xs text-gray-400 uppercase tracking-widest mt-1">Rinde Promedio</div>
-                      </div>
-                    </motion.div>
-                  </ScrollReveal>
-
-                  {/* Rentabilidad */}
-                  <ScrollReveal delay={0.5}>
-                    <motion.div whileHover={{ y: -6 }} className="bg-white border-2 border-[#2D6A4F] rounded-3xl p-5 sm:p-8 shadow-2xl h-full">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto">
-                        <Calculator className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
-                      </div>
-                      <h3 className="text-lg sm:text-xl font-bold text-[#1B4332] text-center mb-2 uppercase tracking-widest">Rentabilidad</h3>
-                      <p className="text-gray-500 text-center text-sm mb-4 sm:mb-6">
-                        Resultado económico y márgenes por campaña.
-                      </p>
-                      <div className="space-y-4">
-                        <div className="bg-[#F4F6F5] rounded-xl p-4">
-                          <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Ingresos / Ha</div>
-                          <div className="text-2xl font-extrabold text-[#2D6A4F]">$1,450</div>
-                        </div>
-                        <div className="bg-[#F4F6F5] rounded-xl p-4">
-                          <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Costos / Ha</div>
-                          <div className="text-2xl font-extrabold text-gray-700">$980</div>
-                        </div>
-                        <div className="bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] rounded-xl p-4">
-                          <div className="text-xs text-white/70 uppercase tracking-widest mb-1">Margen Bruto / Ha</div>
-                          <div className="text-2xl font-extrabold text-white">$470</div>
-                        </div>
-                        <div className="text-center">
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            whileInView={{ scale: 1 }}
-                            transition={{ duration: 0.5, delay: 0.8, type: 'spring' }}
-                            viewport={{ once: false }}
-                            className="inline-flex items-center gap-2 px-5 py-2 bg-[#2D6A4F] text-white rounded-full text-sm font-bold shadow-lg"
-                          >
-                            <TrendingUp className="w-4 h-4" />
-                            <span className="uppercase tracking-widest">ROI: 48%</span>
-                          </motion.div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </ScrollReveal>
-                </div>
-              </div>
-            </ScrollReveal>
+        <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-6">
+          {/* STICKY SECTION HEADER */}
+          {/* Permite al título acompañar a las tarjetas mientras el usuario scrollea, 
+              evitando la desaparición forzada. Compensado para el Navbar con top-[72px] */}
+          <div className="sticky top-[72px] lg:top-[80px] z-30 pt-4 pb-6 transition-all mb-8">
+            {/* Máscara Blur para contraste al hacer sticky scroll */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#0d2b1f] via-[#0d2b1f]/90 to-transparent -z-10 backdrop-blur-md pointer-events-none" />
+            
+            <div className="text-center">
+              <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white mb-2 sm:mb-3 drop-shadow-xl">
+                Gestión Completa
+              </h2>
+              <p className="text-[#52B788] text-sm sm:text-base uppercase tracking-[0.2em] font-bold drop-shadow-md">
+                Inventario · Analítica · Rentabilidad
+              </p>
+            </div>
           </div>
-        </motion.div>
+
+          {/* CONTENEDOR DE TARJETAS FLUIDAS (No más h-screen restrictivo) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+            
+            {/* 1. Inventario */}
+            <ScrollReveal delay={0.2}>
+              <motion.div whileHover={{ y: -6 }} className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 shadow-2xl h-full flex flex-col relative overflow-hidden">
+                <div className="w-14 h-14 bg-gradient-to-br from-[#52B788] to-[#2D6A4F] rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg shadow-[#52B788]/20 border border-white/10">
+                  <Package className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white text-center mb-2 uppercase tracking-widest">Inventario</h3>
+                <p className="text-white/60 text-center text-sm mb-8 leading-relaxed">
+                  Control de insumos agropecuarios con alertas y descuento automático.
+                </p>
+                <div className="space-y-5 mt-auto">
+                  {INVENTORY_ITEMS.map((product, idx) => (
+                    <div key={idx}>
+                      <div className="flex items-center justify-between mb-2 text-sm">
+                        <span className="font-semibold text-white/90">{product.item}</span>
+                        <span className={`font-bold ${product.stock < 30 ? 'text-red-400' : 'text-[#52B788]'}`}>
+                          {product.stock}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          whileInView={{ width: `${product.stock}%` }}
+                          transition={{ duration: 1.2, delay: 0.4 + idx * 0.15, ease: 'easeOut' }}
+                          viewport={{ once: false }}
+                          className={`h-full rounded-full ${
+                            product.stock < 30
+                              ? 'bg-red-400'
+                              : 'bg-gradient-to-r from-[#2D6A4F] to-[#52B788]'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </ScrollReveal>
+
+            {/* 2. Analítica */}
+            <ScrollReveal delay={0.35}>
+              <motion.div whileHover={{ y: -6 }} className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 shadow-2xl h-full flex flex-col relative overflow-hidden">
+                <div className="w-14 h-14 bg-gradient-to-br from-[#52B788] to-[#2D6A4F] rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg shadow-[#52B788]/20 border border-white/10">
+                  <TrendingUp className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white text-center mb-2 uppercase tracking-widest">Analítica</h3>
+                <p className="text-white/60 text-center text-sm mb-8 leading-relaxed">
+                  Evolución de rendimiento y tendencias productivas por campaña agrícola.
+                </p>
+                
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mt-auto">
+                  <div className="flex items-end justify-between h-28 gap-2">
+                    {ANALYTICS_HEIGHTS.map((h, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ height: 0 }}
+                        whileInView={{ height: `${h}%` }}
+                        transition={{ duration: 1, delay: 0.5 + idx * 0.08, ease: 'easeOut' }}
+                        viewport={{ once: false }}
+                        className="flex-1 bg-gradient-to-t from-[#2D6A4F] to-[#52B788] rounded-t-lg opacity-80 hover:opacity-100 transition-opacity"
+                      />
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-6 gap-1 mt-3 text-[10px] text-white/40 text-center font-semibold">
+                    {['2021','2022','2023','2024','2025','2026'].map(y => <div key={y}>{y}</div>)}
+                  </div>
+                </div>
+                
+                <div className="mt-6 text-center">
+                  <div className="text-3xl font-extrabold text-[#52B788]">4.2 Ton/Ha</div>
+                  <div className="text-xs text-white/50 uppercase tracking-widest mt-1 font-semibold">Rinde Promedio</div>
+                </div>
+              </motion.div>
+            </ScrollReveal>
+
+            {/* 3. Rentabilidad */}
+            <ScrollReveal delay={0.5}>
+              <motion.div whileHover={{ y: -6 }} className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 shadow-2xl h-full flex flex-col relative overflow-hidden">
+                <div className="w-14 h-14 bg-gradient-to-br from-[#52B788] to-[#2D6A4F] rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg shadow-[#52B788]/20 border border-white/10">
+                  <Calculator className="w-7 h-7 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white text-center mb-2 uppercase tracking-widest">Rentabilidad</h3>
+                <p className="text-white/60 text-center text-sm mb-8 leading-relaxed">
+                  Resultado económico y margen bruto por hectárea por campaña.
+                </p>
+                <div className="space-y-4 mt-auto">
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex justify-between items-center transitoin-colors hover:bg-white/10">
+                    <div className="text-xs text-white/60 uppercase tracking-widest font-semibold">Ingresos / Ha</div>
+                    <div className="text-xl font-extrabold text-[#52B788]">$1,450</div>
+                  </div>
+                  <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex justify-between items-center transitoin-colors hover:bg-white/10">
+                    <div className="text-xs text-white/60 uppercase tracking-widest font-semibold">Costos / Ha</div>
+                    <div className="text-xl font-extrabold text-white/90">$980</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-[#2D6A4F]/80 to-[#1B4332]/90 border border-[#52B788]/30 rounded-xl p-4 flex justify-between items-center shadow-lg">
+                    <div className="text-xs text-white/80 uppercase tracking-widest font-bold">Margen Bruto / Ha</div>
+                    <div className="text-xl font-extrabold text-white">$470</div>
+                  </div>
+                  
+                  <div className="text-center pt-2">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      whileInView={{ scale: 1 }}
+                      transition={{ duration: 0.5, delay: 0.8, type: 'spring' }}
+                      viewport={{ once: false }}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-[#52B788] text-[#0d2b1f] rounded-full text-sm font-black shadow-[0_0_20px_rgba(82,183,136,0.25)] hover:scale-105 transition-transform"
+                    >
+                      <TrendingUp className="w-4 h-4" />
+                      <span className="uppercase tracking-widest">ROI: 48%</span>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            </ScrollReveal>
+
+          </div>
+        </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
