@@ -13,9 +13,18 @@ import {
 } from "lucide-react";
 
 const IMAGES = [
+    // Campos de soja / cultivos en hileras — sin personas
+    "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=600&auto=format&fit=crop",
+    // Vista aérea de hectáreas cultivadas
+    "https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=600&auto=format&fit=crop",
+    // Campo de trigo dorado al atardecer
+    "https://images.unsplash.com/photo-1543257580-7269da773bf5?q=80&w=600&auto=format&fit=crop",
+    // Hectáreas verdes desde el aire
     "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1560493676-04071c5f467b?q=80&w=600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1574943320219-553eb213f72d?q=80&w=600&auto=format&fit=crop",
+    // Cultivo de maíz en hileras
+    "https://images.unsplash.com/photo-1595187064843-2c8b5c0c4720?q=80&w=600&auto=format&fit=crop",
+    // Llanura agrícola al amanecer
+    "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?q=80&w=600&auto=format&fit=crop",
 ];
 
 export default function CamposPage() {
@@ -44,7 +53,7 @@ export default function CamposPage() {
         if (!campo) return null;
 
         if (campo.latitud != null && campo.longitud != null) {
-            return [campo.latitud, campo.longitud];
+            return [parseFloat(campo.latitud), parseFloat(campo.longitud)];
         }
 
         if (!campo.ubicacion) return null;
@@ -411,13 +420,22 @@ export default function CamposPage() {
                         )}
 
                         <div className="grid grid-cols-2 gap-3 items-end">
-                            <FormField label="Superficie Calculada" required>
-                                <div className="relative pointer-events-none opacity-80">
-                                    <input type="text" readOnly value={formLote.superficie ? `${formLote.superficie} Ha` : "0.00 Ha"} className={`${INPUT_CLASS} bg-gray-100/50 cursor-not-allowed text-[#2D6A4F] font-black`} />
+                            <FormField label="Superficie (Ha)" required>
+                                <div className="relative">
+                                    <input 
+                                        type="number" 
+                                        step="0.01"
+                                        min="0.01"
+                                        value={formLote.superficie} 
+                                        onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} 
+                                        className={`${INPUT_CLASS} pr-10 text-[#2D6A4F] font-black`} 
+                                        placeholder="0.00"
+                                    />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#2D6A4F] font-bold">Ha</span>
                                 </div>
                             </FormField>
                             <div>
-                                <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight mb-3">La superficie es automática según el área seleccionada.</p>
+                                <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight mb-3">Calculada automáticamente al dibujar, pero podés ajustarla si es necesario.</p>
                             </div>
                         </div>
                         {submitError && <ErrorMsg msg={submitError} />}
