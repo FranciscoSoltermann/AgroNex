@@ -34,7 +34,7 @@ export default function DashboardLayout({ children }) {
                         return;
                     }
 
-                    const res = await apiClient.get("/usuarios/me/check", { timeout: 4000 });
+                    const res = await apiClient.get("/usuarios/me/check", { timeout: 15000 });
                     const data = res?.data;
                     if (data && data.registrado === false) {
                         toast.error(
@@ -46,7 +46,7 @@ export default function DashboardLayout({ children }) {
                         return;
                     }
 
-                    const settingsRes = await apiClient.get("/usuarios/settings", { timeout: 4000 });
+                    const settingsRes = await apiClient.get("/usuarios/settings", { timeout: 15000 });
                     const nombreMostrar = settingsRes?.data?.nombreMostrar;
                     if (nombreMostrar && nombreMostrar.trim()) {
                         setUserName(nombreMostrar.trim());
@@ -56,7 +56,11 @@ export default function DashboardLayout({ children }) {
                     return;
                 } catch (err) {
                     if (process.env.NODE_ENV === "development") {
-                        console.warn("No se pudo obtener nombre desde backend", err?.message || err);
+                        if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+                            console.warn("Backend lento o iniciando (timeout)... usando nombre por defecto.");
+                        } else {
+                            console.warn("Error al obtener datos del usuario:", err?.message || err);
+                        }
                     }
                 }
                 setUserName("Usuario");
