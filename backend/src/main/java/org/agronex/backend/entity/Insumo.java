@@ -43,4 +43,8 @@ public class Insumo {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_campo")
     private Campo campo;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_campania")
+    private Campania campania;
 }

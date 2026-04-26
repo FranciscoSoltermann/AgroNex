@@ -31,6 +31,11 @@ public class InsumoMapper {
                 .alertaStockBajoEnviada(insumo.getAlertaStockBajoEnviada())
                 .idCampo(insumo.getCampo() != null ? insumo.getCampo().getIdCampo() : null)
                 .nombreCampo(insumo.getCampo() != null ? insumo.getCampo().getNombre() : null)
+                .idCampania(insumo.getCampania() != null ? insumo.getCampania().getIdCampania() : null)
+                .nombreCampania(insumo.getCampania() != null
+                        ? insumo.getCampania().getCultivo()
+                          + " (" + (insumo.getCampania().getLote() != null ? insumo.getCampania().getLote().getNombre() : "") + ")"
+                        : null)
                 .build();
     }
 }

@@ -22,4 +22,6 @@ public class InsumoResponse {
     private Boolean alertaStockBajoEnviada;
     private UUID idCampo;
     private String nombreCampo;
+    private UUID idCampania;
+    private String nombreCampania;
 }

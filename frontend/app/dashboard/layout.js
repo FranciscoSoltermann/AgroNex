@@ -92,15 +92,15 @@ export default function DashboardLayout({ children }) {
     };
 
     const navItems = [
-        { name: "Dashboard",             path: "/dashboard",             icon: <LayoutDashboard size={18} /> },
-        { name: "Campos/Lotes",          path: "/dashboard/campos",      icon: <Map size={18} /> },
-        { name: "Ciclos de Producción",  path: "/dashboard/lotes",       icon: <RefreshCw size={18} /> },
-        { name: "Clima y Fenología",     path: "/dashboard/clima",       icon: <Cloud size={18} /> },
-        { name: "Costos",                path: "/dashboard/finanzas",    icon: <CircleDollarSign size={18} /> },
-        { name: "Inventario",            path: "/dashboard/inventario",  icon: <Box size={18} /> },
-        { name: "Analítica Comparativa", path: "/dashboard/analitica",   icon: <Activity size={18} /> },
-        { name: "Equipo",                path: "/dashboard/equipo",      icon: <Users size={18} /> },
-        { name: "Configuración",         path: "/dashboard/settings",    icon: <Settings size={18} /> },
+        { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
+        { name: "Campos/Lotes", path: "/dashboard/campos", icon: <Map size={18} /> },
+        { name: "Campañas", path: "/dashboard/lotes", icon: <RefreshCw size={18} /> },
+        { name: "Clima/Fenología", path: "/dashboard/clima", icon: <Cloud size={18} /> },
+        { name: "Finanzas", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} /> },
+        { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} /> },
+        { name: "Analítica Comparativa", path: "/dashboard/analitica", icon: <Activity size={18} /> },
+        { name: "Equipo", path: "/dashboard/equipo", icon: <Users size={18} /> },
+        { name: "Ajustes", path: "/dashboard/settings", icon: <Settings size={18} /> },
     ];
 
     const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "US";
@@ -153,11 +153,10 @@ export default function DashboardLayout({ children }) {
                             href={item.path}
                             onMouseEnter={() => prefetchRoute(item.path)}
                             onFocus={() => prefetchRoute(item.path)}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all ${
-                                isActive
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all ${isActive
                                     ? "bg-white/20 text-white"
                                     : "text-white/70 hover:bg-white/10 hover:text-white"
-                            }`}
+                                }`}
                         >
                             <span className={`flex-shrink-0 ${isActive ? "text-white" : "text-white/50"}`}>
                                 {item.icon}
@@ -253,7 +252,7 @@ export default function DashboardLayout({ children }) {
                 </header>
 
                 {/* Página */}
-                <main className="flex-1 overflow-y-auto px-4 pt-2 pb-4 sm:px-6 sm:pt-3 sm:pb-6 dark:bg-[#0f1419]">
+                <main className="flex-1 overflow-y-auto px-4 pt-2 pb-2 sm:px-6 sm:pt-3 sm:pb-3 dark:bg-[#0f1419]">
                     {children}
                 </main>
             </div>

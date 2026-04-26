@@ -27,10 +27,11 @@ public class InsumoController {
     // Obtener todo el catálogo de semillas, químicos, etc.
     @GetMapping
     public ResponseEntity<List<InsumoResponse>> listarInsumos(
-            @AuthenticationPrincipal Jwt jwt, 
-            @RequestParam(required = false) UUID idCampo) {
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) UUID idCampo,
+            @RequestParam(required = false) UUID idCampania) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
-        return ResponseEntity.ok(insumoService.listarTodos(idUsuario, idCampo));
+        return ResponseEntity.ok(insumoService.listarTodos(idUsuario, idCampo, idCampania));
     }
 
     @GetMapping("/{id}")

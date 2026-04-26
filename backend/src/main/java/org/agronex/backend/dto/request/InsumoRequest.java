@@ -32,4 +32,7 @@ public class InsumoRequest {
 
     @NotNull(message = "El campo es obligatorio")
     private UUID idCampo;
+
+    // Opcional: si se asigna, el insumo pertenece a esta campaña
+    private UUID idCampania;
 }

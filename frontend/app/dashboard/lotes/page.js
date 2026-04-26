@@ -157,7 +157,7 @@ export default function CiclosPage() {
 
             const res = await apiClient.post("/actividades", payload);
             setActividades((prev) => [res.data, ...prev]);
-            setSubmitSuccess("Aplicación registrada correctamente.");
+            setSubmitSuccess("Actividad registrada correctamente.");
             toast.success("¡Actividad registrada con éxito!");
             setFormAct((p) => ({
                 ...p,
@@ -433,138 +433,56 @@ export default function CiclosPage() {
             {/* Monitoreo Satelital */}
             {loteActual && <MonitoreoSatelitalViewer lote={loteActual} />}
 
-
-            <div className="grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-6">
-                <div className="space-y-3">
-                    <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Actividades de la campaña seleccionada</h2>
-                    {actividadesFiltradas.length === 0 ? (
-                        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 p-8 text-center text-gray-400 text-sm shadow-sm">
-                            <Leaf size={28} className="mx-auto mb-2 text-gray-300" />
-                            No hay actividades para esta campaña.
-                        </div>
-                    ) : (
-                        actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} onEliminar={handleEliminarActividad} />)
-                    )}
+            {/* Registrar Actividad — Horizontal */}
+            <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg">
+                <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 className="font-black text-[15px]">Registrar Actividad</h3>
+                        <p className="text-[10px] text-green-100/90 leading-relaxed">
+                            Dosis en unidad del insumo por hectárea. Si no cargás Ha tratadas, se asume todo el lote para el costo de insumos.
+                        </p>
+                    </div>
                 </div>
+                <form onSubmit={handleRegistrarActividad} className="space-y-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Tipo</label>
+                            <select value={formAct.tipoActv} onChange={(e) => setFormAct((p) => ({ ...p, tipoActv: e.target.value }))} className={SELECT_GREEN}>
+                                {TIPO_ACTIVIDAD.map((t) => (<option key={t} value={t}>{t}</option>))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Fecha</label>
+                            <input type="date" required value={formAct.fecha} onChange={(e) => setFormAct((p) => ({ ...p, fecha: e.target.value }))} className={INPUT_GREEN} />
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Costo servicio ($)</label>
+                            <input type="number" step="0.01" min="0" value={formAct.costoServicio} onChange={(e) => setFormAct((p) => ({ ...p, costoServicio: e.target.value }))} className={INPUT_GREEN} placeholder="0" />
+                        </div>
+                        <div>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Ha tratadas (opcional)</label>
+                            <input type="number" step="0.01" min="0" max={loteActual?.superficie != null ? loteActual.superficie : undefined} value={formAct.hectareasTratadas} onChange={(e) => setFormAct((p) => ({ ...p, hectareasTratadas: e.target.value }))} className={INPUT_GREEN} placeholder={`Máx. ${loteActual?.superficie ?? "—"} Ha`} />
+                        </div>
+                    </div>
 
-                <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg h-fit xl:sticky xl:top-4">
-                    <h3 className="font-black text-[15px] mb-1">Registrar aplicación</h3>
-                    <p className="text-[10px] text-green-100/90 mb-4 leading-relaxed">
-                        Dosis en unidad del insumo por hectárea. Si no cargás Ha tratadas, se asume todo el lote para el costo
-                        de insumos.
-                    </p>
-                    <form onSubmit={handleRegistrarActividad} className="space-y-3">
+                    <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 items-end">
                         <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
-                                Tipo
-                            </label>
-                            <select
-                                value={formAct.tipoActv}
-                                onChange={(e) => setFormAct((p) => ({ ...p, tipoActv: e.target.value }))}
-                                className={SELECT_GREEN}
-                            >
-                                {TIPO_ACTIVIDAD.map((t) => (
-                                    <option key={t} value={t}>
-                                        {t}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
-                                Campaña
-                            </label>
-                            <select
-                                required
-                                value={formAct.idCampania || idCampaniaActiva}
-                                onChange={(e) => {
-                                    const v = e.target.value;
-                                    setFormAct((p) => ({ ...p, idCampania: v }));
-                                    setIdCampaniaActiva(v);
-                                }}
-                                className={SELECT_GREEN}
-                            >
-                                <option value="" disabled>
-                                    Seleccionar
-                                </option>
-                                {campaniasDelLote.map((camp) => (
-                                    <option key={camp.idCampania} value={camp.idCampania}>
-                                        {camp.cultivo} ({camp.fechaInicio?.slice?.(0, 4) || ""})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
-                                    Fecha
-                                </label>
-                                <input
-                                    type="date"
-                                    required
-                                    value={formAct.fecha}
-                                    onChange={(e) => setFormAct((p) => ({ ...p, fecha: e.target.value }))}
-                                    className={INPUT_GREEN}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
-                                    Costo servicio ($)
-                                </label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={formAct.costoServicio}
-                                    onChange={(e) => setFormAct((p) => ({ ...p, costoServicio: e.target.value }))}
-                                    className={INPUT_GREEN}
-                                    placeholder="0"
-                                />
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
-                                Ha tratadas (opcional)
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max={loteActual?.superficie != null ? loteActual.superficie : undefined}
-                                value={formAct.hectareasTratadas}
-                                onChange={(e) => setFormAct((p) => ({ ...p, hectareasTratadas: e.target.value }))}
-                                className={INPUT_GREEN}
-                                placeholder={`Máx. ${loteActual?.superficie ?? "—"} Ha`}
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
-                                Insumos / dosis (por Ha)
-                            </label>
-                            <div className="space-y-3 max-h-[280px] overflow-y-auto pr-2">
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Insumos / dosis (por Ha)</label>
+                            <div className="flex flex-wrap gap-2">
                                 {formAct.insumos.map((row, idx) => (
-                                    <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80">
+                                    <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 min-w-[220px] flex-1">
                                         {formAct.insumos.length > 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => removeInsumoRow(idx)}
-                                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100"
-                                                aria-label="Quitar insumo"
-                                            >
+                                            <button type="button" onClick={() => removeInsumoRow(idx)} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100" aria-label="Quitar insumo">
                                                 <X size={12} strokeWidth={3} />
                                             </button>
                                         )}
                                         <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-md bg-[#2D6A4F] flex items-center justify-center text-green-200 shrink-0">
-                                                <FlaskConical size={12} />
-                                            </div>
-                                            <select
-                                                value={row.idInsumo}
-                                                onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)}
-                                                className={`w-full bg-transparent border-none text-[12px] font-black text-white focus:outline-none focus:ring-0 [&>option]:text-gray-900 px-1`}
-                                            >
+                                            <div className="w-6 h-6 rounded-md bg-[#2D6A4F] flex items-center justify-center text-green-200 shrink-0"><FlaskConical size={12} /></div>
+                                            <select value={row.idInsumo} onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)} className={`w-full bg-transparent border-none text-[12px] font-black text-white focus:outline-none focus:ring-0 [&>option]:text-gray-900 px-1`}>
                                                 <option value="" disabled>Seleccionar insumo...</option>
-                                                {insumos.map((ins) => (
+                                                {insumos
+                                                    .filter(ins => !ins.idCampania || ins.idCampania === (formAct.idCampania || idCampaniaActiva))
+                                                    .map((ins) => (
                                                     <option key={ins.idInsumo} value={ins.idInsumo}>
                                                         {ins.nombre} — {getUnidadLabel(ins.unidad)}{ins.cantidad != null ? ` (Stock: ${ins.cantidad})` : ''}
                                                     </option>
@@ -572,78 +490,55 @@ export default function CiclosPage() {
                                             </select>
                                         </div>
                                         <div className="flex items-center justify-between gap-3 pl-8">
-                                            <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">
-                                                Dosis por Ha
-                                            </span>
+                                            <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
                                             <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
-                                                <input
-                                                    type="number"
-                                                    step="0.0001"
-                                                    min="0"
-                                                    placeholder="0.00"
-                                                    value={row.dosisHa}
-                                                    onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)}
-                                                    className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20"
-                                                />
-                                                <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all"
-                                                    style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}
-                                                >
-                                                    {row.idInsumo
-                                                        ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad)
-                                                        : 'und'
-                                                    }
+                                                <input type="number" step="0.0001" min="0" placeholder="0.00" value={row.dosisHa} onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)} className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20" />
+                                                <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all" style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}>
+                                                    {row.idInsumo ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad) : 'und'}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            <button
-                                type="button"
-                                onClick={addInsumoRow}
-                                className="mt-2 text-[10px] font-bold text-green-100 hover:text-white flex items-center gap-1"
-                            >
+                            <button type="button" onClick={addInsumoRow} className="mt-2 text-[10px] font-bold text-green-100 hover:text-white flex items-center gap-1">
                                 <Plus size={12} /> Añadir insumo
                             </button>
                             {insumos.length === 0 && loteActual && (
-                                <p className="text-[9px] text-amber-200/90 mt-1">
-                                    No hay insumos en el catálogo de este campo. Cargalos en Inventario.
-                                </p>
+                                <p className="text-[9px] text-amber-200/90 mt-1">No hay insumos en el catálogo de este campo. Cargalos en Inventario.</p>
                             )}
                         </div>
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">
-                                Notas
-                            </label>
-                            <textarea
-                                rows={2}
-                                value={formAct.notas}
-                                onChange={(e) => setFormAct((p) => ({ ...p, notas: e.target.value }))}
-                                className={`${INPUT_GREEN} resize-none`}
-                                placeholder="Producto, lote comercial, condiciones, etc."
-                            />
+                        <div className="flex flex-col gap-2 min-w-[200px]">
+                            <div>
+                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Notas</label>
+                                <textarea rows={2} value={formAct.notas} onChange={(e) => setFormAct((p) => ({ ...p, notas: e.target.value }))} className={`${INPUT_GREEN} resize-none`} placeholder="Producto, lote comercial, condiciones, etc." />
+                            </div>
+                            {submitError && (
+                                <div className="text-[10px] bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg p-2">{submitError}</div>
+                            )}
+                            {submitSuccess && (
+                                <div className="text-[10px] bg-green-500/20 border border-green-400/30 text-green-100 rounded-lg p-2 flex items-center gap-1"><CheckCircle2 size={11} />{submitSuccess}</div>
+                            )}
+                            <button type="submit" disabled={submitLoading || campaniasDelLote.length === 0} className="w-full bg-white text-[#2D6A4F] py-2.5 rounded-xl font-black text-[12px] hover:bg-green-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                                {submitLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                Guardar actividad
+                            </button>
                         </div>
-                        {submitError && (
-                            <div className="text-[10px] bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg p-2">
-                                {submitError}
-                            </div>
-                        )}
-                        {submitSuccess && (
-                            <div className="text-[10px] bg-green-500/20 border border-green-400/30 text-green-100 rounded-lg p-2 flex items-center gap-1">
-                                <CheckCircle2 size={11} />
-                                {submitSuccess}
-                            </div>
-                        )}
-                        <button
-                            type="submit"
-                            disabled={submitLoading || campaniasDelLote.length === 0}
-                            className="w-full bg-white text-[#2D6A4F] py-2.5 rounded-xl font-black text-[12px] hover:bg-green-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
-                        >
-                            {submitLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                            Guardar aplicación
-                        </button>
-                    </form>
-                </div>
+                    </div>
+                </form>
+            </div>
+
+            {/* Actividades de la campaña seleccionada */}
+            <div className="space-y-3">
+                <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Actividades de la campaña seleccionada</h2>
+                {actividadesFiltradas.length === 0 ? (
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 p-8 text-center text-gray-400 text-sm shadow-sm">
+                        <Leaf size={28} className="mx-auto mb-2 text-gray-300" />
+                        No hay actividades para esta campaña.
+                    </div>
+                ) : (
+                    actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} onEliminar={handleEliminarActividad} />)
+                )}
             </div>
 
             {showModalCampania && (
@@ -680,7 +575,9 @@ export default function CiclosPage() {
                                     <option value="" disabled>
                                         Elegí un lote
                                     </option>
-                                    {lotes.map((lote) => (
+                                    {lotes
+                                        .filter(lote => !campanias.some(c => c.idLote === lote.idLote && c.estado === "ABIERTA"))
+                                        .map((lote) => (
                                         <option key={lote.idLote} value={lote.idLote}>
                                             {lote.nombre} ({lote.superficie} Ha) — {lote.nombreCampo}
                                         </option>

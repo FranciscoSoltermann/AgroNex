@@ -8,6 +8,7 @@ import org.agronex.backend.dto.response.InsumoResponse;
 import org.agronex.backend.entity.*;
 import org.agronex.backend.mapper.InsumoMapper;
 import org.agronex.backend.repository.CampoRepository;
+import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.InsumoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class InsumoService {
 
     private final InsumoRepository insumoRepository;
     private final CampoRepository campoRepository;
+    private final CampaniaRepository campaniaRepository;
     private final InsumoMapper insumoMapper;
     private final AuditService auditService;
 
@@ -36,25 +38,49 @@ public class InsumoService {
         Insumo nuevoInsumo = insumoMapper.toEntity(request);
         nuevoInsumo.setCampo(campo);
 
+        // Asociar campaña si viene en el request
+        if (request.getIdCampania() != null) {
+            Campania campania = campaniaRepository.findById(request.getIdCampania())
+                    .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
+            // Validar que la campaña pertenece al mismo usuario
+            if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+                throw new AccessDeniedException("No tenés permiso para vincular insumos a esta campaña");
+            }
+            nuevoInsumo.setCampania(campania);
+        }
+
         Insumo guardado = insumoRepository.save(nuevoInsumo);
+
+        String detalle = "Stock inicial: " + guardado.getCantidad() + " " + guardado.getUnidad()
+                + ". Precio unitario: " + guardado.getPrecioUnitario()
+                + ". Campo: " + campo.getNombre();
+        if (guardado.getCampania() != null) {
+            detalle += ". Campaña: " + guardado.getCampania().getCultivo();
+        }
 
         auditService.registrar(
                 idUsuarioToken, campo.getUsuario().getEmail(),
                 EntidadAudit.INSUMO, guardado.getIdInsumo().toString(),
                 guardado.getNombre(),
                 AccionAudit.CREAR,
-                "Stock inicial: " + guardado.getCantidad() + " " + guardado.getUnidad()
-                        + ". Precio unitario: " + guardado.getPrecioUnitario()
-                        + ". Campo: " + campo.getNombre()
+                detalle
         );
 
         return insumoMapper.toResponse(guardado);
     }
 
     @Transactional(readOnly = true)
-    public List<InsumoResponse> listarTodos(UUID idUsuario, UUID idCampo) {
+    public List<InsumoResponse> listarTodos(UUID idUsuario, UUID idCampo, UUID idCampania) {
         List<Insumo> list;
-        if (idCampo != null) {
+
+        if (idCampo != null && idCampania != null) {
+            // Filtrar por campo Y campaña
+            list = insumoRepository.findByCampoIdCampoAndCampaniaIdCampania(idCampo, idCampania);
+        } else if (idCampania != null) {
+            // Filtrar solo por campaña
+            list = insumoRepository.findByCampaniaIdCampania(idCampania);
+        } else if (idCampo != null) {
+            // Filtrar solo por campo (incluye todos los insumos del campo, con o sin campaña)
             Campo campo = campoRepository.findById(idCampo)
                     .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
             if (!campo.getUsuario().getIdUsuario().equals(idUsuario)) {
@@ -62,6 +88,7 @@ public class InsumoService {
             }
             list = insumoRepository.findByCampoIdCampo(idCampo);
         } else {
+            // Todos los insumos del usuario
             list = insumoRepository.findByCampoUsuarioIdUsuario(idUsuario);
         }
 

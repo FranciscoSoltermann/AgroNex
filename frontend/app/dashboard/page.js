@@ -203,9 +203,9 @@ export default function DashboardHome() {
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="flex flex-col gap-4 animate-in fade-in duration-500 h-full min-h-0">
+            {/* Stats — 3 cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 flex-shrink-0">
                 <StatCard
                     label="Total Ha"
                     value={Number(stats.hectareasTotales).toLocaleString("es-AR", { maximumFractionDigits: 1 }) || "0"}
@@ -221,14 +221,6 @@ export default function DashboardHome() {
                     iconBg="bg-indigo-50"
                 />
                 <StatCard
-                    label="Gastos Acumulados"
-                    value={stats.gastosAcumulados > 0 ? `$${Number(stats.gastosAcumulados).toLocaleString("es-AR")}` : "$0"}
-                    sub={stats.gastosAcumulados > 0 ? "Total de actividades y gastos fijos" : "Sin gastos registrados"}
-                    subColor={stats.gastosAcumulados > 0 ? "text-orange-500" : "text-gray-400"}
-                    icon={<DollarSign size={18} className="text-orange-500" />}
-                    iconBg="bg-orange-50"
-                />
-                <StatCard
                     label="Ciclos Activos"
                     value={stats.ciclosActivos || 0}
                     sub={stats.ciclosActivos === 1 ? "1 campaña en curso" : stats.ciclosActivos > 0 ? `${stats.ciclosActivos} campañas en curso` : "Sin ciclos activos"}
@@ -238,72 +230,10 @@ export default function DashboardHome() {
                 />
             </div>
 
-            {/* Gráfico + Actividades */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3 sm:gap-4">
-                {/* Gráfico */}
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-                    <div className="flex items-start justify-between mb-1">
-                        <div>
-                            <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Crecimiento: Costos vs Cosechas</h3>
-                            <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Análisis comparativo por quintal</p>
-                        </div>
-                        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5">
-                            {["Semanal", "Mensual"].map(mode => (
-                                <button key={mode} onClick={() => setChartMode(mode)} className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all ${chartMode === mode ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>{mode}</button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="mt-4 sm:mt-6 overflow-x-auto">
-                        <div className="min-w-[280px] flex items-end justify-between gap-3 h-32 sm:h-40">
-                            {dynChartData.map((d, i) => (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                                    <div className="w-full flex gap-1 items-end" style={{ height: "120px" }}>
-                                        <div className="flex-1 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${(d.costos / Math.max(1, dynMaxVal)) * 120}px` }} title={`$${d.costos.toFixed(2)}`} />
-                                        <div className="flex-1 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${(d.cosecha / Math.max(1, dynMaxVal)) * 120}px` }} title={`Rend.: ${d.cosecha}`} />
-                                    </div>
-                                    <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">{d.mes}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap gap-3 sm:gap-5 mt-3">
-                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C1DDD1] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Costos Acumulados</span></div>
-                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Rendimiento de Cosecha (kg)</span></div>
-                    </div>
-                </div>
-
-                {/* Actividades Recientes */}
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
-                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-4">Actividades Recientes</h3>
-                    <div className="flex-1 space-y-3">
-                        {actividades.length === 0 ? (
-                            <p className="text-gray-400 text-xs text-center py-4">No hay actividades recientes.</p>
-                        ) : actividades.slice(0, 5).map((act, i) => {
-                            const config = getActividadConfig(act.tipoActv);
-                            return (
-                                <div key={act.idActividad || i} className="flex items-start gap-3">
-                                    <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>{config.icon}</div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[12px] font-bold text-gray-900 dark:text-gray-100 truncate">{act.tipoActv}</p>
-                                        <p className="text-[10px] text-gray-400 truncate">
-                                            {act.idCampania ? `${act.nombreCultivo} (${act.nombreLote} - ${act.nombreCampo})` : 'Sin campaña vinculada'}
-                                        </p>
-                                    </div>
-                                    <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">{act.fecha}</span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                    <a href="/dashboard/lotes" className="mt-4 w-full flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-all text-center">
-                        Ver Historial Completo <ChevronRight size={12} />
-                    </a>
-                </div>
-            </div>
-
-            {/* Alertas de Inventario + Gastos por Categoría */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+            {/* Alertas de Inventario + Gastos por Categoría + Actividades Recientes */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr] gap-3 sm:gap-4 flex-1 min-h-0">
                 {/* Alertas de Inventario */}
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
@@ -316,8 +246,8 @@ export default function DashboardHome() {
                         </a>
                     </div>
                     {lowStockItems.length === 0 ? (
-                        <div className="text-center py-6 text-gray-400 text-xs font-medium">
-                            <Package size={24} className="mx-auto mb-2 text-gray-300" />
+                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-xs font-medium">
+                            <Package size={24} className="mb-2 text-gray-300" />
                             No hay insumos registrados.
                         </div>
                     ) : (
@@ -354,7 +284,7 @@ export default function DashboardHome() {
                 </div>
 
                 {/* Gastos por Categoría — Pie Chart */}
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
                             <PieChart size={16} className="text-violet-500" />
@@ -362,14 +292,14 @@ export default function DashboardHome() {
                         <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Gastos por Categoría</h3>
                     </div>
                     {gastosPorCategoria.length === 0 ? (
-                        <div className="text-center py-6 text-gray-400 text-xs font-medium">
-                            <DollarSign size={24} className="mx-auto mb-2 text-gray-300" />
+                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-xs font-medium">
+                            <DollarSign size={24} className="mb-2 text-gray-300" />
                             No hay gastos registrados.
                         </div>
                     ) : (
-                        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                        <div className="flex flex-col items-center gap-4">
                             <PieChartSVG data={gastosPorCategoria} />
-                            <div className="flex-1 space-y-2">
+                            <div className="w-full space-y-2">
                                 {gastosPorCategoria.map((cat, i) => {
                                     const total = gastosPorCategoria.reduce((s, c) => s + c.value, 0);
                                     const pct = total > 0 ? ((cat.value / total) * 100).toFixed(1) : 0;
@@ -384,6 +314,65 @@ export default function DashboardHome() {
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* Actividades Recientes */}
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
+                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-4">Actividades Recientes</h3>
+                    <div className="flex-1 flex flex-col space-y-3">
+                        {actividades.length === 0 ? (
+                            <p className="flex-1 flex items-center justify-center text-gray-400 text-xs">No hay actividades recientes.</p>
+                        ) : actividades.slice(0, 5).map((act, i) => {
+                            const config = getActividadConfig(act.tipoActv);
+                            return (
+                                <div key={act.idActividad || i} className="flex items-start gap-3">
+                                    <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center flex-shrink-0`}>{config.icon}</div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[12px] font-bold text-gray-900 dark:text-gray-100 truncate">{act.tipoActv}</p>
+                                        <p className="text-[10px] text-gray-400 truncate">
+                                            {act.idCampania ? `${act.nombreCultivo} (${act.nombreLote} - ${act.nombreCampo})` : 'Sin campaña vinculada'}
+                                        </p>
+                                    </div>
+                                    <span className="text-[10px] text-gray-400 font-medium flex-shrink-0">{act.fecha}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <a href="/dashboard/lotes" className="mt-4 w-full flex items-center justify-center gap-1 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-all text-center">
+                        Ver Historial Completo <ChevronRight size={12} />
+                    </a>
+                </div>
+            </div>
+
+            {/* Crecimiento: Costos vs Cosechas — Full width */}
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="flex items-start justify-between mb-1">
+                    <div>
+                        <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Crecimiento: Costos vs Cosechas</h3>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Análisis comparativo por quintal</p>
+                    </div>
+                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5">
+                        {["Semanal", "Mensual"].map(mode => (
+                            <button key={mode} onClick={() => setChartMode(mode)} className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all ${chartMode === mode ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>{mode}</button>
+                        ))}
+                    </div>
+                </div>
+                <div className="mt-4 sm:mt-6 overflow-x-auto">
+                    <div className="min-w-[280px] flex items-end justify-between gap-3 h-32 sm:h-40">
+                        {dynChartData.map((d, i) => (
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                                <div className="w-full flex gap-1 items-end" style={{ height: "120px" }}>
+                                    <div className="flex-1 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${(d.costos / Math.max(1, dynMaxVal)) * 120}px` }} title={`$${d.costos.toFixed(2)}`} />
+                                    <div className="flex-1 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${(d.cosecha / Math.max(1, dynMaxVal)) * 120}px` }} title={`Rend.: ${d.cosecha}`} />
+                                </div>
+                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">{d.mes}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-3 sm:gap-5 mt-3">
+                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C1DDD1] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Costos Acumulados</span></div>
+                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Rendimiento de Cosecha (kg)</span></div>
                 </div>
             </div>
 
