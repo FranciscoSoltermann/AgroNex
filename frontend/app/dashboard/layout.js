@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import {
     LayoutDashboard, Map, RefreshCw, CircleDollarSign, Wheat, Settings,
-    LogOut, Cloud, Activity, Users, Menu, X, Moon, Sun
+    LogOut, Cloud, Activity, Users, Menu, X, Moon, Sun, Tractor
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTheme } from "@/app/components/ThemeProvider";
@@ -98,6 +98,7 @@ export default function DashboardLayout({ children }) {
         { name: "Clima/Fenología", path: "/dashboard/clima", icon: <Cloud size={18} /> },
         { name: "Finanzas", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} /> },
         { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} /> },
+        { name: "Maquinaria", path: "/dashboard/maquinaria", icon: <Tractor size={18} /> },
         { name: "Analítica Comparativa", path: "/dashboard/analitica", icon: <Activity size={18} /> },
         { name: "Equipo", path: "/dashboard/equipo", icon: <Users size={18} /> },
         { name: "Ajustes", path: "/dashboard/settings", icon: <Settings size={18} /> },
@@ -114,6 +115,7 @@ export default function DashboardLayout({ children }) {
         "/dashboard/clima": "Clima y Fenología",
         "/dashboard/finanzas": "Finanzas y Rendimiento",
         "/dashboard/inventario": "Catálogo e Inventario",
+        "/dashboard/maquinaria": "Maquinaria e Integraciones",
         "/dashboard/analitica": "Analítica Comparativa",
         "/dashboard/equipo": "Gestión de Equipo",
         "/dashboard/settings": "Ajustes del Sistema",

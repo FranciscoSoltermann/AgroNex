@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "AgroNex — Gestión Agrícola Digital",
+  title: "AgroNex",
   description:
     "Plataforma de gestión de campos, lotes y campañas para productores agropecuarios.",
   icons: {

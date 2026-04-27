@@ -93,6 +93,10 @@ public class SecurityConfig {
                         "/api/public/auth/registro/juridica")
                     .authenticated()
 
+                // Callback OAuth de John Deere (redirect externo, sin JWT de AgroNex)
+                .requestMatchers("/api/maquinaria/john-deere/auth/callback")
+                    .permitAll()
+
                 // Resto de rutas públicas (checkout, webhook MP, etc.)
                 .requestMatchers("/api/public/**", "/public/**").permitAll()
 
