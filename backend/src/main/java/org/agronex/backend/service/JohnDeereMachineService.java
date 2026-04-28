@@ -59,27 +59,49 @@ public class JohnDeereMachineService {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listMachines(UUID userId, String orgId) {
         String token = authService.getUserAccessToken(userId);
-        String url = config.getApiBaseUrl() + "/organizations/" + orgId + "/machines";
+        List<String> endpointsToTry = List.of(
+            config.getApiBaseUrl() + "/organizations/" + orgId + "/machines",
+            "https://equipmentapi.deere.com/isg/equipment",
+            "https://equipmentapi.deere.com/isg/equipment?orgId=" + orgId,
+            config.getApiBaseUrl() + "/organizations/" + orgId + "/equipment"
+        );
 
-        try {
-            Map<String, Object> response = restClient.get()
-                    .uri(url)
-                    .header("Authorization", "Bearer " + token)
-                    .header("Accept", ACCEPT_HEADER)
-                    .retrieve()
-                    .body(Map.class);
+        for (String url : endpointsToTry) {
+            log.info(">>> Probando URL JD: {}", url);
+            try {
+                String rawResponse = restClient.get()
+                        .uri(url)
+                        .header("Authorization", "Bearer " + token)
+                        .header("Accept", ACCEPT_HEADER)
+                        .retrieve()
+                        .body(String.class);
 
-            if (response == null) return List.of();
+                log.info(">>> Exito con {}. Respuesta RAW: {}", url, rawResponse);
+                
+                if (rawResponse == null || rawResponse.isBlank()) continue;
 
-            if (response.containsKey("values")) {
-                return (List<Map<String, Object>>) response.get("values");
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                Map<String, Object> response = mapper.readValue(rawResponse, Map.class);
+
+                if (response.containsKey("values")) {
+                    List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
+                    log.info(">>> Encontrados {} equipos.", values.size());
+                    return values;
+                } else if (response.containsKey("elements")) {
+                    List<Map<String, Object>> elements = (List<Map<String, Object>>) response.get("elements");
+                    log.info(">>> Encontrados {} equipos (elements).", elements.size());
+                    return elements;
+                }
+                
+                log.info(">>> Respuesta sin 'values' ni 'elements'. Keys: {}", response.keySet());
+                return List.of(response);
+            } catch (Exception e) {
+                log.warn(">>> Fallo al consultar {}: {}", url, e.getMessage());
             }
-
-            return List.of(response);
-        } catch (Exception e) {
-            log.error("Error listando máquinas JD para org {}: {}", orgId, e.getMessage());
-            throw new RuntimeException("Error al obtener máquinas: " + e.getMessage());
         }
+        
+        log.error("Todos los endpoints fallaron para la org {}", orgId);
+        return List.of();
     }
 
     /**
