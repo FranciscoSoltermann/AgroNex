@@ -11,6 +11,7 @@ export default function InventarioPage() {
     const [insumos, setInsumos] = useState([]);
     const [campos, setCampos] = useState([]);
     const [campanias, setCampanias] = useState([]);
+    const [actividades, setActividades] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filtroActivo, setFiltroActivo] = useState("Todos");
     const [filtroCampoId, setFiltroCampoId] = useState("Todos");
@@ -27,14 +28,16 @@ export default function InventarioPage() {
         try {
             setLoading(true);
             const t = new Date().getTime();
-            const [insRes, camRes, campRes] = await Promise.all([
+            const [insRes, camRes, campRes, actRes] = await Promise.all([
                 apiClient.get(`/insumos?t=${t}`),
                 apiClient.get(`/campos?t=${t}`).catch(() => ({ data: [] })),
-                apiClient.get(`/campanias?t=${t}`).catch(() => ({ data: [] }))
+                apiClient.get(`/campanias?t=${t}`).catch(() => ({ data: [] })),
+                apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] }))
             ]);
             setInsumos(insRes.data || []);
             setCampos(camRes.data || []);
             setCampanias(campRes.data || []);
+            setActividades(actRes.data || []);
         } catch (error) {
             console.error("Error al cargar inventario", error);
         } finally {
@@ -94,6 +97,39 @@ export default function InventarioPage() {
         return Number(i.cantidad) <= 0 || (pct !== null && pct < 20);
     }).length;
     const itemsDisponibles = displayInsumos.filter(i => Number(i.cantidad) > 0).length;
+
+    const historialUso = actividades.flatMap(act => 
+        (act.insumos || []).map(ins => {
+            const insumoRelacionado = insumos.find(i => i.idInsumo === ins.idInsumo);
+            const hectareas = act.hectareasTratadas || act.superficieLoteHa || 0;
+            const cantidadTotal = Number(ins.dosisHa) * Number(hectareas);
+            
+            return {
+                idActividadInsumo: ins.idActividadInsumo,
+                fecha: act.fecha,
+                tipoActv: act.tipoActv,
+                idCampania: act.idCampania,
+                nombreCampania: `${act.nombreCultivo} (${act.nombreLote})`,
+                nombreCampo: act.nombreCampo,
+                idInsumo: ins.idInsumo,
+                nombreInsumo: ins.nombreInsumo,
+                dosisHa: ins.dosisHa,
+                hectareas: hectareas,
+                cantidadTotalUsada: cantidadTotal,
+                unidad: insumoRelacionado?.unidad || "UNIDADES"
+            };
+        })
+    ).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+
+    const historialFiltrado = historialUso.filter(h => {
+        if (filtroCampaniaId !== "Todos" && h.idCampania !== filtroCampaniaId) return false;
+        if (filtroCampoId !== "Todos") {
+            const campaniaDelHistorial = campanias.find(c => c.idCampania === h.idCampania);
+            if (campaniaDelHistorial && campaniaDelHistorial.idCampo !== filtroCampoId) return false;
+        }
+        if (searchTerm) return h.nombreInsumo.toLowerCase().includes(searchTerm.toLowerCase());
+        return true;
+    });
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
@@ -251,6 +287,60 @@ export default function InventarioPage() {
                                     ))}
                                     {displayInsumos.length === 0 && (
                                         <tr><td colSpan="7" className="text-center py-10 text-gray-400 font-medium">No se encontraron artículos con estos filtros.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    {/* Historial de Uso de Insumos */}
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden mt-6">
+                        <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                            <h3 className="font-black text-gray-900 dark:text-gray-100 text-[15px]">Historial de Consumo por Campaña</h3>
+                            <p className="text-[12px] text-gray-500 font-medium mt-1">
+                                Detalle de insumos utilizados en las actividades, filtrados según los criterios superiores.
+                            </p>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Insumo</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Campaña</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Actividad</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Dosis / Ha</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Cant. Total Usada</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {historialFiltrado.map((h, i) => (
+                                        <tr key={i} className="border-b border-gray-50 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition-colors">
+                                            <td className="p-4 text-sm text-gray-500 font-medium">{h.fecha}</td>
+                                            <td className="p-4">
+                                                <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{h.nombreInsumo}</p>
+                                                <p className="text-[11px] text-gray-400 font-bold uppercase">{h.nombreCampo}</p>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 text-[11px] font-bold border border-teal-100 dark:border-teal-800">
+                                                    {h.nombreCampania}
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="px-2.5 py-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-md font-bold text-[11px] uppercase">
+                                                    {h.tipoActv}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-sm text-gray-500 font-semibold text-right">
+                                                {Number(h.dosisHa).toLocaleString("es-AR")} <span className="text-[10px] uppercase">{h.unidad}/Ha</span>
+                                            </td>
+                                            <td className="p-4 text-sm font-black text-orange-500 text-right">
+                                                {Number(h.cantidadTotalUsada).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[10px] text-gray-400 uppercase">{h.unidad}</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {historialFiltrado.length === 0 && (
+                                        <tr><td colSpan="6" className="text-center py-10 text-gray-400 font-medium">No hay registros de consumo con estos filtros.</td></tr>
                                     )}
                                 </tbody>
                             </table>

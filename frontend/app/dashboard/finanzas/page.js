@@ -222,14 +222,27 @@ export default function FinanzasPage() {
                     <div className="flex flex-wrap items-center gap-2">
                         <select
                             className="bg-white/15 border border-white/25 rounded-xl px-3 py-2 text-[12px] font-bold text-white min-w-[220px]"
-                            value={idCampaniaEconomia}
+                            value={idCampaniaEconomia || ""}
                             onChange={(e) => setIdCampaniaEconomia(e.target.value)}
                         >
-                            {campanias.map((c) => (
-                                <option key={c.idCampania} value={c.idCampania} className="text-gray-900">
-                                    {c.cultivo} · {c.nombreLote} ({c.nombreCampo})
+                            {campanias.length === 0 ? (
+                                <option value="" disabled className="text-gray-900">
+                                    No hay campañas registradas
                                 </option>
-                            ))}
+                            ) : (
+                                <>
+                                    {!idCampaniaEconomia && (
+                                        <option value="" disabled className="text-gray-900">
+                                            Seleccionar campaña...
+                                        </option>
+                                    )}
+                                    {campanias.map((c) => (
+                                        <option key={c.idCampania} value={c.idCampania} className="text-gray-900">
+                                            {c.cultivo} · {c.nombreLote} ({c.nombreCampo})
+                                        </option>
+                                    ))}
+                                </>
+                            )}
                         </select>
                         {resumenCampania?.estado === "ABIERTA" && (
                             <button
@@ -250,7 +263,15 @@ export default function FinanzasPage() {
                         <Loader2 className="animate-spin text-white/80" size={36} />
                     </div>
                 ) : !resumenCampania ? (
-                    <p className="text-center text-white/60 text-sm py-8">Seleccioná una campaña con datos.</p>
+                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-black/10 rounded-xl border border-white/10 border-dashed mt-2">
+                        <div className="bg-white/5 p-4 rounded-full mb-4">
+                            <BarChart2 size={32} className="text-white/40" />
+                        </div>
+                        <h3 className="text-white/90 font-bold text-[15px] mb-1.5">Sin datos de la campaña</h3>
+                        <p className="text-white/50 text-[12px] max-w-sm">
+                            Seleccioná una campaña en el menú superior para ver su análisis económico detallado. Asegurate de que tenga gastos o cosechas registradas.
+                        </p>
+                    </div>
                 ) : (
                     <>
                         <div className="flex flex-wrap gap-2 mb-5">
