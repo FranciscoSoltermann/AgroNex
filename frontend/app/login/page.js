@@ -5,7 +5,7 @@ import { Navbar } from "@/components/shared/layout/Navbar";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, ArrowRight, Globe } from "lucide-react";
+import { Mail, Lock, ArrowRight, Globe, ShieldCheck, Loader2 } from "lucide-react";
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -21,6 +21,12 @@ export default function AuthPage() {
     const [dni, setDni] = useState("");
     const [razonSocial, setRazonSocial] = useState("");
     const [cuit, setCuit] = useState("");
+
+    // ── MFA Challenge State ──
+    const [showMfaChallenge, setShowMfaChallenge] = useState(false);
+    const [mfaCode, setMfaCode] = useState("");
+    const [mfaVerifying, setMfaVerifying] = useState(false);
+    const [mfaError, setMfaError] = useState("");
 
     useEffect(() => { setError(null); }, [isLogin]);
 
@@ -73,6 +79,15 @@ export default function AuthPage() {
             if (isLogin) {
                 const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
                 if (loginError) throw loginError;
+
+                // Check if MFA challenge is needed
+                const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+                if (aalData?.nextLevel === "aal2" && aalData?.currentLevel !== "aal2") {
+                    setShowMfaChallenge(true);
+                    setLoading(false);
+                    return;
+                }
+
                 router.push("/dashboard");
             } else {
                 const disponibilidadPayload = tipoUsuario === "FISICA"
@@ -142,6 +157,34 @@ export default function AuthPage() {
             setError(resolveAuthError(err));
         } finally {
             setLoading(false);
+        }
+    };
+
+    // ── MFA Challenge Handler ──
+    const handleMfaVerify = async () => {
+        if (mfaCode.length < 6) return;
+        setMfaVerifying(true);
+        setMfaError("");
+        try {
+            const { data: factors } = await supabase.auth.mfa.listFactors();
+            const totpFactor = factors?.totp?.[0];
+            if (!totpFactor) throw new Error("No se encontró factor TOTP.");
+
+            const { data: challenge, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: totpFactor.id });
+            if (challengeErr) throw challengeErr;
+
+            const { error: verifyErr } = await supabase.auth.mfa.verify({
+                factorId: totpFactor.id,
+                challengeId: challenge.id,
+                code: mfaCode,
+            });
+            if (verifyErr) throw verifyErr;
+
+            router.push("/dashboard");
+        } catch (err) {
+            setMfaError(err?.message || "Código inválido.");
+        } finally {
+            setMfaVerifying(false);
         }
     };
 
@@ -247,8 +290,57 @@ export default function AuthPage() {
                             </form>
                         </div>
                     </div>
-                    {error && <p className="absolute bottom-4 text-red-600 text-[10px] font-bold uppercase tracking-widest text-center px-4">{error}</p>}
+                    {error && !showMfaChallenge && <p className="absolute bottom-4 text-red-600 text-[10px] font-bold uppercase tracking-widest text-center px-4">{error}</p>}
                 </div>
+
+                {/* ── MFA Challenge Overlay ── */}
+                {showMfaChallenge && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-gray-100">
+                            <div className="flex items-center gap-3 mb-5">
+                                <div className="w-10 h-10 bg-[#2D6A4F] rounded-xl flex items-center justify-center">
+                                    <ShieldCheck size={20} className="text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-gray-900">Verificación 2FA</h3>
+                                    <p className="text-[11px] text-gray-500 font-medium">Ingresá el código de tu app autenticadora</p>
+                                </div>
+                            </div>
+
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={6}
+                                value={mfaCode}
+                                onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                placeholder="000000"
+                                className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-4 text-center text-2xl font-black text-gray-900 tracking-[0.5em] focus:border-[#2D6A4F] outline-none transition-all mb-4"
+                                autoFocus
+                                onKeyDown={(e) => { if (e.key === "Enter") handleMfaVerify(); }}
+                            />
+
+                            {mfaError && (
+                                <p className="text-red-600 text-[11px] font-bold text-center mb-3">{mfaError}</p>
+                            )}
+
+                            <button
+                                onClick={handleMfaVerify}
+                                disabled={mfaCode.length < 6 || mfaVerifying}
+                                className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {mfaVerifying ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+                                Verificar
+                            </button>
+
+                            <button
+                                onClick={() => { setShowMfaChallenge(false); setMfaCode(""); setMfaError(""); supabase.auth.signOut(); }}
+                                className="w-full mt-3 text-gray-500 py-2 text-[11px] font-bold uppercase tracking-widest hover:text-gray-700 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <style jsx global>{`

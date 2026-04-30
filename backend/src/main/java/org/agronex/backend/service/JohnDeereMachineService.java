@@ -30,20 +30,29 @@ public class JohnDeereMachineService {
     public List<Map<String, Object>> listOrganizations(UUID userId) {
         String token = authService.getUserAccessToken(userId);
         String url = config.getApiBaseUrl() + "/organizations";
+        
+        log.info(">>> GETting organizations from URL: {}", url);
 
         try {
-            Map<String, Object> response = restClient.get()
+            String rawResponse = restClient.get()
                     .uri(url)
                     .header("Authorization", "Bearer " + token)
                     .header("Accept", ACCEPT_HEADER)
                     .retrieve()
-                    .body(Map.class);
+                    .body(String.class);
 
-            if (response == null) return List.of();
+            log.info(">>> RAW Organizations Response: {}", rawResponse);
+
+            if (rawResponse == null || rawResponse.isBlank()) return List.of();
+
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            Map<String, Object> response = mapper.readValue(rawResponse, Map.class);
 
             // La respuesta puede venir como { "values": [...] } o lista directa
             if (response.containsKey("values")) {
                 return (List<Map<String, Object>>) response.get("values");
+            } else if (response.containsKey("elements")) {
+                return (List<Map<String, Object>>) response.get("elements");
             }
 
             return List.of(response);
@@ -61,8 +70,6 @@ public class JohnDeereMachineService {
         String token = authService.getUserAccessToken(userId);
         List<String> endpointsToTry = List.of(
             config.getApiBaseUrl() + "/organizations/" + orgId + "/machines",
-            "https://equipmentapi.deere.com/isg/equipment",
-            "https://equipmentapi.deere.com/isg/equipment?orgId=" + orgId,
             config.getApiBaseUrl() + "/organizations/" + orgId + "/equipment"
         );
 
@@ -160,6 +167,47 @@ public class JohnDeereMachineService {
         } catch (Exception e) {
             log.error("Error obteniendo historial de ubicación para máquina {}: {}", machineId, e.getMessage());
             throw new RuntimeException("Error al obtener historial de ubicación: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Lista los campos (fields) de una organización.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> listFields(UUID userId, String orgId) {
+        String token = authService.getUserAccessToken(userId);
+        String url = config.getApiBaseUrl() + "/organizations/" + orgId + "/fields";
+
+        log.info(">>> Probando URL JD para campos: {}", url);
+        try {
+            String rawResponse = restClient.get()
+                    .uri(url)
+                    .header("Authorization", "Bearer " + token)
+                    .header("Accept", ACCEPT_HEADER)
+                    .retrieve()
+                    .body(String.class);
+
+            log.info(">>> RAW Fields Response: {}", rawResponse);
+
+            if (rawResponse == null || rawResponse.isBlank()) return List.of();
+
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            Map<String, Object> response = mapper.readValue(rawResponse, Map.class);
+
+            if (response.containsKey("values")) {
+                List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
+                log.info(">>> Encontrados {} campos.", values.size());
+                return values;
+            } else if (response.containsKey("elements")) {
+                List<Map<String, Object>> elements = (List<Map<String, Object>>) response.get("elements");
+                log.info(">>> Encontrados {} campos (elements).", elements.size());
+                return elements;
+            }
+
+            return List.of(response);
+        } catch (Exception e) {
+            log.warn(">>> Fallo al consultar campos en {}: {}", url, e.getMessage());
+            return List.of();
         }
     }
 }

@@ -138,6 +138,8 @@ public class SecurityConfig {
             .oauth2ResourceServer(oauth -> oauth.jwt(jwt ->
                 jwt.jwtAuthenticationConverter(rolJwtAuthenticationConverter)
             ));
+            // Se remueve oauth2Login() nativo porque usamos el flujo manual JWT-state
+
 
         return http.build();
     }

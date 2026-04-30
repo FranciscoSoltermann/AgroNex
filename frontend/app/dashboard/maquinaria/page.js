@@ -139,6 +139,11 @@ export default function MaquinariaPage() {
                 </div>
             </div>
 
+            {/* Unified Equipos Component (John Deere) */}
+            {providers.find(p => p.id === "john-deere")?.userConnected && (
+                <JohnDeereEquipos />
+            )}
+
             {/* Providers */}
             {providers.map((provider) => (
                 <ProviderCard
@@ -166,12 +171,18 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
     const { id, name, description, color, logo, configured, userConnected, connections, organizations, loading, error } = provider;
     const [showOrgs, setShowOrgs] = useState(false);
     const [machines, setMachines] = useState({});
+    const [fields, setFields] = useState({});
     const [loadingMachines, setLoadingMachines] = useState({});
 
     const fetchMachines = async (orgId) => {
-        if (machines[orgId]) {
+        if (machines[orgId] || fields[orgId]) {
             // Toggle: ya las tenemos, solo las mostramos/ocultamos
             setMachines(prev => {
+                const copy = { ...prev };
+                delete copy[orgId];
+                return copy;
+            });
+            setFields(prev => {
                 const copy = { ...prev };
                 delete copy[orgId];
                 return copy;
@@ -201,6 +212,14 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
         } catch {
             setMachines(prev => ({ ...prev, [orgId]: [] }));
         }
+        
+        try {
+            const resFields = await apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/fields`);
+            setFields(prev => ({ ...prev, [orgId]: resFields.data || [] }));
+        } catch {
+            setFields(prev => ({ ...prev, [orgId]: [] }));
+        }
+
         setLoadingMachines(prev => ({ ...prev, [orgId]: false }));
     };
 
@@ -344,7 +363,7 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                                 <div className="flex items-center gap-2">
                                                     {isLoading && <Loader2 size={14} className="animate-spin text-gray-400" />}
                                                     <span className="text-[10px] font-bold text-[#367C2B]">
-                                                        {orgMachines ? `${orgMachines.length} máquinas` : "Ver máquinas →"}
+                                                        {orgMachines ? `${orgMachines.length} máquinas y ${fields[orgId]?.length || 0} campos` : "Ver detalle →"}
                                                     </span>
                                                 </div>
                                             </button>
@@ -353,14 +372,45 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                             {orgMachines && (
                                                 <div className="px-6 pb-4">
                                                     {orgMachines.length === 0 ? (
-                                                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 text-center">
+                                                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 text-center mb-4">
                                                             <p className="text-[11px] text-gray-400 font-medium">No se encontraron máquinas en esta organización.</p>
                                                         </div>
                                                     ) : (
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                                                             {orgMachines.map((machine) => (
                                                                 <MachineCard key={machine.id || machine.principalId} machine={machine} />
                                                             ))}
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {/* Fields List */}
+                                                    {fields[orgId] && fields[orgId].length > 0 ? (
+                                                        <>
+                                                            <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+                                                                <MapPin size={16} className="text-green-600" />
+                                                                Campos ({fields[orgId].length})
+                                                            </h4>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                {fields[orgId].map((field) => (
+                                                                    <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+                                                                        <div className="flex items-start justify-between">
+                                                                            <div>
+                                                                                <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100">{field.name}</p>
+                                                                                <p className="text-[10px] text-gray-400 font-medium mt-0.5">ID: {field.id}</p>
+                                                                            </div>
+                                                                            {field.area && (
+                                                                                <span className="text-[11px] font-bold bg-green-50 text-green-700 px-2 py-1 rounded">
+                                                                                    {Number(field.area.value).toFixed(2)} {field.area.unitId}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 text-center">
+                                                            <p className="text-[11px] text-gray-400 font-medium">No se encontraron campos en esta organización.</p>
                                                         </div>
                                                     )}
                                                 </div>
@@ -503,6 +553,142 @@ function MachineCard({ machine }) {
             ) : (
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
                     <p className="text-[10px] text-gray-400 font-medium">Sin datos de ubicación disponibles</p>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function JohnDeereEquipos() {
+    const [equipos, setEquipos] = useState([]);
+    const [fields, setFields] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                // Fetch machines
+                let equiposConUbicacion = [];
+                try {
+                    const res = await apiClient.get('/maquinaria/john-deere/equipos');
+                    equiposConUbicacion = await Promise.all(
+                        (res.data || []).map(async (machine) => {
+                            try {
+                                const locRes = await apiClient.get(`/maquinaria/john-deere/machines/${machine.id || machine.principalId}/breadcrumbs`);
+                                const breadcrumbs = locRes.data || [];
+                                return { ...machine, breadcrumbs: breadcrumbs.length > 0 ? breadcrumbs[0] : null };
+                            } catch {
+                                return { ...machine, breadcrumbs: null };
+                            }
+                        })
+                    );
+                } catch (err) {
+                    console.error("Error al obtener equipos:", err);
+                }
+                setEquipos(equiposConUbicacion);
+
+                // Fetch fields
+                let camposList = [];
+                try {
+                    const resFields = await apiClient.get('/maquinaria/john-deere/campos');
+                    camposList = resFields.data || [];
+                } catch (err) {
+                    console.error("Error al obtener campos:", err);
+                }
+                setFields(camposList);
+                
+                setError(null);
+            } catch (err) {
+                console.error("Error al obtener datos unificados:", err);
+                setError("No se pudieron cargar los datos. Verifica que tu token sea válido y tengas organizaciones disponibles.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm animate-pulse mb-6">
+                <div className="h-6 w-48 bg-gray-200 dark:bg-gray-800 rounded mb-4"></div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-xl"></div>
+                    <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-xl"></div>
+                    <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-xl"></div>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/50 rounded-2xl p-6 mb-6">
+                <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-2">
+                    <AlertCircle size={18} />
+                    <h3 className="font-bold text-sm">Error de sincronización</h3>
+                </div>
+                <p className="text-xs text-red-500/80">{error}</p>
+            </div>
+        );
+    }
+
+    if (equipos.length === 0 && fields.length === 0) {
+        return null; // Si no hay equipos ni campos y tampoco error, no mostramos nada
+    }
+
+    return (
+        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm mb-6">
+            <div className="flex items-center justify-between mb-6">
+                <div>
+                    <h2 className="text-lg font-black text-gray-900 dark:text-gray-100">Vista Global de la Organización Principal</h2>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1">
+                        Mostrando {equipos.length} máquinas y {fields.length} campos obtenidos de tu organización en John Deere.
+                    </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center border border-green-100 dark:border-green-800">
+                    <Tractor size={18} className="text-green-600 dark:text-green-400" />
+                </div>
+            </div>
+
+            {equipos.length > 0 && (
+                <div className="mb-6">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                        <Tractor size={16} className="text-green-600" /> Máquinas
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {equipos.map((machine) => (
+                            <MachineCard key={machine.id || machine.principalId} machine={machine} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {fields.length > 0 && (
+                <div>
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                        <MapPin size={16} className="text-green-600" /> Campos
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {fields.map((field) => (
+                            <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100">{field.name}</p>
+                                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">ID: {field.id}</p>
+                                    </div>
+                                    {field.area && (
+                                        <span className="text-[11px] font-bold bg-green-50 text-green-700 px-2 py-1 rounded">
+                                            {Number(field.area.value).toFixed(2)} {field.area.unitId}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
         </div>

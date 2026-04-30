@@ -185,6 +185,14 @@ public class JohnDeereController {
         return ResponseEntity.ok(machineService.listMachines(userId, orgId));
     }
 
+    @GetMapping("/organizations/{orgId}/fields")
+    public ResponseEntity<List<Map<String, Object>>> listFields(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String orgId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listFields(userId, orgId));
+    }
+
     @GetMapping("/machines/{machineId}/breadcrumbs")
     public ResponseEntity<List<Map<String, Object>>> getMachineBreadcrumbs(
             @AuthenticationPrincipal Jwt jwt,
@@ -199,5 +207,59 @@ public class JohnDeereController {
             @PathVariable String machineId) {
         UUID userId = SecurityUtils.requireUserId(jwt);
         return ResponseEntity.ok(machineService.getMachineLocationHistory(userId, machineId));
+    }
+
+    /**
+     * Endpoint unificado que busca la primera organización y devuelve sus equipos.
+     */
+    @GetMapping("/equipos")
+    public ResponseEntity<List<Map<String, Object>>> getEquiposUnificados(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        
+        // 1. Obtener organizaciones
+        List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
+        if (orgs == null || orgs.isEmpty()) {
+            return ResponseEntity.ok(List.of()); // Sin organizaciones, retornar lista vacía
+        }
+        
+        // 2. Tomar la primera organización
+        Map<String, Object> firstOrg = orgs.get(0);
+        String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
+        
+        if (orgId == null) {
+            return ResponseEntity.ok(List.of()); // ID de org no válido
+        }
+        
+        // 3. Obtener máquinas de esa organización
+        List<Map<String, Object>> machines = machineService.listMachines(userId, orgId);
+        
+        return ResponseEntity.ok(machines);
+    }
+
+    /**
+     * Endpoint unificado que busca la primera organización y devuelve sus campos.
+     */
+    @GetMapping("/campos")
+    public ResponseEntity<List<Map<String, Object>>> getCamposUnificados(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        
+        // 1. Obtener organizaciones
+        List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
+        if (orgs == null || orgs.isEmpty()) {
+            return ResponseEntity.ok(List.of()); // Sin organizaciones, retornar lista vacía
+        }
+        
+        // 2. Tomar la primera organización
+        Map<String, Object> firstOrg = orgs.get(0);
+        String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
+        
+        if (orgId == null) {
+            return ResponseEntity.ok(List.of()); // ID de org no válido
+        }
+        
+        // 3. Obtener campos de esa organización
+        List<Map<String, Object>> fields = machineService.listFields(userId, orgId);
+        
+        return ResponseEntity.ok(fields);
     }
 }

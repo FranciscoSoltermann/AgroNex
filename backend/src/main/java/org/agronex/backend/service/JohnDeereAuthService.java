@@ -37,7 +37,7 @@ public class JohnDeereAuthService {
     private static final String AUTHORIZE_URL = "https://signin.johndeere.com/oauth2/aus78tnlaysMraFhC1t7/v1/authorize";
 
     /** Scopes requeridos para las APIs de Equipment y Machine Locations */
-    private static final String USER_SCOPES = "openid profile offline_access eq1 eq2 org1 org2";
+    private static final String USER_SCOPES = "openid profile offline_access ag1 eq1 eq2 org1 org2 files";
 
     // ────────────────────────────────────────────────────
     // 1. CLIENT CREDENTIALS (app-level)
