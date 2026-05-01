@@ -42,7 +42,7 @@ public class AuthService {
         PersonaFisica persona = fisicaMapper.toEntity(request, supabaseUuid);
         persona.setEmail(emailNormalizado);
         persona.setDni(dniNormalizado);
-        persona.setRol(RolUsuario.PROPIETARIO);
+        persona.setRol(request.getRol() != null && request.getRol() == RolUsuario.EMPLEADO ? RolUsuario.EMPLEADO : RolUsuario.PROPIETARIO);
         persona.setIdPropietario(null);
 
         PersonaFisica guardada = fisicaRepository.save(persona);
@@ -52,7 +52,7 @@ public class AuthService {
                 EntidadAudit.USUARIO, guardada.getIdUsuario().toString(),
                 guardada.getNombre() + " " + guardada.getApellido(),
                 AccionAudit.REGISTRO,
-                "Registro como Persona Física. DNI: " + dniNormalizado
+                "Registro como Persona Física (" + persona.getRol() + "). DNI: " + dniNormalizado
         );
 
         return fisicaMapper.toResponse(guardada);
@@ -72,7 +72,7 @@ public class AuthService {
         PersonaJuridica empresa = juridicaMapper.toEntity(request, supabaseUuid);
         empresa.setEmail(emailNormalizado);
         empresa.setCuit(cuitNormalizado);
-        empresa.setRol(RolUsuario.PROPIETARIO);
+        empresa.setRol(request.getRol() != null && request.getRol() == RolUsuario.EMPLEADO ? RolUsuario.EMPLEADO : RolUsuario.PROPIETARIO);
         empresa.setIdPropietario(null);
         PersonaJuridica guardada = juridicaRepository.save(empresa);
 

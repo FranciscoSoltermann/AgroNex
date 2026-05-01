@@ -24,13 +24,16 @@ public class GastoFijoService {
     private final CampaniaRepository campaniaRepository;
     private final GastoFijoMapper gastoFijoMapper;
     private final AuditService auditService;
+    private final UsuarioService usuarioService;
 
     @Transactional
     public GastoFijoResponse registrarGasto(GastoFijoRequest request, UUID idUsuarioToken) {
         Campo campo = campoRepository.findById(request.getIdCampo())
                 .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
 
-        if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tienes permiso sobre este campo");
         }
 
@@ -41,7 +44,7 @@ public class GastoFijoService {
             if (!campania.getLote().getCampo().getIdCampo().equals(campo.getIdCampo())) {
                 throw new AccessDeniedException("La campaña no corresponde al campo indicado");
             }
-            if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
                 throw new AccessDeniedException("No tenés permiso sobre esta campaña");
             }
         }
@@ -66,7 +69,8 @@ public class GastoFijoService {
 
     @Transactional(readOnly = true)
     public java.util.List<GastoFijoResponse> listarGastosPersonales(UUID idUsuarioToken) {
-        return gastoFijoRepository.findByCampoUsuarioIdUsuario(idUsuarioToken)
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        return gastoFijoRepository.findByCampoUsuarioIdUsuario(idDatos)
                 .stream()
                 .map(gastoFijoMapper::toResponse)
                 .collect(java.util.stream.Collectors.toList());
@@ -77,7 +81,9 @@ public class GastoFijoService {
         GastoFijo gastoFijo = gastoFijoRepository.findById(idGasto)
                 .orElseThrow(() -> new EntityNotFoundException("Gasto no encontrado"));
 
-        if (!gastoFijo.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!gastoFijo.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para eliminar este gasto");
         }
 

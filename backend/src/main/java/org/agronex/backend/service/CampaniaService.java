@@ -36,13 +36,16 @@ public class CampaniaService {
     private final ActividadInsumoRepository actividadInsumoRepository;
     private final ActividadRepository actividadRepository;
     private final CosechaRepository cosechaRepository;
+    private final UsuarioService usuarioService;
 
     @Transactional
     public CampaniaResponse crearCampania(CampaniaRequest request, UUID idUsuarioToken) {
         Lote lote = loteRepository.findById(request.getIdLote())
                 .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
 
-        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("Acceso denegado al lote especificado");
         }
 
@@ -62,7 +65,8 @@ public class CampaniaService {
 
     @Transactional(readOnly = true)
     public List<CampaniaResponse> listarMisCampanias(UUID idUsuarioToken) {
-        return campaniaRepository.findByLoteCampoUsuarioIdUsuario(idUsuarioToken)
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        return campaniaRepository.findByLoteCampoUsuarioIdUsuario(idDatos)
                 .stream()
                 .map(campaniaMapper::toResponse)
                 .collect(Collectors.toList());

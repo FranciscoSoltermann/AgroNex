@@ -33,13 +33,16 @@ public class MonitoreoSatelitalService {
     private final LoteRepository loteRepository;
     private final AgromonitoringService agromonitoringService;
     private final AlertaUsuarioService alertaUsuarioService;
+    private final UsuarioService usuarioService;
 
     @Transactional
     public MonitoreoSatelitalResponse registrarMonitoreo(MonitoreoSatelitalRequest request, UUID idUsuarioToken) {
         Lote lote = loteRepository.findById(request.getIdLote())
                 .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
 
-        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para registrar monitoreo en este lote.");
         }
 
@@ -63,7 +66,9 @@ public class MonitoreoSatelitalService {
         Lote lote = loteRepository.findById(idLote)
                 .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
 
-        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés acceso a este lote.");
         }
 
@@ -85,7 +90,9 @@ public class MonitoreoSatelitalService {
         Lote lote = loteRepository.findById(idLote)
                 .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
 
-        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para sincronizar este lote.");
         }
 

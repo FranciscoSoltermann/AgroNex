@@ -24,10 +24,12 @@ public class CosechaService {
     private final CampaniaRepository campaniaRepository;
     private final CosechaMapper cosechaMapper;
     private final AuditService auditService;
+    private final UsuarioService usuarioService;
 
     @Transactional(readOnly = true)
     public List<CosechaResponse> listarTodas(UUID idUsuario) {
-        return cosechaRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idUsuario)
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuario);
+        return cosechaRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idDatos)
                 .stream()
                 .map(cosechaMapper::toResponse)
                 .collect(Collectors.toList());
@@ -38,7 +40,9 @@ public class CosechaService {
         Campania campania = campaniaRepository.findById(request.getIdCampania())
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
 
-        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tienes permiso sobre esta campaña");
         }
 

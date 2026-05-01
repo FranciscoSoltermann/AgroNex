@@ -26,12 +26,16 @@ public class InsumoService {
     private final CampaniaRepository campaniaRepository;
     private final InsumoMapper insumoMapper;
     private final AuditService auditService;
+    private final UsuarioService usuarioService;
 
     @Transactional
     public InsumoResponse crearInsumo(InsumoRequest request, UUID idUsuarioToken) {
         Campo campo = campoRepository.findById(request.getIdCampo())
                 .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
-        if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para cargar insumos en este campo");
         }
 
@@ -43,7 +47,7 @@ public class InsumoService {
             Campania campania = campaniaRepository.findById(request.getIdCampania())
                     .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
             // Validar que la campaña pertenece al mismo usuario
-            if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+            if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
                 throw new AccessDeniedException("No tenés permiso para vincular insumos a esta campaña");
             }
             nuevoInsumo.setCampania(campania);
@@ -72,6 +76,7 @@ public class InsumoService {
     @Transactional(readOnly = true)
     public List<InsumoResponse> listarTodos(UUID idUsuario, UUID idCampo, UUID idCampania) {
         List<Insumo> list;
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuario);
 
         if (idCampo != null && idCampania != null) {
             // Filtrar por campo Y campaña
@@ -83,13 +88,13 @@ public class InsumoService {
             // Filtrar solo por campo (incluye todos los insumos del campo, con o sin campaña)
             Campo campo = campoRepository.findById(idCampo)
                     .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
-            if (!campo.getUsuario().getIdUsuario().equals(idUsuario)) {
+            if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
                 throw new AccessDeniedException("No tenés acceso a este campo");
             }
             list = insumoRepository.findByCampoIdCampo(idCampo);
         } else {
             // Todos los insumos del usuario
-            list = insumoRepository.findByCampoUsuarioIdUsuario(idUsuario);
+            list = insumoRepository.findByCampoUsuarioIdUsuario(idDatos);
         }
 
         return list.stream()
@@ -101,7 +106,10 @@ public class InsumoService {
     public InsumoResponse buscarPorId(UUID id, UUID idUsuarioToken) {
         Insumo insumo = insumoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en el catálogo"));
-        if (insumo.getCampo() == null || !insumo.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        
+        if (insumo.getCampo() == null || !insumo.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés acceso a este insumo");
         }
         return insumoMapper.toResponse(insumo);

@@ -10,6 +10,7 @@ import { Mail, Lock, ArrowRight, Globe, ShieldCheck, Loader2 } from "lucide-reac
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
     const [tipoUsuario, setTipoUsuario] = useState("FISICA");
+    const [rolRegistro, setRolRegistro] = useState("PROPIETARIO");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const router = useRouter();
@@ -144,8 +145,8 @@ export default function AuthPage() {
                     : `/public/auth/registro/juridica`;
 
                 const payload = tipoUsuario === "FISICA"
-                    ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim() }
-                    : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim() };
+                    ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim(), rol: rolRegistro }
+                    : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim(), rol: rolRegistro };
 
                 await apiClient.post(url, payload, {
                     headers: { Authorization: `Bearer ${session.access_token}` },
@@ -258,13 +259,18 @@ export default function AuthPage() {
 
                         {/* CARA BACK: REGISTER */}
                         <div className="card-face card-face-back absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2.5rem] p-8 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)] overflow-hidden">
-                            <div className="h-16 flex flex-col items-center text-center justify-center mb-4">
+                            <div className="h-16 flex flex-col items-center text-center justify-center mb-2">
                                 <h2 className="text-3xl font-black text-gray-900 tracking-tighter uppercase italic">Crear cuenta</h2>
                             </div>
 
+                            <div className="flex bg-white/25 p-1 rounded-[14px] mb-3 border border-white/50 backdrop-blur-md">
+                                <button type="button" onClick={() => setRolRegistro("PROPIETARIO")} className={`flex-1 py-1.5 rounded-[10px] text-[9px] font-black uppercase transition-all ${rolRegistro === "PROPIETARIO" ? "bg-[#2D6A4F] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Propietario</button>
+                                <button type="button" onClick={() => setRolRegistro("EMPLEADO")} className={`flex-1 py-1.5 rounded-[10px] text-[9px] font-black uppercase transition-all ${rolRegistro === "EMPLEADO" ? "bg-[#2D6A4F] text-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Empleado</button>
+                            </div>
+
                             <div className="flex bg-white/25 p-1 rounded-[14px] mb-4 border border-white/50 backdrop-blur-md">
-                                <button type="button" onClick={() => setTipoUsuario("FISICA")} className={`flex-1 py-2 rounded-[10px] text-[10px] font-black uppercase transition-all ${tipoUsuario === "FISICA" ? "bg-white text-[#2D6A4F] shadow-sm" : "text-slate-500"}`}>Individual</button>
-                                <button type="button" onClick={() => setTipoUsuario("JURIDICA")} className={`flex-1 py-2 rounded-[10px] text-[10px] font-black uppercase transition-all ${tipoUsuario === "JURIDICA" ? "bg-white text-[#2D6A4F] shadow-sm" : "text-slate-500"}`}>Empresa</button>
+                                <button type="button" onClick={() => setTipoUsuario("FISICA")} className={`flex-1 py-1.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${tipoUsuario === "FISICA" ? "bg-white text-[#2D6A4F] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Individual</button>
+                                <button type="button" onClick={() => setTipoUsuario("JURIDICA")} className={`flex-1 py-1.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${tipoUsuario === "JURIDICA" ? "bg-white text-[#2D6A4F] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Empresa</button>
                             </div>
 
                             <form className="space-y-3" onSubmit={handleAuth}>

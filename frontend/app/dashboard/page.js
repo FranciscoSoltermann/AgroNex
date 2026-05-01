@@ -55,6 +55,8 @@ export default function DashboardHome() {
     const [loading, setLoading] = useState(true);
     const [chartMode, setChartMode] = useState("Mensual");
     const [userName, setUserName] = useState("Productor");
+    const [userRole, setUserRole] = useState(null);
+    const [userPermisos, setUserPermisos] = useState([]);
 
     const [dynChartData, setDynChartData] = useState([{ mes: "MAR", costos: 0, cosecha: 0 }]);
     const [dynMaxVal, setDynMaxVal] = useState(100);
@@ -73,13 +75,14 @@ export default function DashboardHome() {
                     try {
                         const t = new Date().getTime();
                         // 1. Añadimos resCampos a la carga masiva
-                        const [bootstrap, resStats, resActs, resGastos, resCosechas, resInsumos] = await Promise.all([
+                        const [bootstrap, resStats, resActs, resGastos, resCosechas, resInsumos, resSettings] = await Promise.all([
                             getDashboardBootstrapData(),
                             apiClient.get(`/campos/stats?t=${t}`).catch(() => ({ data: {} })),
                             apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/gastos?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] })),
                             apiClient.get(`/insumos?t=${t}`).catch(() => ({ data: [] })),
+                            apiClient.get(`/usuarios/settings?t=${t}`).catch(() => ({ data: {} })),
                         ]);
 
                         const actos = resActs.data || [];
@@ -88,6 +91,10 @@ export default function DashboardHome() {
                         const coses = resCosechas.data || [];
                         const d = resStats.data || {};
                         const listaCampos = bootstrap.campos || [];
+                        const settingsData = resSettings?.data || {};
+
+                        setUserRole(settingsData.rol);
+                        setUserPermisos(settingsData.permisos || []);
 
                         const totalCostosActs = actos.reduce((sum, a) => sum + (a.costoServicio || 0), 0);
                         const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
@@ -233,6 +240,7 @@ export default function DashboardHome() {
             {/* Alertas de Inventario + Gastos por Categoría + Actividades Recientes */}
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr] gap-3 sm:gap-4 flex-1 min-h-0">
                 {/* Alertas de Inventario */}
+                {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_INVENTARIO")) && (
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
@@ -282,8 +290,10 @@ export default function DashboardHome() {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Gastos por Categoría — Pie Chart */}
+                {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
                     <div className="flex items-center gap-2 mb-4">
                         <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
@@ -315,6 +325,7 @@ export default function DashboardHome() {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Actividades Recientes */}
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
@@ -345,6 +356,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Crecimiento: Costos vs Cosechas — Full width */}
+            {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
             <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800">
                 <div className="flex items-start justify-between mb-1">
                     <div>
@@ -375,6 +387,7 @@ export default function DashboardHome() {
                     <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Rendimiento de Cosecha (kg)</span></div>
                 </div>
             </div>
+            )}
 
         </div>
     );

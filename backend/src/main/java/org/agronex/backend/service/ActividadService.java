@@ -32,13 +32,16 @@ public class ActividadService {
     private final ActividadMapper actividadMapper;
     private final AlertaUsuarioService alertaUsuarioService;
     private final AuditService auditService;
+    private final UsuarioService usuarioService;
 
     @Transactional
     public ActividadResponse registrarActividad(ActividadRequest request, UUID idUsuarioToken) {
         Campania campania = campaniaRepository.findById(request.getIdCampania())
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
 
-        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tienes permiso para agregar actividades a esta campaña");
         }
 
@@ -118,7 +121,8 @@ public class ActividadService {
 
     @Transactional(readOnly = true)
     public List<ActividadResponse> listarMisActividades(UUID idUsuarioToken) {
-        return actividadRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idUsuarioToken)
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        return actividadRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idDatos)
                 .stream()
                 .map(actividadMapper::toResponse)
                 .collect(Collectors.toList());
@@ -129,7 +133,9 @@ public class ActividadService {
         Actividad actividad = actividadRepository.findById(idActividad)
                 .orElseThrow(() -> new EntityNotFoundException("Actividad no encontrada"));
 
-        if (!actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para eliminar esta actividad");
         }
 

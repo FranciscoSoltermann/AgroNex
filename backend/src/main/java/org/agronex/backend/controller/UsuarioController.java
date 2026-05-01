@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.request.AsignarEmpleadoRequest;
 import org.agronex.backend.dto.request.ActualizarRolUsuarioRequest;
 import org.agronex.backend.dto.request.UsuarioSettingsUpdateRequest;
+import org.agronex.backend.dto.response.EmpleadoResponse;
 import org.agronex.backend.dto.response.UsuarioSettingsResponse;
 import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.UsuarioService;
@@ -15,6 +16,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -56,6 +59,13 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioSettingsService.actualizarSettings(idUsuario, request));
     }
 
+    /** Lista los empleados asignados al propietario autenticado. */
+    @GetMapping("/empleados")
+    public ResponseEntity<List<EmpleadoResponse>> listarEmpleados(@AuthenticationPrincipal Jwt jwt) {
+        UUID idPropietario = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(usuarioService.listarEmpleados(idPropietario));
+    }
+
     /** Un PROPIETARIO puede vincular un usuario existente como EMPLEADO de su cuenta. */
     @PostMapping("/empleados/asignar")
     @PreAuthorize("hasAuthority('ROLE_PROPIETARIO')")
@@ -63,7 +73,18 @@ public class UsuarioController {
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody AsignarEmpleadoRequest request) {
         UUID idPropietario = SecurityUtils.requireUserId(jwt);
-        usuarioService.asignarEmpleadoPorEmail(idPropietario, request.getEmail());
+        usuarioService.asignarEmpleado(idPropietario, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Un PROPIETARIO desvincula a un empleado de su equipo. */
+    @DeleteMapping("/empleados/{idEmpleado}")
+    @PreAuthorize("hasAuthority('ROLE_PROPIETARIO')")
+    public ResponseEntity<Void> desvincularEmpleado(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID idEmpleado) {
+        UUID idPropietario = SecurityUtils.requireUserId(jwt);
+        usuarioService.desvincularEmpleado(idPropietario, idEmpleado);
         return ResponseEntity.noContent().build();
     }
 

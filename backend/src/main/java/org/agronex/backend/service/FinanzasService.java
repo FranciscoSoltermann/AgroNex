@@ -24,6 +24,7 @@ public class FinanzasService {
     private final ActividadRepository actividadRepository;
     private final CosechaRepository cosechaRepository;
     private final CampaniaRepository campaniaRepository;
+    private final UsuarioService usuarioService;
 
     private static BigDecimal nz(BigDecimal v) {
         return v != null ? v : BigDecimal.ZERO;
@@ -54,10 +55,11 @@ public class FinanzasService {
 
     @Transactional(readOnly = true)
     public List<FinanzasCampoResponse> obtenerResumenGeneral(UUID idUsuario) {
-        List<Campo> campos = campoRepository.findByUsuarioIdUsuario(idUsuario);
-        List<GastoFijo> gastosFijos = gastoFijoRepository.findByCampoUsuarioIdUsuario(idUsuario);
-        List<Actividad> actividades = actividadRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idUsuario);
-        List<Cosecha> cosechas = cosechaRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idUsuario);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuario);
+        List<Campo> campos = campoRepository.findByUsuarioIdUsuario(idDatos);
+        List<GastoFijo> gastosFijos = gastoFijoRepository.findByCampoUsuarioIdUsuario(idDatos);
+        List<Actividad> actividades = actividadRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idDatos);
+        List<Cosecha> cosechas = cosechaRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idDatos);
 
         Map<UUID, BigDecimal> gastosPorCampo = new HashMap<>();
         for (GastoFijo g : gastosFijos) {
@@ -126,7 +128,10 @@ public class FinanzasService {
     public ResumenCampaniaResponse obtenerResumenCampania(UUID idCampania, UUID idUsuario) {
         Campania campania = campaniaRepository.findById(idCampania)
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
-        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuario)) {
+        
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuario);
+        
+        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés acceso a esta campaña");
         }
 

@@ -1,8 +1,10 @@
 package org.agronex.backend.repository;
 
 import org.agronex.backend.entity.Usuario;
+import org.agronex.backend.enums.RolUsuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,4 +13,5 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     Optional<Usuario> findByEmail(String email);
     Optional<Usuario> findByEmailIgnoreCase(String email);
     boolean existsByEmailIgnoreCase(String email);
+    List<Usuario> findByIdPropietario(UUID idPropietario);
 }

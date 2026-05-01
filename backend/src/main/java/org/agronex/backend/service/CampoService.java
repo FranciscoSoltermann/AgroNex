@@ -53,7 +53,8 @@ public class CampoService {
 
     @Transactional(readOnly = true)
     public List<CampoResponse> listarMisCampos(UUID idUsuarioToken) {
-        return campoRepository.findByUsuarioIdUsuario(idUsuarioToken)
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        return campoRepository.findByUsuarioIdUsuario(idDatos)
                 .stream()
                 .map(campoMapper::toResponse)
                 .collect(Collectors.toList());
@@ -61,7 +62,8 @@ public class CampoService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> obtenerEstadisticas(UUID idUsuarioToken) {
-        List<Campo> campos = campoRepository.findByUsuarioIdUsuario(idUsuarioToken);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        List<Campo> campos = campoRepository.findByUsuarioIdUsuario(idDatos);
 
         long camposActivos = campos.size();
 

@@ -16,4 +16,7 @@ public class AsignarEmpleadoRequest {
     @NotBlank(message = "El email es obligatorio")
     @Email(message = "Debe ser un formato de email válido")
     private String email;
+
+    private org.agronex.backend.enums.RolOperativo rolOperativo;
+    private java.util.List<org.agronex.backend.enums.PermisoEmpleado> permisos;
 }

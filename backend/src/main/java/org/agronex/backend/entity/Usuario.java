@@ -51,6 +51,17 @@ public abstract class Usuario {
     @Column(name = "fecha_registro", updatable = false)
     private OffsetDateTime fechaRegistro;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "rol_operativo", length = 30)
+    private org.agronex.backend.enums.RolOperativo rolOperativo;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "usuario_permisos", joinColumns = @JoinColumn(name = "id_usuario"))
+    @Enumerated(EnumType.STRING)
+    @Column(name = "permiso")
+    @Builder.Default
+    private List<org.agronex.backend.enums.PermisoEmpleado> permisos = new ArrayList<>();
+
     @PrePersist
     private void prePersist() {
         if (fechaRegistro == null) {

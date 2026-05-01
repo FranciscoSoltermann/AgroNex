@@ -28,6 +28,7 @@ public class LoteService {
     private final LoteMapper loteMapper;
     private final AgromonitoringService agromonitoringService;
     private final AuditService auditService;
+    private final UsuarioService usuarioService;
 
     @Transactional
     public LoteResponse crearLote(LoteRequest request, UUID idUsuarioToken) {
@@ -36,7 +37,8 @@ public class LoteService {
                 .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
 
         // 2. SEGURIDAD: Verificamos propiedad y lanzamos 403 si no coincide el dueño
-        if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tienes permiso para agregar lotes a este campo");
         }
 
@@ -77,9 +79,8 @@ public class LoteService {
     }
     @Transactional(readOnly = true)
     public List<LoteResponse> listarMisLotes(UUID idUsuarioToken) {
-        // Asumiendo que tenés este método en LoteRepository:
-        // List<Lote> findByCampoUsuarioIdUsuario(UUID idUsuario);
-        return loteRepository.findByCampoUsuarioIdUsuario(idUsuarioToken)
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        return loteRepository.findByCampoUsuarioIdUsuario(idDatos)
                 .stream()
                 .map(loteMapper::toResponse)
                 .collect(Collectors.toList());

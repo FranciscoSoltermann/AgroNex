@@ -21,6 +21,8 @@ public class PersonaJuridicaRequest {
     private String razonSocial;
 
     @NotBlank(message = "El CUIT es obligatorio")
-    @Pattern(regexp = "\\d{11}", message = "El CUIT debe tener 11 números sin guiones")
+    @Pattern(regexp = "\\d+", message = "El CUIT solo debe contener números")
     private String cuit;
+
+    private org.agronex.backend.enums.RolUsuario rol;
 }

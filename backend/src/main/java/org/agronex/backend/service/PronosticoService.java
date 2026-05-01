@@ -27,6 +27,7 @@ public class PronosticoService {
 
     private final AgromonitoringService agromonitoringService;
     private final LoteRepository loteRepository;
+    private final UsuarioService usuarioService;
 
     /**
      * Obtiene los datos de suelo actuales para un lote (requiere polígono en Agromonitoring).
@@ -36,7 +37,9 @@ public class PronosticoService {
         Lote lote = loteRepository.findById(idLote)
                 .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
 
-        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés acceso a este lote.");
         }
 

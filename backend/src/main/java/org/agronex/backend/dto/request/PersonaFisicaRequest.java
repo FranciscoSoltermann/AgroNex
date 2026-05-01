@@ -21,4 +21,6 @@ public class PersonaFisicaRequest {
     @NotBlank(message = "El DNI es obligatorio")
     @Pattern(regexp = "\\d+", message = "El DNI solo debe contener números")
     private String dni;
+
+    private org.agronex.backend.enums.RolUsuario rol;
 }

@@ -19,6 +19,7 @@ public class JohnDeereMachineService {
 
     private final JohnDeereAuthService authService;
     private final JohnDeereConfig config;
+    private final UsuarioService usuarioService;
     private final RestClient restClient = RestClient.create();
 
     private static final String ACCEPT_HEADER = "application/vnd.deere.axiom.v3+json";
@@ -28,7 +29,8 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listOrganizations(UUID userId) {
-        String token = authService.getUserAccessToken(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/organizations";
         
         log.info(">>> GETting organizations from URL: {}", url);
@@ -67,7 +69,8 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listMachines(UUID userId, String orgId) {
-        String token = authService.getUserAccessToken(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String token = authService.getUserAccessToken(idDatos);
         List<String> endpointsToTry = List.of(
             config.getApiBaseUrl() + "/organizations/" + orgId + "/machines",
             config.getApiBaseUrl() + "/organizations/" + orgId + "/equipment"
@@ -117,7 +120,8 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getMachineBreadcrumbs(UUID userId, String machineId) {
-        String token = authService.getUserAccessToken(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/machines/" + machineId + "/breadcrumbs";
 
         try {
@@ -146,7 +150,8 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getMachineLocationHistory(UUID userId, String machineId) {
-        String token = authService.getUserAccessToken(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/machines/" + machineId + "/locationHistory";
 
         try {
@@ -175,7 +180,8 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listFields(UUID userId, String orgId) {
-        String token = authService.getUserAccessToken(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/organizations/" + orgId + "/fields";
 
         log.info(">>> Probando URL JD para campos: {}", url);

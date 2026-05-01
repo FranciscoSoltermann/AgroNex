@@ -19,6 +19,8 @@ export default function DashboardLayout({ children }) {
     const pathname = usePathname();
     const router = useRouter();
     const [userName, setUserName] = useState("Usuario");
+    const [userRole, setUserRole] = useState(null);
+    const [userPermisos, setUserPermisos] = useState([]);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { theme, toggleTheme } = useTheme();
 
@@ -47,9 +49,10 @@ export default function DashboardLayout({ children }) {
                     }
 
                     const settingsRes = await apiClient.get("/usuarios/settings", { timeout: 15000 });
-                    const nombreMostrar = settingsRes?.data?.nombreMostrar;
-                    if (nombreMostrar && nombreMostrar.trim()) {
-                        setUserName(nombreMostrar.trim());
+                    if (settingsRes?.data) {
+                        setUserName(settingsRes.data.nombreMostrar?.trim() || "Usuario");
+                        setUserRole(settingsRes.data.rol);
+                        setUserPermisos(settingsRes.data.permisos || []);
                     } else {
                         setUserName("Usuario");
                     }
@@ -91,18 +94,26 @@ export default function DashboardLayout({ children }) {
         setTimeout(() => router.refresh(), 100);
     };
 
-    const navItems = [
+    const baseNavItems = [
         { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
-        { name: "Campos/Lotes", path: "/dashboard/campos", icon: <Map size={18} /> },
+        { name: "Campos/Lotes", path: "/dashboard/campos", icon: <Map size={18} />, permission: "LECTURA_CAMPOS" },
         { name: "Campañas", path: "/dashboard/lotes", icon: <RefreshCw size={18} /> },
         { name: "Clima/Fenología", path: "/dashboard/clima", icon: <Cloud size={18} /> },
-        { name: "Finanzas", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} /> },
-        { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} /> },
-        { name: "Maquinaria", path: "/dashboard/maquinaria", icon: <Tractor size={18} /> },
+        { name: "Finanzas", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} />, permission: "GESTION_FINANZAS" },
+        { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} />, permission: "GESTION_INVENTARIO" },
+        { name: "Maquinaria", path: "/dashboard/maquinaria", icon: <Tractor size={18} />, permission: "GESTION_MAQUINARIA" },
         { name: "Analítica Comparativa", path: "/dashboard/analitica", icon: <Activity size={18} /> },
-        { name: "Equipo", path: "/dashboard/equipo", icon: <Users size={18} /> },
+        { name: "Equipo", path: "/dashboard/equipo", icon: <Users size={18} />, adminOnly: true },
         { name: "Ajustes", path: "/dashboard/settings", icon: <Settings size={18} /> },
     ];
+
+    const navItems = baseNavItems.filter(item => {
+        if (userRole === "EMPLEADO") {
+            if (item.adminOnly) return false;
+            if (item.permission && !userPermisos.includes(item.permission)) return false;
+        }
+        return true;
+    });
 
     const initials = userName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "US";
     const prefetchRoute = (path) => { router.prefetch(path); };

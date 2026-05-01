@@ -17,6 +17,8 @@ public class UsuarioSettingsResponse {
     private String razonSocial;
     private String nombreMostrar;
     private String rol;
+    private String rolOperativo;
+    private java.util.List<String> permisos;
 
     private String emailNotificaciones;
     private Boolean dosFactoresHabilitado;

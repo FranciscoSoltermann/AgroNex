@@ -31,13 +31,16 @@ public class ClimaService {
     private final CampoRepository campoRepository;
     private final CampaniaRepository campaniaRepository;
     private final AlertaUsuarioService alertaUsuarioService;
+    private final UsuarioService usuarioService;
 
     @Transactional
     public RegistroClimaResponse registrarClima(RegistroClimaRequest request, UUID idUsuarioToken) {
         Campo campo = campoRepository.findById(request.getIdCampo())
                 .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
 
-        if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para registrar clima en este campo.");
         }
 
@@ -107,7 +110,9 @@ public class ClimaService {
         Campo campo = campoRepository.findById(idCampo)
                 .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
 
-        if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés acceso a este campo.");
         }
 
@@ -122,7 +127,9 @@ public class ClimaService {
         Campania campania = campaniaRepository.findById(idCampania)
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
 
-        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para ver datos de esta campaña.");
         }
 
@@ -230,7 +237,9 @@ public class ClimaService {
         RegistroClima registro = climaRepository.findById(idRegistro)
                 .orElseThrow(() -> new EntityNotFoundException("Registro de clima no encontrado"));
 
-        if (!registro.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!registro.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para modificar este registro.");
         }
 
@@ -246,7 +255,9 @@ public class ClimaService {
         RegistroClima registro = climaRepository.findById(idRegistro)
                 .orElseThrow(() -> new EntityNotFoundException("Registro de clima no encontrado"));
 
-        if (!registro.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (!registro.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para eliminar este registro.");
         }
 
