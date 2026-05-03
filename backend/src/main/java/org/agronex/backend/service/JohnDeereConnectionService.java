@@ -1,6 +1,5 @@
 package org.agronex.backend.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.dto.response.JohnDeereConnectionResponse;
@@ -25,7 +24,6 @@ public class JohnDeereConnectionService {
     private final JohnDeereAuthService authService;
     private final JohnDeereConfig config;
     private final RestClient restClient = RestClient.create();
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Lista todas las conexiones activas de la app en John Deere.

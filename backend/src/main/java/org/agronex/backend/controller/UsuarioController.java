@@ -39,9 +39,10 @@ public class UsuarioController {
 
     @GetMapping("/me/check")
     public ResponseEntity<Map<String, Boolean>> checkUserRegistration(@AuthenticationPrincipal Jwt jwt) {
-        String email = jwt.getClaimAsString("email");
-        if (email == null) return ResponseEntity.badRequest().build();
-        boolean exists = usuarioRepository.findByEmailIgnoreCase(email).isPresent();
+        // Debe coincidir el id de Supabase (sub) con id_usuario en AgroNex — no basta el email,
+        // porque OAuth puede crear otro usuario con el mismo correo.
+        UUID supabaseId = UUID.fromString(jwt.getSubject());
+        boolean exists = usuarioRepository.existsById(supabaseId);
         return ResponseEntity.ok(Map.of("registrado", exists));
     }
 

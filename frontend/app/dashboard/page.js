@@ -238,7 +238,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Alertas de Inventario + Gastos por Categoría + Actividades Recientes */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_1fr] gap-3 sm:gap-4 flex-1 min-h-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0">
                 {/* Alertas de Inventario */}
                 {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_INVENTARIO")) && (
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
@@ -358,14 +358,14 @@ export default function DashboardHome() {
             {/* Crecimiento: Costos vs Cosechas — Full width */}
             {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
             <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-                <div className="flex items-start justify-between mb-1">
-                    <div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-1">
+                    <div className="min-w-0">
                         <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Crecimiento: Costos vs Cosechas</h3>
                         <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Análisis comparativo por quintal</p>
                     </div>
-                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5">
+                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5 shrink-0 self-start">
                         {["Semanal", "Mensual"].map(mode => (
-                            <button key={mode} onClick={() => setChartMode(mode)} className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all ${chartMode === mode ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}>{mode}</button>
+                            <button key={mode} type="button" onClick={() => setChartMode(mode)} className={`px-3 py-2 sm:py-1 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all min-h-10 sm:min-h-0 ${chartMode === mode ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}>{mode}</button>
                         ))}
                     </div>
                 </div>

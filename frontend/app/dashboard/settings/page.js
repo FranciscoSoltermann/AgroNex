@@ -244,17 +244,17 @@ export default function SettingsPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* ── Perfil ── */}
-                <section className={`${CARD_CLASS} lg:col-span-2 p-6`}>
-                    <div className="flex items-start gap-4 mb-6">
-                        <div className="w-16 h-16 rounded-2xl bg-[#2D6A4F] text-white flex items-center justify-center font-black text-lg shadow-md">
+                <section className={`${CARD_CLASS} lg:col-span-2 p-4 sm:p-6`}>
+                    <div className="flex flex-col min-[480px]:flex-row items-start gap-4 mb-6">
+                        <div className="w-16 h-16 rounded-2xl bg-[#2D6A4F] text-white flex items-center justify-center font-black text-lg shadow-md shrink-0">
                             {initials}
                         </div>
-                        <div>
-                            <h2 className="text-[22px] font-black text-gray-900 dark:text-gray-100 leading-tight">{draft.nombreMostrar}</h2>
+                        <div className="min-w-0">
+                            <h2 className="text-lg sm:text-[22px] font-black text-gray-900 dark:text-gray-100 leading-tight break-words">{draft.nombreMostrar}</h2>
                             <p className="text-[13px] text-gray-500 font-medium">{draft.rol}</p>
-                            <div className="mt-2 inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg text-[11px] font-bold">
-                                <Mail size={12} />
-                                {draft.email}
+                            <div className="mt-2 inline-flex items-center gap-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2.5 py-1 rounded-lg text-[11px] font-bold max-w-full">
+                                <Mail size={12} className="shrink-0" />
+                                <span className="truncate">{draft.email}</span>
                             </div>
                         </div>
                     </div>

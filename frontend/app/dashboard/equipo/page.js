@@ -223,9 +223,9 @@ export default function EquipoPage() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 xl:grid-cols-[360px_1fr] gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_1fr] gap-6">
                 {/* ── Panel izquierdo: Asignar empleado ── */}
-                <section className={`${CARD_CLASS} p-5 h-fit`}>
+                <section className={`${CARD_CLASS} p-4 sm:p-5 h-fit`}>
                     <h2 className="text-[17px] font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
                         <UserPlus size={18} className="text-[#2D6A4F]" />
                         Vincular Empleado
@@ -314,7 +314,7 @@ export default function EquipoPage() {
                 </section>
 
                 {/* ── Panel derecho: Tabla de empleados ── */}
-                <section className={`${CARD_CLASS} p-5 flex flex-col h-full`}>
+                <section className={`${CARD_CLASS} p-4 sm:p-5 flex flex-col h-full min-w-0`}>
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                         <div>
                             <h2 className="text-[17px] font-black text-gray-900 dark:text-gray-100">Colaboradores Activos</h2>
@@ -325,15 +325,15 @@ export default function EquipoPage() {
                                 }
                             </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
+                        <div className="flex flex-col min-[400px]:flex-row items-stretch min-[400px]:items-center gap-2 w-full sm:w-auto">
+                            <div className="relative flex-1 min-w-0 min-[400px]:max-w-xs">
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input
                                     type="text"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     placeholder="Buscar..."
-                                    className="bg-gray-50 dark:bg-[#0f1419] border border-gray-200 dark:border-gray-700 rounded-lg pl-8 pr-3 py-2 text-[12px] font-semibold text-gray-700 dark:text-gray-300 focus:outline-none focus:border-[#2D6A4F] w-40 sm:w-56 transition-colors"
+                                    className="w-full bg-gray-50 dark:bg-[#0f1419] border border-gray-200 dark:border-gray-700 rounded-lg pl-8 pr-3 py-2.5 text-[12px] font-semibold text-gray-700 dark:text-gray-300 focus:outline-none focus:border-[#2D6A4F] min-h-10 transition-colors"
                                 />
                             </div>
                             <button

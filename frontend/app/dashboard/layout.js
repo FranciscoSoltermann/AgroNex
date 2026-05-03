@@ -39,9 +39,24 @@ export default function DashboardLayout({ children }) {
                     const res = await apiClient.get("/usuarios/me/check", { timeout: 15000 });
                     const data = res?.data;
                     if (data && data.registrado === false) {
+                        const { data: idData } = await supabase.auth.getUserIdentities();
+                        const providers = (idData?.identities || []).map((i) => i.provider);
+                        const soloGoogle = providers.includes("google") && !providers.includes("email");
+                        const msg = soloGoogle
+                            ? "No podés usar Google sin una cuenta AgroNex: registrate con correo y contraseña y vinculá Google en Ajustes."
+                            : "Acceso denegado: tu usuario no está dado de alta en AgroNex. Registrate primero.";
+                        toast.error(msg, { duration: 8000 });
+                        await supabase.auth.signOut();
+                        router.push("/login");
+                        return;
+                    }
+
+                    const { data: idDataPost } = await supabase.auth.getUserIdentities();
+                    const providersPost = (idDataPost?.identities || []).map((i) => i.provider);
+                    if (providersPost.includes("google") && !providersPost.includes("email")) {
                         toast.error(
-                            "Acceso denegado: este correo no está registrado en AgroNex. Regístrese primero.",
-                            { duration: 6000 }
+                            "Para usar Google necesitás haber creado la cuenta en AgroNex y vinculado Google en Ajustes.",
+                            { duration: 8000 }
                         );
                         await supabase.auth.signOut();
                         router.push("/login");
@@ -157,7 +172,7 @@ export default function DashboardLayout({ children }) {
             </div>
 
             {/* Navegación */}
-            <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
+            <nav className="flex-1 px-2 sm:px-3 space-y-0.5 overflow-y-auto">
                 {navItems.map((item) => {
                     const isActive = pathname === item.path;
                     return (
@@ -166,7 +181,7 @@ export default function DashboardLayout({ children }) {
                             href={item.path}
                             onMouseEnter={() => prefetchRoute(item.path)}
                             onFocus={() => prefetchRoute(item.path)}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all ${isActive
+                            className={`flex items-center gap-2.5 px-2.5 min-h-11 sm:min-h-10 rounded-xl text-[12px] sm:text-[13px] font-semibold transition-all leading-snug ${isActive
                                     ? "bg-white/20 text-white"
                                     : "text-white/70 hover:bg-white/10 hover:text-white"
                                 }`}
@@ -174,7 +189,7 @@ export default function DashboardLayout({ children }) {
                             <span className={`flex-shrink-0 ${isActive ? "text-white" : "text-white/50"}`}>
                                 {item.icon}
                             </span>
-                            {item.name}
+                            <span className="break-words">{item.name}</span>
                         </Link>
                     );
                 })}
@@ -201,10 +216,10 @@ export default function DashboardLayout({ children }) {
     );
 
     return (
-        <div className="flex h-screen bg-[#F4F6F5] dark:bg-[#0f1419] font-sans overflow-hidden">
+        <div className="flex h-[100dvh] min-h-0 bg-[#F4F6F5] dark:bg-[#0f1419] font-sans overflow-hidden">
 
             {/* ══ SIDEBAR DESKTOP (≥ lg) ══ */}
-            <aside className="hidden lg:flex w-[220px] min-w-[220px] bg-[#2D6A4F] flex-col shadow-sm">
+            <aside className="hidden lg:flex w-[220px] min-w-[220px] xl:w-[236px] xl:min-w-[236px] bg-[#2D6A4F] flex-col shadow-sm">
                 <SidebarContent />
             </aside>
 
@@ -213,26 +228,30 @@ export default function DashboardLayout({ children }) {
                 <div className="fixed inset-0 z-50 flex lg:hidden">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm pt-[env(safe-area-inset-top)]"
                         onClick={() => setSidebarOpen(false)}
+                        aria-hidden
                     />
-                    {/* Drawer */}
-                    <aside className="relative w-[240px] bg-[#2D6A4F] flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
+                    {/* Drawer: ancho adaptable + safe area */}
+                    <aside
+                        className="relative w-[min(20rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)))] max-w-[85vw] bg-[#2D6A4F] flex flex-col shadow-2xl animate-in slide-in-from-left duration-200 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+                    >
                         <SidebarContent />
                     </aside>
                 </div>
             )}
 
             {/* ══ CONTENIDO PRINCIPAL ══ */}
-            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
 
                 {/* Header */}
-                <header className="h-14 bg-white dark:bg-[#1a1f25] border-b border-gray-100 dark:border-gray-800 flex items-center justify-between px-4 sm:px-6 flex-shrink-0">
+                <header className="min-h-14 shrink-0 bg-white dark:bg-[#1a1f25] border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] py-2 sm:px-6 sm:py-0 sm:h-14">
                     {/* Izquierda: Hamburger + Título de página */}
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                         {/* Hamburger (solo móvil) */}
                         <button
-                            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300 flex-shrink-0"
+                            type="button"
+                            className="lg:hidden min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300 shrink-0"
                             onClick={() => setSidebarOpen(true)}
                             aria-label="Abrir menú"
                         >
@@ -241,32 +260,35 @@ export default function DashboardLayout({ children }) {
 
                         {/* Título de la página actual */}
                         {currentPageTitle && (
-                            <h1 className="text-[15px] sm:text-lg font-black text-gray-900 dark:text-gray-100 tracking-tight truncate">
+                            <h1 className="text-sm sm:text-lg font-black text-gray-900 dark:text-gray-100 tracking-tight truncate leading-tight">
                                 {currentPageTitle}
                             </h1>
                         )}
                     </div>
 
                     {/* Derecha: Notificaciones + Bienvenido */}
-                    <div className="flex items-center gap-2 ml-auto flex-shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         <button
+                            type="button"
                             onClick={toggleTheme}
-                            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
+                            className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
                             aria-label="Alternar modo oscuro"
                             title={theme === 'dark' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}
                         >
                             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                         </button>
                         <NotificationBell />
-                        <p className="hidden sm:block text-sm font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[160px]">
-                            Bienvenido, {userName}
+                        <p className="hidden md:block text-sm font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[140px] lg:max-w-[200px]">
+                            Hola, {userName}
                         </p>
                     </div>
                 </header>
 
-                {/* Página */}
-                <main className="flex-1 overflow-y-auto px-4 pt-2 pb-2 sm:px-6 sm:pt-3 sm:pb-3 dark:bg-[#0f1419]">
-                    {children}
+                {/* Página: scroll + ancho máximo en pantallas muy anchas */}
+                <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain dark:bg-[#0f1419] pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:pt-3 sm:pb-4 lg:px-8 xl:px-10">
+                    <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto min-h-0">
+                        {children}
+                    </div>
                 </main>
             </div>
         </div>

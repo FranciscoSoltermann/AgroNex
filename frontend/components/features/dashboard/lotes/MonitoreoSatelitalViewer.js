@@ -114,29 +114,30 @@ export default function MonitoreoSatelitalViewer({ lote }) {
 
     return (
         <div className="bg-[#111822] border border-white/5 rounded-2xl overflow-hidden mt-6 mb-8">
-            <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+            <div className="p-4 border-b border-white/5 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center bg-white/[0.02]">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
                         <Satellite className="w-4 h-4 text-emerald-400" />
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-white">Monitoreo Satelital (NDVI)</h3>
+                    <div className="min-w-0">
+                        <h3 className="font-semibold text-white text-sm sm:text-base">Monitoreo Satelital (NDVI)</h3>
                         <p className="text-xs text-white/50">Imágenes Agromonitoring</p>
                     </div>
                 </div>
                 <button 
+                    type="button"
                     onClick={handleSync}
                     disabled={syncing || !lote.idPoligonoAgro}
-                    className="flex items-center gap-2 bg-white/5 hover:bg-white/10 transition-colors text-white/80 py-1.5 px-3 rounded-lg text-sm"
+                    className="flex w-full sm:w-auto items-center justify-center gap-2 bg-white/5 hover:bg-white/10 transition-colors text-white/80 py-2.5 sm:py-1.5 px-3 rounded-lg text-sm min-h-11 sm:min-h-0 shrink-0"
                 >
                     {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                     Sincronizar
                 </button>
             </div>
 
-            <div className="p-5 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Chart Section */}
-                <div className="h-64 bg-[#0a0f16] rounded-xl border border-white/5 p-4 flex flex-col">
+                <div className="h-[min(16rem,45vh)] sm:h-64 min-h-[200px] bg-[#0a0f16] rounded-xl border border-white/5 p-4 flex flex-col">
                     <h4 className="text-xs font-semibold uppercase tracking-wider text-white/50 mb-4">Evolución NDVI</h4>
                     {loading ? (
                         <div className="flex-1 flex justify-center items-center"><Loader2 className="w-6 h-6 animate-spin text-emerald-500" /></div>
@@ -161,7 +162,7 @@ export default function MonitoreoSatelitalViewer({ lote }) {
                 </div>
 
                 {/* Map Section */}
-                <div className="h-64 rounded-xl border border-white/5 overflow-hidden relative">
+                <div className="h-[min(16rem,45vh)] sm:h-64 min-h-[200px] rounded-xl border border-white/5 overflow-hidden relative">
                     {coordinates.length > 0 ? (
                         <MapContainer
                             key={lote.idLote}

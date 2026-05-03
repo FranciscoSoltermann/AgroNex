@@ -31,6 +31,31 @@ export default function AuthPage() {
 
     useEffect(() => { setError(null); }, [isLogin]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get("error");
+        if (!code) return;
+
+        const messages = {
+            no_registro_agronex:
+                "No podés iniciar sesión con Google si no te registraste antes en AgroNex. Creá tu cuenta con correo y contraseña.",
+            google_sin_cuenta_agronex:
+                "Esta cuenta de Google no está registrada en AgroNex. Registrate primero con correo y contraseña.",
+            google_no_vinculado:
+                "Para usar Google tenés que vincular tu cuenta: iniciá sesión con correo y contraseña, entrá a Ajustes y vinculá Google.",
+            oauth_sin_sesion:
+                "No se pudo completar el inicio de sesión con Google. Intentá de nuevo.",
+            oauth_error:
+                "Ocurrió un error al validar tu cuenta. Intentá de nuevo o usá correo y contraseña.",
+        };
+        const text = messages[code] || messages.oauth_error;
+        setError(text);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("error");
+        window.history.replaceState({}, "", url.pathname + url.search);
+    }, []);
+
     const isUserAlreadyRegisteredError = (err) => {
         const msg = (err?.message || "").toLowerCase();
         return msg.includes("user already registered") || msg.includes("already registered");
@@ -57,7 +82,7 @@ export default function AuthPage() {
         setError(null);
 
         try {
-            const redirectTo = `${window.location.origin}/dashboard`;
+            const redirectTo = `${window.location.origin}/auth/callback`;
             const { error: googleError } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: { redirectTo },

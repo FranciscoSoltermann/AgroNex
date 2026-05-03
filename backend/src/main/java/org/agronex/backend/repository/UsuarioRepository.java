@@ -1,7 +1,6 @@
 package org.agronex.backend.repository;
 
 import org.agronex.backend.entity.Usuario;
-import org.agronex.backend.enums.RolUsuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import java.util.List;

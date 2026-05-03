@@ -395,37 +395,39 @@ export default function CiclosPage() {
                 )}
             </div>
 
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                     <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Progreso del ciclo</h2>
                     <button
                         type="button"
                         onClick={() => setShowModalCampania(true)}
-                        className="flex items-center gap-2 bg-[#2D6A4F] text-white px-4 py-2.5 rounded-xl text-[10px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/5"
+                        className="flex w-full sm:w-auto items-center justify-center gap-2 bg-[#2D6A4F] text-white px-4 py-3 sm:py-2.5 rounded-xl text-[10px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/5 min-h-11 shrink-0"
                     >
                         <Plus size={14} /> Nueva campaña
                     </button>
                 </div>
-                <div className="relative">
-                    <div className="flex gap-1 h-10 rounded-xl overflow-hidden">
-                        {FASES.map((fase, i) => (
-                            <div
-                                key={fase}
-                                className={`flex-1 flex items-center justify-center transition-all ${i <= faseActual ? "bg-[#2D6A4F]" : "bg-gray-100"
-                                    }`}
-                            >
-                                {i === faseActual && (
-                                    <RefreshCw size={14} className="text-white animate-spin" style={{ animationDuration: "3s" }} />
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                    <div className="flex mt-2">
-                        {FASES.map((fase) => (
-                            <div key={fase} className="flex-1 text-center">
-                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{fase}</p>
-                            </div>
-                        ))}
+                <div className="relative dashboard-scroll-x overflow-x-auto -mx-1 px-1">
+                    <div className="min-w-[520px] sm:min-w-0">
+                        <div className="flex gap-1 h-10 rounded-xl overflow-hidden">
+                            {FASES.map((fase, i) => (
+                                <div
+                                    key={fase}
+                                    className={`flex-1 min-w-0 flex items-center justify-center transition-all ${i <= faseActual ? "bg-[#2D6A4F]" : "bg-gray-100 dark:bg-gray-800"
+                                        }`}
+                                >
+                                    {i === faseActual && (
+                                        <RefreshCw size={14} className="text-white animate-spin" style={{ animationDuration: "3s" }} />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex mt-2">
+                            {FASES.map((fase) => (
+                                <div key={fase} className="flex-1 min-w-0 text-center px-0.5">
+                                    <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight leading-tight break-words">{fase}</p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -542,8 +544,8 @@ export default function CiclosPage() {
             </div>
 
             {showModalCampania && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[1100] p-4">
-                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[min(92dvh,92vh)] overflow-y-auto p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-5">
                             <h3 className="font-black text-[16px] text-gray-900 dark:text-gray-100">Nueva campaña</h3>
                             <button
@@ -645,10 +647,11 @@ function ActividadCard({ actividad, onEliminar }) {
     const insumos = actividad.insumos || [];
 
     return (
-        <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow relative group">
+        <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow relative group pr-14 md:pr-4">
             <button
+                type="button"
                 onClick={() => onEliminar && onEliminar(actividad.idActividad)}
-                className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all font-bold text-[10px] flex items-center gap-1 bg-red-50 px-2 py-1 rounded-md"
+                className="absolute top-3 right-3 text-gray-500 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-all font-bold text-[10px] flex items-center gap-1 bg-red-50 dark:bg-red-900/30 px-2 py-1.5 rounded-md min-h-9"
                 title="Eliminar actividad"
             >
                 <X size={12} /> Eliminar

@@ -31,3 +31,18 @@ body {
 body {
   transition: background-color 0.2s ease, color 0.15s ease;
 }
+
+/* Scroll horizontal en tablas del dashboard sin cortar el layout */
+.dashboard-scroll-x {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+@media (max-width: 640px) {
+  .dashboard-scroll-x {
+    margin-left: -0.25rem;
+    margin-right: -0.25rem;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+}

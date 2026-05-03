@@ -119,7 +119,7 @@ export default function ClimaLotePanel({ lote }) {
                     <div className="w-8 h-8 bg-sky-100 dark:bg-sky-900/30 rounded-full animate-pulse" />
                     <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 </div>
-                <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-4 sm:p-5 grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-4 gap-3">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className="h-20 bg-gray-50 dark:bg-gray-800/50 rounded-xl animate-pulse border border-gray-100 dark:border-gray-800" />
                     ))}
@@ -217,22 +217,23 @@ export default function ClimaLotePanel({ lote }) {
     return (
         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
             {/* ── Header ── */}
-            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/10 dark:to-blue-900/10">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-lg">
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/10 dark:to-blue-900/10">
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/30 flex items-center justify-center text-lg shrink-0">
                         {emoji}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <h3 className="font-black text-[13px] text-gray-900 dark:text-gray-100">Clima & Suelo en tiempo real</h3>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 break-words">
                             Open-Meteo · {desc}{sueloData ? " · Suelo vía Agromonitoring" : ""}
                         </p>
                     </div>
                 </div>
                 <button
+                    type="button"
                     onClick={handleRefresh}
                     disabled={loadingWeather}
-                    className="flex items-center gap-1.5 bg-white dark:bg-[#1a1f25] border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-sky-600 dark:hover:text-sky-400 hover:border-sky-300 dark:hover:border-sky-700 py-1.5 px-3 rounded-lg text-[11px] font-bold transition-all shadow-sm"
+                    className="flex w-full sm:w-auto items-center justify-center gap-1.5 bg-white dark:bg-[#1a1f25] border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-sky-600 dark:hover:text-sky-400 hover:border-sky-300 dark:hover:border-sky-700 py-2.5 sm:py-1.5 px-3 rounded-lg text-[11px] font-bold transition-all shadow-sm min-h-11 sm:min-h-0 shrink-0"
                 >
                     <RefreshCw size={12} className={loadingWeather ? "animate-spin" : ""} />
                     Actualizar
@@ -240,7 +241,7 @@ export default function ClimaLotePanel({ lote }) {
             </div>
 
             {/* ── Métricas clima actual ── */}
-            <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 sm:p-5 grid grid-cols-1 min-[400px]:grid-cols-2 sm:grid-cols-4 gap-3">
                 <MetricCard
                     icon={<Thermometer size={16} className="text-orange-500" />}
                     bg="bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-800/50"
@@ -279,7 +280,7 @@ export default function ClimaLotePanel({ lote }) {
                     <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
                         Pronóstico 7 días — <span className="text-sky-500 normal-case font-semibold">tocá un día para ver detalles</span>
                     </h4>
-                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                    <div className="grid grid-cols-2 min-[400px]:grid-cols-3 sm:grid-cols-4 md:grid-cols-7 gap-2">
                         {daily.time.map((iso, i) => (
                             <DiaDaysCard
                                 key={iso}

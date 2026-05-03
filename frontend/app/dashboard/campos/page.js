@@ -241,10 +241,11 @@ export default function CamposPage() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
                 <button
+                    type="button"
                     onClick={() => { setShowModalCampo(true); setSubmitError(null); setSubmitSuccess(null); }}
-                    className="flex items-center gap-2 bg-[#2D6A4F] text-white px-4 py-2.5 rounded-xl text-[12px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/20 self-start sm:self-auto whitespace-nowrap"
+                    className="flex w-full sm:w-auto items-center justify-center gap-2 bg-[#2D6A4F] text-white px-4 py-3 sm:py-2.5 rounded-xl text-[12px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/20 min-h-11"
                 >
                     <Plus size={15} /> Agregar Campo/Lote
                 </button>
@@ -451,19 +452,21 @@ export default function CamposPage() {
 function CampoCard({ campo, imagen, vista, onAgregarLote, onEliminarCampo, resolvingCenter }) {
     if (vista === "lista") {
         return (
-            <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4 hover:shadow-md transition-shadow">
-                <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-                <div className="flex-1 min-w-0">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-wrap items-center gap-3 hover:shadow-md transition-shadow">
+                <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                <div className="flex-1 min-w-[min(100%,12rem)] basis-[12rem]">
                     <p className="font-bold text-gray-900 dark:text-gray-100 text-[13px] truncate">{campo.nombre}</p>
-                    {campo.ubicacion && <p className="text-[11px] text-gray-400 flex items-center gap-1"><MapPin size={10} />{campo.ubicacion}</p>}
+                    {campo.ubicacion && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate"><MapPin size={10} className="shrink-0" />{campo.ubicacion}</p>}
                 </div>
-                <div className="text-right flex-shrink-0">
-                    <p className="font-black text-gray-900 dark:text-gray-100">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
-                    <p className="text-[10px] text-gray-400">{campo.cantidadLotes} lotes</p>
+                <div className="flex items-center gap-3 ml-auto shrink-0">
+                    <div className="text-right">
+                        <p className="font-black text-gray-900 dark:text-gray-100">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
+                        <p className="text-[10px] text-gray-400">{campo.cantidadLotes} lotes</p>
+                    </div>
+                    <button type="button" onClick={onAgregarLote} disabled={resolvingCenter} className="min-h-10 min-w-10 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 disabled:opacity-60">
+                        {resolvingCenter ? <Loader2 size={14} className="animate-spin" /> : <MoreVertical size={14} />}
+                    </button>
                 </div>
-                <button onClick={onAgregarLote} disabled={resolvingCenter} className="ml-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 disabled:opacity-60">
-                    {resolvingCenter ? <Loader2 size={14} className="animate-spin" /> : <MoreVertical size={14} />}
-                </button>
             </div>
         );
     }
@@ -510,8 +513,8 @@ const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py
 
 function Modal({ titulo, onClose, children }) {
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-            <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md p-5 sm:p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md lg:max-w-lg p-5 sm:p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[min(92dvh,92vh)] overflow-y-auto">
                 <div className="flex items-center justify-between mb-5">
                     <h3 className="text-[16px] font-black text-gray-900 dark:text-gray-100">{titulo}</h3>
                     <button onClick={onClose} className="w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-400 transition-colors"><X size={16} /></button>

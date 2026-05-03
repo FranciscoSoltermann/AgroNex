@@ -116,7 +116,7 @@ export default function AnaliticaPage() {
                 </div>
             )}
 
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
                         <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2">Filtro por Campo</label>
@@ -163,7 +163,7 @@ export default function AnaliticaPage() {
                     </div>
                 ) : (
                     <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4 max-w-xl">
+                        <div className="grid grid-cols-1 min-[400px]:grid-cols-2 gap-4 w-full max-w-xl">
                             <div className="bg-[#EBF3EF] border border-green-200 rounded-xl p-4">
                                 <p className="text-[10px] font-bold text-green-700 uppercase tracking-widest mb-1">Rinde Máximo Registrado</p>
                                 <p className="text-2xl font-black text-[#2D6A4F]">{Math.max(...chartData.map(d => d.rindeHa), 0).toFixed(1)} <span className="text-sm">Tn/Ha</span></p>
@@ -176,7 +176,7 @@ export default function AnaliticaPage() {
                             </div>
                         </div>
 
-                        <div className="h-[400px] w-full pt-4">
+                        <div className="h-[min(420px,55vh)] sm:h-[400px] w-full min-h-[260px] pt-4">
                             <h3 className="text-[13px] font-bold text-gray-800 mb-4 flex items-center gap-2">
                                 <BarChart3 size={16} className="text-[#2D6A4F]" /> Evolución del Rendimiento (Ton/Ha)
                             </h3>

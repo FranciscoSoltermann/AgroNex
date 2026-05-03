@@ -208,20 +208,20 @@ export default function FinanzasPage() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] rounded-2xl p-6 text-white shadow-lg border border-white/10">
+            <div className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] rounded-2xl p-4 sm:p-6 text-white shadow-lg border border-white/10">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                    <div className="flex items-center gap-2">
-                        <PieChart size={22} className="opacity-90" />
-                        <div>
-                            <h2 className="text-[16px] font-black tracking-tight">Resultado económico por campaña</h2>
-                            <p className="text-[11px] text-white/70 mt-0.5">
+                    <div className="flex items-start gap-2 min-w-0">
+                        <PieChart size={22} className="opacity-90 shrink-0 mt-0.5" />
+                        <div className="min-w-0">
+                            <h2 className="text-[15px] sm:text-[16px] font-black tracking-tight leading-tight">Resultado económico por campaña</h2>
+                            <p className="text-[11px] text-white/70 mt-0.5 leading-snug">
                                 Gastos totales / Ha, ingresos / Ha, quintales / Ha y margen bruto al cierre.
                             </p>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-col min-[400px]:flex-row flex-wrap items-stretch min-[400px]:items-center gap-2 w-full sm:w-auto">
                         <select
-                            className="bg-white/15 border border-white/25 rounded-xl px-3 py-2 text-[12px] font-bold text-white min-w-[220px]"
+                            className="bg-white/15 border border-white/25 rounded-xl px-3 py-3 sm:py-2 text-[12px] font-bold text-white w-full sm:w-auto sm:min-w-[200px] min-h-11 [&>option]:text-gray-900"
                             value={idCampaniaEconomia || ""}
                             onChange={(e) => setIdCampaniaEconomia(e.target.value)}
                         >
@@ -249,7 +249,7 @@ export default function FinanzasPage() {
                                 type="button"
                                 onClick={handleCerrarCampania}
                                 disabled={cerrarLoading}
-                                className="inline-flex items-center gap-1.5 bg-white text-[#1B4332] px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-green-50 disabled:opacity-60"
+                                className="inline-flex items-center justify-center gap-1.5 bg-white text-[#1B4332] px-3 py-3 sm:py-2 rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-green-50 disabled:opacity-60 w-full min-[400px]:w-auto min-h-11"
                             >
                                 {cerrarLoading ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
                                 Cerrar campaña
@@ -282,7 +282,7 @@ export default function FinanzasPage() {
                                 {resumenCampania.nombreLote} · {resumenCampania.superficieLoteHa != null ? `${formatNum(resumenCampania.superficieLoteHa, 2)} Ha` : "—"}
                             </span>
                         </div>
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-4 gap-3">
                             <MetricBox label="Costo total / Ha" value={`${formatCurrency(resumenCampania.costoPorHa)}`} sub="Incluye servicios, insumos, logística y gastos fijos" />
                             <MetricBox label="Ingresos / Ha" value={`${formatCurrency(resumenCampania.ingresosPorHa)}`} sub="Cosechas registradas" />
                             <MetricBox label="Quintales / Ha" value={`${formatNum(resumenCampania.quintalesPorHa, 3)} qq`} sub="Producción por hectárea" />
@@ -360,8 +360,8 @@ export default function FinanzasPage() {
             </div>
 
             {/* Resumen Económico */}
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm mt-6">
-                <h2 className="text-[16px] font-black text-[#2D6A4F] mb-6 flex items-center gap-2"><BarChart2 size={20} /> Rentabilidad por Campo</h2>
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm mt-6">
+                <h2 className="text-[15px] sm:text-[16px] font-black text-[#2D6A4F] mb-6 flex flex-wrap items-center gap-2"><BarChart2 size={20} className="shrink-0" /> Rentabilidad por Campo</h2>
 
                 {resumen.length === 0 ? (
                     <div className="text-center text-gray-400 py-8">No hay datos financieros para mostrar.</div>
@@ -369,13 +369,13 @@ export default function FinanzasPage() {
                     <div className="space-y-6">
                         {resumen.map((r, i) => (
                             <div key={i} className="border border-gray-100 dark:border-gray-800 p-5 rounded-xl bg-gray-50 dark:bg-[#151a20] shadow-sm transition-all hover:shadow-md">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-lg">{r.nombreCampo}</h3>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${r.roi > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center mb-4">
+                                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base sm:text-lg break-words">{r.nombreCampo}</h3>
+                                    <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold shrink-0 ${r.roi > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
                                         ROI: {r.roi > 0 ? '+' : ''}{r.roi}%
                                     </span>
                                 </div>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Ingresos Totales</p>
                                         <p className="text-green-600 font-black text-sm">{formatCurrency(r.ingresos)}</p>
@@ -405,10 +405,10 @@ export default function FinanzasPage() {
                                             </>
                                         ) : <div className="w-full bg-gray-200"></div>}
                                     </div>
-                                    <div className="flex justify-between mt-1 text-[9px] text-gray-500 font-bold uppercase">
-                                        <span className="text-green-600">■ Ingresos</span>
-                                        <span className="text-orange-500">■ Costos Var.</span>
-                                        <span className="text-red-500">■ Costos Fijos</span>
+                                    <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 mt-1 text-[9px] text-gray-500 dark:text-gray-400 font-bold uppercase">
+                                        <span className="text-green-600 dark:text-green-400 shrink-0">■ Ingresos</span>
+                                        <span className="text-orange-500 dark:text-orange-400 shrink-0">■ Costos Var.</span>
+                                        <span className="text-red-500 dark:text-red-400 shrink-0">■ Costos Fijos</span>
                                     </div>
                                 </div>
                             </div>
@@ -417,12 +417,12 @@ export default function FinanzasPage() {
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Formulario Gasto Fijo */}
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
                     <h3 className="text-[15px] font-black text-gray-900 dark:text-gray-100 mb-4">Ingresar Costo Estructural</h3>
                     <form onSubmit={handleRegistrarGasto} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
                             <FormField label="Campo">
                                 <select required value={formGasto.idCampo} onChange={e => setFormGasto(p => ({ ...p, idCampo: e.target.value, idCampania: "" }))} className={INPUT_CLASS}>
                                     <option value="" disabled>Elegir Campo</option>
@@ -469,7 +469,7 @@ export default function FinanzasPage() {
                 </div>
 
                 {/* Formulario Cosecha (Ingresos) */}
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
                     <h3 className="text-[15px] font-black text-gray-900 dark:text-gray-100 mb-4">Ingresar Ganancias (Cosecha)</h3>
                     <form onSubmit={handleRegistrarCosecha} className="space-y-4">
                         <FormField label="Campaña Origen">
@@ -478,7 +478,7 @@ export default function FinanzasPage() {
                                 {campanias.map(c => <option key={c.idCampania} value={c.idCampania}>{c.cultivo} - {c.fechaInicio?.slice(0, 4)} ({c.nombreLote} - {c.nombreCampo})</option>)}
                             </select>
                         </FormField>
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
                             <FormField label="Rendimiento (qq)">
                                 <input type="number" step="0.01" max="999999999" required value={formCosecha.rendimientoTotalQq} onChange={e => setFormCosecha(p => ({ ...p, rendimientoTotalQq: e.target.value }))} className={INPUT_CLASS} />
                             </FormField>
@@ -502,7 +502,7 @@ export default function FinanzasPage() {
                         )}
 
                         {formCosecha.tipoLogistica === "PROPIO" && (
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
                                 <FormField label="Litros combustible">
                                     <input type="number" step="0.01" max="999999999" required value={formCosecha.fletePropioLitrosCombustible} onChange={e => setFormCosecha(p => ({ ...p, fletePropioLitrosCombustible: e.target.value }))} className={INPUT_CLASS} />
                                 </FormField>
@@ -522,11 +522,11 @@ export default function FinanzasPage() {
             </div>
 
             {/* Historial de Gastos Fijos */}
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm mt-6 overflow-hidden">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-[15px] font-black text-gray-900 dark:text-gray-100">Historial de Gastos Estructurales Detallados</h3>
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm mt-6 overflow-hidden">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <h3 className="text-[14px] sm:text-[15px] font-black text-gray-900 dark:text-gray-100">Historial de Gastos Estructurales Detallados</h3>
                     <select
-                        className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-1.5 text-[11px] font-bold text-gray-800 focus:outline-none focus:border-[#2D6A4F]"
+                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-[11px] font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#2D6A4F] w-full sm:w-auto min-h-11"
                         value={filtroCampoId}
                         onChange={e => setFiltroCampoId(e.target.value)}
                     >
@@ -534,8 +534,8 @@ export default function FinanzasPage() {
                         {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
                     </select>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                <div className="dashboard-scroll-x overflow-x-auto -mx-1">
+                    <table className="w-full min-w-[640px] text-left border-collapse">
                         <thead>
                             <tr className="border-b border-gray-100 dark:border-gray-800 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                 <th className="pb-3 pr-4">Fecha</th>

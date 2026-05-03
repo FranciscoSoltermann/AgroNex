@@ -163,14 +163,14 @@ export default function InventarioPage() {
             </div>
 
             {/* Header */}
-            <div className="flex items-end justify-between mt-2">
-                <div className="flex items-center gap-3 text-sm text-gray-500 font-medium">
-                    <span className="flex items-center gap-1.5"><Package size={14} className="text-[#2D6A4F]" /> {displayInsumos.length} Artículos en vista</span>
-                    <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mt-2">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    <span className="flex items-center gap-1.5"><Package size={14} className="text-[#2D6A4F] shrink-0" /> {displayInsumos.length} Artículos en vista</span>
+                    <span className="hidden sm:inline w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" aria-hidden />
                     <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Estado: Operativo</span>
                 </div>
-                <button onClick={() => setShowModal(true)}
-                    className="bg-[#2D6A4F] hover:bg-[#1B4332] text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-green-900/20 flex items-center gap-2">
+                <button type="button" onClick={() => setShowModal(true)}
+                    className="w-full sm:w-auto justify-center bg-[#2D6A4F] hover:bg-[#1B4332] text-white px-5 py-3 sm:py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-green-900/20 flex items-center gap-2 min-h-11">
                     <Plus size={18} /> Registrar Insumo
                 </button>
             </div>
@@ -209,19 +209,19 @@ export default function InventarioPage() {
 
                     {/* Tabla */}
                     <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                        <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 gap-4">
-                            <div className="flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 gap-4">
+                            <div className="dashboard-scroll-x flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto w-full sm:w-auto">
                                 {["Todos", "Fertilizante", "Semilla", "Herbicida"].map((tab) => (
-                                    <button key={tab} onClick={() => setFiltroActivo(tab)}
-                                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+                                    <button key={tab} type="button" onClick={() => setFiltroActivo(tab)}
+                                        className={`shrink-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all min-h-10 ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                                         {tab}
                                     </button>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                        <div className="dashboard-scroll-x overflow-x-auto">
+                            <table className="w-full min-w-[720px] text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Artículo / Campo</th>
@@ -301,8 +301,8 @@ export default function InventarioPage() {
                                 Detalle de insumos utilizados en las actividades, filtrados según los criterios superiores.
                             </p>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                        <div className="dashboard-scroll-x overflow-x-auto">
+                            <table className="w-full min-w-[640px] text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha</th>

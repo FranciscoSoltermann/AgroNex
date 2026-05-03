@@ -115,24 +115,25 @@ export default function MaquinariaPage() {
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
             {/* Header */}
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div className="flex items-start justify-between">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                        <div className="flex items-start gap-3 mb-2">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-700 flex items-center justify-center text-white shadow-lg shadow-green-900/20">
                                 <Tractor size={20} />
                             </div>
-                            <div>
-                                <h2 className="text-lg font-black text-gray-900 dark:text-gray-100">Integraciones de Maquinaria</h2>
-                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                            <div className="min-w-0">
+                                <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 leading-tight">Integraciones de Maquinaria</h2>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium leading-snug mt-1">
                                     Conectá tu cuenta con plataformas de maquinaria agrícola para sincronizar datos y rastrear equipos.
                                 </p>
                             </div>
                         </div>
                     </div>
                     <button
+                        type="button"
                         onClick={fetchProviderData}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all"
+                        className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shrink-0 min-h-11"
                     >
                         <RefreshCw size={14} /> Actualizar
                     </button>
@@ -240,17 +241,17 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
     return (
         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
             {/* Provider Header */}
-            <div className="p-6 flex items-center justify-between">
-                <div className="flex items-center gap-4">
+            <div className="p-4 sm:p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-3 sm:gap-4 min-w-0">
                     <div
                         className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl shadow-lg"
                         style={{ background: `linear-gradient(135deg, ${color}, ${color}dd)` }}
                     >
                         {logo}
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-black text-gray-900 dark:text-gray-100">{name}</h3>
+                            <h3 className="font-black text-gray-900 dark:text-gray-100 break-words">{name}</h3>
                             {configured ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-bold border border-green-100 dark:border-green-800">
                                     <Wifi size={10} /> API
@@ -269,11 +270,12 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                         <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">{description}</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col min-[400px]:flex-row items-stretch min-[400px]:items-center gap-2 w-full lg:w-auto lg:shrink-0">
                     {configured && !userConnected && (
                         <button
+                            type="button"
                             onClick={() => onConnect(id)}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-bold text-white shadow-lg transition-all hover:scale-[1.02]"
+                            className="flex items-center justify-center gap-2 px-4 py-3 sm:py-2.5 rounded-xl text-[11px] font-bold text-white shadow-lg transition-all hover:scale-[1.02] min-h-11 w-full min-[400px]:w-auto"
                             style={{ background: `linear-gradient(135deg, ${color}, #1B4332)` }}
                         >
                             <LogIn size={14} /> Conectar mi cuenta
@@ -281,8 +283,9 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                     )}
                     {userConnected && (
                         <button
+                            type="button"
                             onClick={() => onDisconnect(id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-all"
+                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-lg text-[10px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-all min-h-11 w-full min-[400px]:w-auto"
                         >
                             <LogOut size={12} /> Desconectar
                         </button>
@@ -641,15 +644,15 @@ function JohnDeereEquipos() {
     }
 
     return (
-        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm mb-6">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h2 className="text-lg font-black text-gray-900 dark:text-gray-100">Vista Global de la Organización Principal</h2>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1">
+        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm mb-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div className="min-w-0">
+                    <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 leading-tight">Vista Global de la Organización Principal</h2>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mt-1 leading-snug">
                         Mostrando {equipos.length} máquinas y {fields.length} campos obtenidos de tu organización en John Deere.
                     </p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center border border-green-100 dark:border-green-800">
+                <div className="w-10 h-10 rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center border border-green-100 dark:border-green-800 shrink-0 self-start sm:self-auto">
                     <Tractor size={18} className="text-green-600 dark:text-green-400" />
                 </div>
             </div>

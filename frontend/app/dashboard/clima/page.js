@@ -121,7 +121,7 @@ export default function ClimaPage() {
             )}
 
             {/* ── Selectores ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-[#1a1f25] p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-[#1a1f25] p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm">
                 <div>
                     <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2">
                         1. Seleccioná el Campo
@@ -228,7 +228,7 @@ function ResumenPanel({ resumen, onRefresh }) {
     return (
         <div className="space-y-4">
             {/* ─ Top stats grid ─ */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 min-[400px]:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {/* GDD */}
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-5 border border-orange-200 shadow-sm">
                     <div className="flex items-start justify-between mb-3">
@@ -318,13 +318,15 @@ function ResumenPanel({ resumen, onRefresh }) {
                             style={{ width: `${pct}%` }}
                         />
                     </div>
-                    <div className="flex justify-between mt-2">
-                        {FENOLOGY_STAGES.map((s, i) => (
-                            <div key={i} className="flex flex-col items-center">
-                                <div className={`w-1.5 h-1.5 rounded-full ${pct >= s.pct ? "bg-emerald-600" : "bg-emerald-300"}`} />
-                                <span className="text-[8px] font-bold text-emerald-700 mt-0.5 hidden lg:block">{s.label}</span>
-                            </div>
-                        ))}
+                    <div className="dashboard-scroll-x overflow-x-auto -mx-1 px-1">
+                        <div className="flex justify-between min-w-[520px] sm:min-w-0 mt-2 gap-1">
+                            {FENOLOGY_STAGES.map((s, i) => (
+                                <div key={i} className="flex flex-col items-center flex-1 min-w-0">
+                                    <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${pct >= s.pct ? "bg-emerald-600" : "bg-emerald-300"}`} />
+                                    <span className="text-[7px] sm:text-[8px] font-bold text-emerald-700 dark:text-emerald-500 mt-0.5 text-center leading-tight px-0.5 line-clamp-2">{s.label}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
