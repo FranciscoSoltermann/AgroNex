@@ -18,6 +18,20 @@ import java.util.UUID;
 public class NotificacionService {
 
     private final NotificacionUsuarioRepository notificacionUsuarioRepository;
+    private final org.agronex.backend.repository.UsuarioRepository usuarioRepository;
+
+    @Transactional
+    public NotificacionResponse crearNotificacionParaUsuario(UUID idUsuario, String titulo, String mensaje) {
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+        NotificacionUsuario notificacion = NotificacionUsuario.builder()
+                .usuario(usuario)
+                .titulo(titulo)
+                .mensaje(mensaje)
+                .build();
+        NotificacionUsuario guardada = notificacionUsuarioRepository.save(notificacion);
+        return toResponse(guardada);
+    }
 
     @Transactional
     public void crearNotificacion(Usuario usuario, String titulo, String mensaje) {

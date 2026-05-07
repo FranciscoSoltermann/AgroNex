@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
 import {
     Thermometer, Droplets, Wind, RefreshCw, Loader2, CloudRain,
     Sun, Cloud, Zap, CloudSun, Info, AlertTriangle, Leaf, ChevronDown,
-    X, Gauge
+    X, Gauge, Snowflake, ThermometerSun, CheckCircle2, ShieldAlert
 } from "lucide-react";
 
 /**
@@ -98,6 +98,48 @@ export default function ClimaLotePanel({ lote }) {
         fetchWeather();
         fetchSuelo();
     }, [fetchWeather, fetchSuelo]);
+
+    const currentData = weatherData?.current;
+    const dailyData = weatherData?.daily;
+
+    const alertasAgro = useMemo(() => {
+        if (!currentData || !dailyData) return [];
+        return generarAlertasAgro(currentData, dailyData);
+    }, [currentData, dailyData]);
+
+    // Enviar alertas al sistema de notificaciones global (una vez por día por tipo de alerta)
+    useEffect(() => {
+        if (!alertasAgro || alertasAgro.length === 0 || !lote?.idLote) return;
+
+        const enviarNotificaciones = async () => {
+            const hoy = new Date().toISOString().split('T')[0];
+            
+            for (const alerta of alertasAgro) {
+                // Solo enviar alertas de tipo warning o danger al sistema global, o success si es muy relevante
+                if (alerta.type === 'success') continue; 
+
+                const storageKey = `agronex_alerta_${lote.idLote}_${alerta.id}`;
+                const lastSent = localStorage.getItem(storageKey);
+
+                if (lastSent !== hoy) {
+                    try {
+                        await apiClient.post("/notificaciones", {
+                            titulo: `[${lote?.campo?.nombre ?? 'Lote'}] ${alerta.title}`,
+                            mensaje: alerta.message
+                        });
+                        localStorage.setItem(storageKey, hoy);
+                        
+                        // Emitimos un evento personalizado para que la campanita de notificaciones se actualice
+                        window.dispatchEvent(new Event('notificacion-nueva'));
+                    } catch (error) {
+                        console.error("Error enviando alerta al sistema de notificaciones:", error);
+                    }
+                }
+            }
+        };
+
+        enviarNotificaciones();
+    }, [alertasAgro, lote?.idLote, lote?.campo?.nombre]);
 
     if (!lote) return null;
 
@@ -266,11 +308,19 @@ export default function ClimaLotePanel({ lote }) {
                 {renderHumedadCard()}
             </div>
 
-            {/* ── Recomendación de riego ── */}
-            {recomendacion && (
-                <div className="mx-5 mb-4 bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/10 dark:to-blue-900/10 border border-sky-100 dark:border-sky-800 rounded-xl px-4 py-3 flex items-start gap-2.5">
-                    <Droplets size={15} className="text-sky-500 dark:text-sky-400 mt-0.5 shrink-0" />
-                    <p className="text-[12px] text-sky-800 dark:text-sky-200 font-medium leading-relaxed">{recomendacion}</p>
+            {/* ── Recomendaciones y Alertas Agronómicas ── */}
+            {(recomendacion || alertasAgro.length > 0) && (
+                <div className="px-5 pb-4 space-y-3">
+                    {recomendacion && (
+                        <div className="bg-gradient-to-r from-sky-50 to-blue-50 dark:from-sky-900/10 dark:to-blue-900/10 border border-sky-100 dark:border-sky-800 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                            <Droplets size={15} className="text-sky-500 dark:text-sky-400 mt-0.5 shrink-0" />
+                            <p className="text-[12px] text-sky-800 dark:text-sky-200 font-medium leading-relaxed">{recomendacion}</p>
+                        </div>
+                    )}
+                    
+                    {alertasAgro.map(alerta => (
+                        <AlertaAgroCard key={alerta.id} alerta={alerta} />
+                    ))}
                 </div>
             )}
 
@@ -359,6 +409,44 @@ export default function ClimaLotePanel({ lote }) {
 
 // ─── Subcomponentes ───────────────────────────────────────────────────────────
 
+function AlertaAgroCard({ alerta }) {
+    const config = {
+        danger: {
+            bg: "bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/60",
+            iconColor: "text-red-500",
+            titleColor: "text-red-800 dark:text-red-300",
+            textColor: "text-red-700 dark:text-red-400"
+        },
+        warning: {
+            bg: "bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/60",
+            iconColor: "text-amber-500",
+            titleColor: "text-amber-800 dark:text-amber-300",
+            textColor: "text-amber-700 dark:text-amber-400"
+        },
+        success: {
+            bg: "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800/60",
+            iconColor: "text-emerald-500",
+            titleColor: "text-emerald-800 dark:text-emerald-300",
+            textColor: "text-emerald-700 dark:text-emerald-400"
+        }
+    };
+    
+    const style = config[alerta.type];
+    const Icon = alerta.icon;
+
+    return (
+        <div className={`border rounded-xl px-4 py-3 flex items-start gap-3 ${style.bg}`}>
+            <Icon size={16} className={`${style.iconColor} mt-0.5 shrink-0`} />
+            <div>
+                <h4 className={`text-[12px] font-bold ${style.titleColor}`}>{alerta.title}</h4>
+                <p className={`text-[11px] font-medium leading-relaxed mt-0.5 ${style.textColor}`}>
+                    {alerta.message}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 function MetricCard({ icon, bg, label, value, sub }) {
     return (
         <div className={`rounded-xl border p-3 transition-colors ${bg}`}>
@@ -425,6 +513,104 @@ function DetalleItem({ icon, label, value, sub }) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function generarAlertasAgro(current, daily) {
+    const alertas = [];
+    const viento = current.wind_speed_10m;
+    const temp = current.temperature_2m;
+    const hum = current.relative_humidity_2m;
+
+    // 1. Alertas para Fumigación
+    if (viento > 15) {
+        alertas.push({
+            id: 'fum-deriva',
+            type: 'danger',
+            icon: Wind,
+            title: 'Riesgo de Deriva - No Pulverizar',
+            message: `Viento excesivo (${Math.round(viento)} km/h). Alto riesgo de deriva de agroquímicos hacia zonas no deseadas. El límite seguro es 15 km/h.`
+        });
+    } else if (viento < 3) {
+        alertas.push({
+            id: 'fum-inversion',
+            type: 'warning',
+            icon: Wind,
+            title: 'Riesgo de Inversión Térmica',
+            message: `Viento muy leve (${Math.round(viento)} km/h). Evitá pulverizar ya que las gotas finas pueden quedar suspendidas en el aire.`
+        });
+    }
+
+    if (temp > 30 || hum < 40) {
+        alertas.push({
+            id: 'fum-evaporacion',
+            type: 'warning',
+            icon: ThermometerSun,
+            title: 'Riesgo de Evaporación Rápida',
+            message: `Condiciones subóptimas para aplicar agroquímicos (Temp: ${Math.round(temp)}°C, Hum: ${Math.round(hum)}%). Alta tasa de evaporación de la gota antes de llegar al blanco.`
+        });
+    }
+
+    // Ventana Óptima
+    const lluviaManana = daily?.precipitation_sum?.[1] ?? 0;
+    const probLluvia = daily?.precipitation_probability_max?.[0] ?? 0;
+    if (viento >= 3 && viento <= 15 && temp <= 30 && hum >= 40 && current.precipitation === 0 && lluviaManana < 5 && probLluvia < 30) {
+        alertas.push({
+            id: 'fum-ideal',
+            type: 'success',
+            icon: CheckCircle2,
+            title: 'Ventana Óptima de Aplicación',
+            message: `Condiciones actuales ideales para pulverización (Viento: ${Math.round(viento)} km/h, Temp: ${Math.round(temp)}°C, Hum: ${Math.round(hum)}%).`
+        });
+    }
+
+    // 2. Alertas de Tormentas Severas
+    const code = current.weather_code;
+    if ([95, 96, 99].includes(code)) {
+        alertas.push({
+            id: 'tormenta',
+            type: 'danger',
+            icon: Zap,
+            title: 'Alerta por Tormenta Eléctrica',
+            message: 'Tormenta eléctrica en curso o inminente en la zona. Recomendamos suspender tareas a campo abierto por riesgo de descargas.'
+        });
+    } else if (probLluvia > 80 && daily?.precipitation_sum?.[0] > 30) {
+        alertas.push({
+            id: 'inundacion',
+            type: 'danger',
+            icon: CloudRain,
+            title: 'Alerta por Lluvias Intensas',
+            message: `Se esperan abundantes precipitaciones hoy (más de ${Math.round(daily.precipitation_sum[0])} mm). Posible anegamiento temporal y dificultad de acceso a lotes.`
+        });
+    }
+
+    // 3. Alertas de Heladas (Próximos 2 días)
+    const minHoy = daily?.temperature_2m_min?.[0] ?? 99;
+    const minManana = daily?.temperature_2m_min?.[1] ?? 99;
+    const minProyectada = Math.min(minHoy, minManana);
+    
+    if (minProyectada <= 3) {
+        alertas.push({
+            id: 'helada',
+            type: 'danger',
+            icon: Snowflake,
+            title: 'Riesgo Inminente de Helada Agronómica',
+            message: `Temperaturas mínimas críticas proyectadas (${Math.round(minProyectada)}°C) en las próximas 48hs. Alto riesgo de daño por frío en cultivos sensibles.`
+        });
+    }
+
+    // 4. Ola de Calor Extremo
+    const maxHoy = daily?.temperature_2m_max?.[0] ?? 0;
+    if (maxHoy >= 36) {
+        alertas.push({
+            id: 'calor',
+            type: 'danger',
+            icon: ShieldAlert,
+            title: 'Estrés Térmico Severo',
+            message: `Temperaturas máximas extremas proyectadas para hoy (${Math.round(maxHoy)}°C). Riesgo muy alto de estrés hídrico y fisiológico en los cultivos.`
+        });
+    }
+
+    return alertas;
+}
 
 function getWeatherInfo(code) {
     if (code === 0) return { emoji: "☀️", desc: "Despejado" };

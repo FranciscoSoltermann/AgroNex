@@ -5,8 +5,13 @@ import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import {
     Loader2, CheckCircle2,
-    BarChart2, Tractor, TrendingUp, PieChart, Lock
+    BarChart2, Tractor, TrendingUp, PieChart, Lock, Download
 } from "lucide-react";
+import dynamic from 'next/dynamic';
+
+const PdfDownloadButton = dynamic(() => import('@/components/features/dashboard/finanzas/PdfDownloadButton'), {
+    ssr: false
+});
 
 export default function FinanzasPage() {
     const [resumen, setResumen] = useState([]);
@@ -361,7 +366,16 @@ export default function FinanzasPage() {
 
             {/* Resumen Económico */}
             <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm mt-6">
-                <h2 className="text-[15px] sm:text-[16px] font-black text-[#2D6A4F] mb-6 flex flex-wrap items-center gap-2"><BarChart2 size={20} className="shrink-0" /> Rentabilidad por Campo</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                    <h2 className="text-[15px] sm:text-[16px] font-black text-[#2D6A4F] flex flex-wrap items-center gap-2"><BarChart2 size={20} className="shrink-0" /> Rentabilidad por Campo</h2>
+                    <PdfDownloadButton
+                        campanias={campanias}
+                        resumen={resumen}
+                        gastos={gastos}
+                        campos={campos}
+                        loading={loading}
+                    />
+                </div>
 
                 {resumen.length === 0 ? (
                     <div className="text-center text-gray-400 py-8">No hay datos financieros para mostrar.</div>

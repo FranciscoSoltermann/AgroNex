@@ -105,6 +105,19 @@ export default function ClimaPage() {
         ? campanias.filter(c => c.idCampo === seleccion.campoId)
         : campanias;
 
+    const lotesFiltrados = seleccion.campoId
+        ? lotes.filter(l => l.idCampo === seleccion.campoId)
+        : lotes;
+
+    // Asegurar que idLoteClima sea válido para el campo seleccionado
+    useEffect(() => {
+        if (lotesFiltrados.length > 0) {
+            if (!lotesFiltrados.find(l => l.idLote === idLoteClima)) {
+                setIdLoteClima(lotesFiltrados[0].idLote);
+            }
+        }
+    }, [seleccion.campoId, lotesFiltrados, idLoteClima]);
+
     if (loading) return (
         <div className="flex h-full items-center justify-center">
             <Loader2 className="animate-spin text-[#2D6A4F] h-10 w-10" />
@@ -155,6 +168,33 @@ export default function ClimaPage() {
                 </div>
             </div>
 
+            {/* ── Clima en tiempo real (widget por lote) ── */}
+            {seleccion.campoId && lotesFiltrados.length > 0 && (
+                <div className="space-y-4">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                        <div className="max-w-md">
+                            <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
+                                Lote para clima en tiempo real
+                            </label>
+                            <select
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
+                                value={idLoteClima}
+                                onChange={(e) => setIdLoteClima(e.target.value)}
+                            >
+                                {lotesFiltrados.map((l) => (
+                                    <option key={l.idLote} value={l.idLote}>
+                                        {l.nombre} — {l.superficie} Ha · {l.nombreCampo}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    {lotesFiltrados.find((l) => l.idLote === idLoteClima) && (
+                        <ClimaLotePanel lote={lotesFiltrados.find((l) => l.idLote === idLoteClima)} />
+                    )}
+                </div>
+            )}
+
             {/* ── GDD Report ── */}
             {fetchingGdd ? (
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-16 border border-gray-100 dark:border-gray-800 flex flex-col items-center justify-center text-gray-400">
@@ -181,33 +221,6 @@ export default function ClimaPage() {
                     campoId={seleccion.campoId}
                     onDataChange={() => seleccion.campaniaId && cargarResumen(seleccion.campaniaId)}
                 />
-            )}
-
-            {/* ── Clima en tiempo real (widget por lote) ── */}
-            {lotes.length > 0 && (
-                <div className="space-y-4">
-                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
-                        <div className="max-w-md">
-                            <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">
-                                Lote para clima en tiempo real
-                            </label>
-                            <select
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
-                                value={idLoteClima}
-                                onChange={(e) => setIdLoteClima(e.target.value)}
-                            >
-                                {lotes.map((l) => (
-                                    <option key={l.idLote} value={l.idLote}>
-                                        {l.nombre} — {l.superficie} Ha · {l.nombreCampo}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-                    {lotes.find((l) => l.idLote === idLoteClima) && (
-                        <ClimaLotePanel lote={lotes.find((l) => l.idLote === idLoteClima)} />
-                    )}
-                </div>
             )}
         </div>
     );

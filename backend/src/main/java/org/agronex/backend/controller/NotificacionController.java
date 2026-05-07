@@ -20,6 +20,14 @@ public class NotificacionController {
 
     private final NotificacionService notificacionService;
 
+    @PostMapping
+    public ResponseEntity<NotificacionResponse> crearNotificacion(
+            @AuthenticationPrincipal Jwt jwt,
+            @jakarta.validation.Valid @RequestBody org.agronex.backend.dto.request.NotificacionRequest request) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(notificacionService.crearNotificacionParaUsuario(idUsuario, request.getTitulo(), request.getMensaje()));
+    }
+
     @GetMapping
     public ResponseEntity<List<NotificacionResponse>> listarRecientes(
             @AuthenticationPrincipal Jwt jwt,
