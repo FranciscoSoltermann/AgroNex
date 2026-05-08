@@ -33,9 +33,6 @@ build/
 .vscode/
 
 # Entorno local sensible — NUNCA commitear
-.env
-.env.local
-.env.*.local
 *_logs.txt
 backend_logs.txt
 
