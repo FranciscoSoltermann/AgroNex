@@ -20,4 +20,7 @@ public interface InsumoRepository extends JpaRepository<Insumo, UUID> {
 
     @Query("SELECT i FROM Insumo i WHERE i.campo.idCampo = :idCampo AND i.campania.idCampania = :idCampania")
     List<Insumo> findByCampoIdCampoAndCampaniaIdCampania(@Param("idCampo") UUID idCampo, @Param("idCampania") UUID idCampania);
+
+    void deleteByCampania_IdCampania(UUID idCampania);
+    void deleteByCampo_IdCampo(UUID idCampo);
 }

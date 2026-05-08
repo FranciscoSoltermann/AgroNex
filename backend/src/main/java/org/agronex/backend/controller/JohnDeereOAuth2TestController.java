@@ -1,48 +1,24 @@
 package org.agronex.backend.controller;
 
-import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
-import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 
+/**
+ * SEGURIDAD (VUL-C03): este controlador de debugging/testing fue desactivado.
+ * <p>
+ * El endpoint de prueba de organizaciones John Deere está ahora disponible solo para
+ * administradores en: {@code GET /api/maquinaria/john-deere/admin/test-organizations}
+ * con protección {@code @PreAuthorize("hasAuthority('ROLE_ADMIN')")} dentro de
+ * {@code JohnDeereController}.
+ * <p>
+ * Esta clase se conserva vacía para evitar errores de compilación si hay references
+ * transitorias, y se puede eliminar en el próximo cleanup.
+ */
 @RestController
 @RequestMapping("/api/maquinaria/john-deere/test")
+@PreAuthorize("hasAuthority('ROLE_ADMIN')")
+@Deprecated(forRemoval = true)
 public class JohnDeereOAuth2TestController {
-
-    /**
-     * Ejemplo de cómo extraer el token automáticamente con Spring Security OAuth2 Client
-     * y hacer una llamada a la API de John Deere.
-     */
-    @GetMapping("/organizations")
-    public ResponseEntity<String> testJohnDeereApi(
-            @RegisteredOAuth2AuthorizedClient("johndeere") OAuth2AuthorizedClient authorizedClient) {
-        
-        String accessToken = authorizedClient.getAccessToken().getTokenValue();
-        
-        RestTemplate restTemplate = new RestTemplate();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        // Header requerido por la API de John Deere
-        headers.set("Accept", "application/vnd.deere.axiom.v3+json");
-        
-        HttpEntity<String> entity = new HttpEntity<>("", headers);
-        
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    "https://sandboxapi.deere.com/platform/organizations",
-                    HttpMethod.GET,
-                    entity,
-                    String.class
-            );
-            return ResponseEntity.ok(response.getBody());
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error al consumir API JD: " + e.getMessage());
-        }
-    }
+    // Controlador desactivado intencionalmente. Ver JohnDeereController#testOrganizationsAdmin
 }

@@ -192,7 +192,7 @@ export default function CiclosPage() {
 
     const handleEliminarLote = async () => {
         if (!idLoteSeleccionado) return;
-        if (!window.confirm("¿Estás seguro que querés eliminar este lote y TODAS sus campañas y actividades?")) return;
+        if (!window.confirm("¿Estás seguro que querés eliminar este lote?\n\n¡ATENCIÓN! Esto eliminará permanentemente TODAS sus campañas, actividades, insumos usados, gastos imputados y registros de cosecha vinculados. Esta acción NO se puede deshacer.")) return;
         try {
             await apiClient.delete(`/lotes/${idLoteSeleccionado}`);
             toast.success("¡Lote y campañas eliminados!");
@@ -238,7 +238,7 @@ export default function CiclosPage() {
     const handleEliminarCampania = async (idCampania) => {
         const camp = campanias.find(c => c.idCampania === idCampania);
         if (!camp) return;
-        if (!window.confirm(`¿Seguro que querés eliminar la campaña "${camp.cultivo}"?\nEsta acción eliminará también todas sus actividades registradas. NO se puede deshacer.`)) return;
+        if (!window.confirm(`¿Seguro que querés eliminar la campaña "${camp.cultivo}"?\n\n¡ATENCIÓN! Esta acción eliminará permanentemente todos los datos de la campaña: actividades, insumos usados, gastos fijos imputados y registros de cosecha. No se puede deshacer.`)) return;
         try {
             await apiClient.delete(`/campanias/${idCampania}`);
             toast.success("¡Campaña eliminada!");

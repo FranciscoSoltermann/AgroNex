@@ -100,6 +100,37 @@ export default function PdfDownloadButton({ campanias, resumen, gastos, campos, 
                     });
 
                     finalY = doc.lastAutoTable.finalY + 10;
+
+                    if (cData.detallesInsumos && cData.detallesInsumos.length > 0) {
+                        if (finalY > 260) {
+                            doc.addPage();
+                            finalY = 20;
+                        }
+
+                        doc.setFontSize(10);
+                        doc.setTextColor(50);
+                        doc.text("Historial de Insumos Gastados:", 14, finalY);
+                        finalY += 5;
+
+                        const insumosColumn = ["Insumo", "Cantidad Usada", "Precio Unitario", "Costo Total"];
+                        const insumosRows = cData.detallesInsumos.map(ins => [
+                            ins.nombreInsumo,
+                            formatNum(ins.cantidadTotalUsada, 2),
+                            formatCurrency(ins.precioUnitario),
+                            formatCurrency(ins.costoTotal)
+                        ]);
+
+                        autoTable(doc, {
+                            startY: finalY,
+                            head: [insumosColumn],
+                            body: insumosRows,
+                            theme: 'grid',
+                            headStyles: { fillColor: [220, 220, 220], textColor: [0, 0, 0] },
+                            styles: { fontSize: 8, cellPadding: 1.5 },
+                        });
+
+                        finalY = doc.lastAutoTable.finalY + 10;
+                    }
                 });
             }
 
@@ -137,7 +168,9 @@ export default function PdfDownloadButton({ campanias, resumen, gastos, campos, 
             doc.save(`Reporte_Financiero_AgroNex_${dateStr}.pdf`);
 
         } catch (err) {
-            console.error("Error al generar PDF:", err);
+            if (process.env.NODE_ENV === 'development') {
+                console.error("Error al generar PDF:", err);
+            }
             alert("Ocurrió un error al generar el reporte en PDF.");
         } finally {
             setPdfLoading(false);

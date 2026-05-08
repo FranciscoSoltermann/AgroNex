@@ -13,10 +13,28 @@ export default function AuthPage() {
     const [rolRegistro, setRolRegistro] = useState("PROPIETARIO");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [checkingSession, setCheckingSession] = useState(true);
     const router = useRouter();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+
+    // Si ya hay sesión activa, redirigir al dashboard
+    useEffect(() => {
+        const checkExistingSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    router.replace("/dashboard");
+                    return;
+                }
+            } catch {
+                // Sin sesión, mostrar login normalmente
+            }
+            setCheckingSession(false);
+        };
+        checkExistingSession();
+    }, [router]);
     const [nombre, setNombre] = useState("");
     const [apellido, setApellido] = useState("");
     const [dni, setDni] = useState("");
@@ -213,6 +231,14 @@ export default function AuthPage() {
             setMfaVerifying(false);
         }
     };
+
+    if (checkingSession) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#F9FBFA]">
+                <Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen flex flex-col bg-[#F9FBFA] font-sans selection:bg-green-100 antialiased">

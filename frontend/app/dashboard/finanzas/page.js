@@ -5,7 +5,7 @@ import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import {
     Loader2, CheckCircle2,
-    BarChart2, Tractor, TrendingUp, PieChart, Lock, Download
+    BarChart2, Tractor, TrendingUp, PieChart, Lock, Download, Trash2
 } from "lucide-react";
 import dynamic from 'next/dynamic';
 
@@ -26,6 +26,7 @@ export default function FinanzasPage() {
     const [resumenCampania, setResumenCampania] = useState(null);
     const [resumenCampLoading, setResumenCampLoading] = useState(false);
     const [cerrarLoading, setCerrarLoading] = useState(false);
+    const [eliminarLoading, setEliminarLoading] = useState(false);
 
     const gastosFiltrados = filtroCampoId ? gastos.filter(g => g.idCampo === filtroCampoId) : gastos;
 
@@ -211,6 +212,25 @@ export default function FinanzasPage() {
         }
     };
 
+    const handleEliminarCampania = async () => {
+        if (!idCampaniaEconomia || !resumenCampania) return;
+        if (!confirm(`¿Estás seguro de eliminar la campaña "${resumenCampania.nombreLote}"? \n\n¡ATENCIÓN! Esta acción eliminará permanentemente todos los datos de la campaña: actividades, insumos usados, gastos fijos imputados y registros de cosecha. No se puede deshacer.`)) return;
+        
+        setEliminarLoading(true);
+        try {
+            await apiClient.delete(`/campanias/${idCampaniaEconomia}`);
+            setIdCampaniaEconomia("");
+            setResumenCampania(null);
+            invalidateDashboardBootstrapCache();
+            await fetchData({ forceRefresh: true });
+            alert("Campaña eliminada correctamente.");
+        } catch (err) {
+            alert(err.response?.data?.message || "No se pudo eliminar la campaña.");
+        } finally {
+            setEliminarLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] rounded-2xl p-4 sm:p-6 text-white shadow-lg border border-white/10">
@@ -253,11 +273,22 @@ export default function FinanzasPage() {
                             <button
                                 type="button"
                                 onClick={handleCerrarCampania}
-                                disabled={cerrarLoading}
+                                disabled={cerrarLoading || eliminarLoading}
                                 className="inline-flex items-center justify-center gap-1.5 bg-white text-[#1B4332] px-3 py-3 sm:py-2 rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-green-50 disabled:opacity-60 w-full min-[400px]:w-auto min-h-11"
                             >
                                 {cerrarLoading ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
                                 Cerrar campaña
+                            </button>
+                        )}
+                        {idCampaniaEconomia && (
+                            <button
+                                type="button"
+                                onClick={handleEliminarCampania}
+                                disabled={eliminarLoading || cerrarLoading}
+                                className="inline-flex items-center justify-center gap-1.5 bg-red-500/20 text-red-200 border border-red-500/30 px-3 py-3 sm:py-2 rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-red-500/30 disabled:opacity-60 w-full min-[400px]:w-auto min-h-11"
+                            >
+                                {eliminarLoading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                Eliminar
                             </button>
                         )}
                     </div>

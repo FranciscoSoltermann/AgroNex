@@ -1,5 +1,6 @@
 package org.agronex.backend.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.infrastructure.config.JohnDeereConfig;
@@ -11,6 +12,12 @@ import java.util.*;
 /**
  * Servicio que consume las APIs de Equipment y Machine Locations de John Deere.
  * Requiere tokens user-level (Authorization Code flow).
+ *
+ * SEGURIDAD:
+ *  - VUL-B02 CORREGIDO: los logs de respuesta RAW completa se redujeron a nivel
+ *    DEBUG para evitar filtrar datos de ubicación, tokens o PII en entornos prod.
+ *  - VUL-M05 CORREGIDO: ObjectMapper se inyecta desde el contexto de Spring en
+ *    lugar de instanciarse por llamada, usando la configuración centralizada.
  */
 @Service
 @RequiredArgsConstructor
@@ -20,6 +27,7 @@ public class JohnDeereMachineService {
     private final JohnDeereAuthService authService;
     private final JohnDeereConfig config;
     private final UsuarioService usuarioService;
+    private final ObjectMapper objectMapper;   // VUL-M05: inyectado, no new ObjectMapper()
     private final RestClient restClient = RestClient.create();
 
     private static final String ACCEPT_HEADER = "application/vnd.deere.axiom.v3+json";
@@ -32,8 +40,8 @@ public class JohnDeereMachineService {
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
         String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/organizations";
-        
-        log.info(">>> GETting organizations from URL: {}", url);
+
+        log.debug("Consultando organizaciones JD para usuario {}", idDatos);
 
         try {
             String rawResponse = restClient.get()
@@ -43,24 +51,27 @@ public class JohnDeereMachineService {
                     .retrieve()
                     .body(String.class);
 
-            log.info(">>> RAW Organizations Response: {}", rawResponse);
+            // VUL-B02: solo DEBUG en producción, no INFO
+            log.debug("Respuesta de organizaciones JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);
 
             if (rawResponse == null || rawResponse.isBlank()) return List.of();
 
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            Map<String, Object> response = mapper.readValue(rawResponse, Map.class);
+            Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
 
-            // La respuesta puede venir como { "values": [...] } o lista directa
             if (response.containsKey("values")) {
-                return (List<Map<String, Object>>) response.get("values");
+                List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
+                log.debug("JD: {} organizaciones encontradas.", values.size());
+                return values;
             } else if (response.containsKey("elements")) {
-                return (List<Map<String, Object>>) response.get("elements");
+                List<Map<String, Object>> elements = (List<Map<String, Object>>) response.get("elements");
+                log.debug("JD: {} organizaciones encontradas (elements).", elements.size());
+                return elements;
             }
 
             return List.of(response);
         } catch (Exception e) {
-            log.error("Error listando organizaciones JD: {}", e.getMessage());
-            throw new RuntimeException("Error al obtener organizaciones de John Deere: " + e.getMessage());
+            log.error("Error listando organizaciones JD para usuario {}: {}", idDatos, e.getMessage());
+            throw new RuntimeException("Error al obtener organizaciones de John Deere.");
         }
     }
 
@@ -77,7 +88,7 @@ public class JohnDeereMachineService {
         );
 
         for (String url : endpointsToTry) {
-            log.info(">>> Probando URL JD: {}", url);
+            log.debug("Consultando equipos JD en org {}", orgId);
             try {
                 String rawResponse = restClient.get()
                         .uri(url)
@@ -86,37 +97,36 @@ public class JohnDeereMachineService {
                         .retrieve()
                         .body(String.class);
 
-                log.info(">>> Exito con {}. Respuesta RAW: {}", url, rawResponse);
-                
+                // VUL-B02: respuesta completa solo a nivel DEBUG
+                log.debug("Respuesta equipos JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);
+
                 if (rawResponse == null || rawResponse.isBlank()) continue;
 
-                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                Map<String, Object> response = mapper.readValue(rawResponse, Map.class);
+                Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
 
                 if (response.containsKey("values")) {
                     List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
-                    log.info(">>> Encontrados {} equipos.", values.size());
+                    log.debug("JD: {} equipos encontrados.", values.size());
                     return values;
                 } else if (response.containsKey("elements")) {
                     List<Map<String, Object>> elements = (List<Map<String, Object>>) response.get("elements");
-                    log.info(">>> Encontrados {} equipos (elements).", elements.size());
+                    log.debug("JD: {} equipos encontrados (elements).", elements.size());
                     return elements;
                 }
-                
-                log.info(">>> Respuesta sin 'values' ni 'elements'. Keys: {}", response.keySet());
+
+                log.debug("JD: respuesta sin 'values' ni 'elements'. Keys: {}", response.keySet());
                 return List.of(response);
             } catch (Exception e) {
-                log.warn(">>> Fallo al consultar {}: {}", url, e.getMessage());
+                log.warn("Fallo al consultar equipos JD en {}: {}", url, e.getMessage());
             }
         }
-        
-        log.error("Todos los endpoints fallaron para la org {}", orgId);
+
+        log.error("Todos los endpoints fallaron para equipos de org {}", orgId);
         return List.of();
     }
 
     /**
      * Obtiene la ubicación más reciente (breadcrumbs) de una máquina.
-     * Devuelve: speed, fuelLevel, heading, machineState, location, altitude.
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getMachineBreadcrumbs(UUID userId, String machineId) {
@@ -141,7 +151,7 @@ public class JohnDeereMachineService {
             return List.of(response);
         } catch (Exception e) {
             log.error("Error obteniendo breadcrumbs para máquina {}: {}", machineId, e.getMessage());
-            throw new RuntimeException("Error al obtener ubicación de la máquina: " + e.getMessage());
+            throw new RuntimeException("Error al obtener ubicación de la máquina.");
         }
     }
 
@@ -171,7 +181,7 @@ public class JohnDeereMachineService {
             return List.of(response);
         } catch (Exception e) {
             log.error("Error obteniendo historial de ubicación para máquina {}: {}", machineId, e.getMessage());
-            throw new RuntimeException("Error al obtener historial de ubicación: " + e.getMessage());
+            throw new RuntimeException("Error al obtener historial de ubicación.");
         }
     }
 
@@ -184,7 +194,7 @@ public class JohnDeereMachineService {
         String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/organizations/" + orgId + "/fields";
 
-        log.info(">>> Probando URL JD para campos: {}", url);
+        log.debug("Consultando campos JD en org {}", orgId);
         try {
             String rawResponse = restClient.get()
                     .uri(url)
@@ -193,26 +203,26 @@ public class JohnDeereMachineService {
                     .retrieve()
                     .body(String.class);
 
-            log.info(">>> RAW Fields Response: {}", rawResponse);
+            // VUL-B02: solo DEBUG
+            log.debug("Respuesta campos JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);
 
             if (rawResponse == null || rawResponse.isBlank()) return List.of();
 
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            Map<String, Object> response = mapper.readValue(rawResponse, Map.class);
+            Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
 
             if (response.containsKey("values")) {
                 List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
-                log.info(">>> Encontrados {} campos.", values.size());
+                log.debug("JD: {} campos encontrados.", values.size());
                 return values;
             } else if (response.containsKey("elements")) {
                 List<Map<String, Object>> elements = (List<Map<String, Object>>) response.get("elements");
-                log.info(">>> Encontrados {} campos (elements).", elements.size());
+                log.debug("JD: {} campos encontrados (elements).", elements.size());
                 return elements;
             }
 
             return List.of(response);
         } catch (Exception e) {
-            log.warn(">>> Fallo al consultar campos en {}: {}", url, e.getMessage());
+            log.warn("Fallo al consultar campos JD en org {}: {}", orgId, e.getMessage());
             return List.of();
         }
     }

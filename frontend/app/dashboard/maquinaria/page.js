@@ -81,6 +81,10 @@ export default function MaquinariaPage() {
             const res = await apiClient.get(provider.connectEndpoint);
             const authUrl = res.data?.authorizationUrl;
             if (authUrl) {
+                const parsed = new URL(authUrl);
+                if (!parsed.hostname.endsWith('johndeere.com')) {
+                    throw new Error("URL de redirección no autorizada");
+                }
                 window.location.href = authUrl;
             }
         } catch {
@@ -588,7 +592,9 @@ function JohnDeereEquipos() {
                         })
                     );
                 } catch (err) {
-                    console.error("Error al obtener equipos:", err);
+                    if (process.env.NODE_ENV === 'development') {
+                        console.error("Error al obtener equipos:", err);
+                    }
                 }
                 setEquipos(equiposConUbicacion);
 
@@ -598,13 +604,17 @@ function JohnDeereEquipos() {
                     const resFields = await apiClient.get('/maquinaria/john-deere/campos');
                     camposList = resFields.data || [];
                 } catch (err) {
-                    console.error("Error al obtener campos:", err);
+                    if (process.env.NODE_ENV === 'development') {
+                        console.error("Error al obtener campos:", err);
+                    }
                 }
                 setFields(camposList);
                 
                 setError(null);
             } catch (err) {
-                console.error("Error al obtener datos unificados:", err);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error("Error al obtener datos unificados:", err);
+                }
                 setError("No se pudieron cargar los datos. Verifica que tu token sea válido y tengas organizaciones disponibles.");
             } finally {
                 setLoading(false);

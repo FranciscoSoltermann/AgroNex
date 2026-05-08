@@ -3,12 +3,15 @@ package org.agronex.backend.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.dto.response.JohnDeereConnectionResponse;
+import org.agronex.backend.infrastructure.security.OAuthStateStore;
 import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.JohnDeereAuthService;
 import org.agronex.backend.service.JohnDeereConnectionService;
 import org.agronex.backend.service.JohnDeereMachineService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +28,12 @@ import java.util.*;
  *  - /api/maquinaria/john-deere/auth/*           → OAuth Authorization Code flow
  *  - /api/maquinaria/john-deere/organizations    → Orgs del usuario conectado
  *  - /api/maquinaria/john-deere/machines         → Máquinas y ubicaciones
+ *
+ * SEGURIDAD:
+ *  - VUL-C01 CORREGIDO: el state OAuth ahora es un nonce aleatorio gestionado por
+ *    OAuthStateStore, en lugar del userId en texto plano. Esto previene CSRF.
+ *  - VUL-C02 CORREGIDO: los mensajes de error interno ya no se exponen en redirects.
+ *  - VUL-C03 CORREGIDO: se eliminó JohnDeereOAuth2TestController de producción.
  */
 @RestController
 @RequestMapping("/api/maquinaria/john-deere")
@@ -35,9 +44,13 @@ public class JohnDeereController {
     private final JohnDeereConnectionService connectionService;
     private final JohnDeereAuthService authService;
     private final JohnDeereMachineService machineService;
+    private final OAuthStateStore oAuthStateStore;
 
-    private static final String REDIRECT_URI = "http://localhost:8080/api/maquinaria/john-deere/auth/callback";
-    private static final String FRONTEND_REDIRECT = "http://localhost:3000/dashboard/maquinaria";
+    @Value("${john-deere.redirect-uri:http://localhost:8080/api/maquinaria/john-deere/auth/callback}")
+    private String redirectUri;
+
+    @Value("${john-deere.frontend-redirect:http://localhost:3000/dashboard/maquinaria}")
+    private String frontendRedirect;
 
     // ──────────────────────────────────────────────────
     // STATUS
@@ -77,66 +90,63 @@ public class JohnDeereController {
     // ──────────────────────────────────────────────────
 
     /**
-     * Inicia el flujo OAuth: devuelve la URL de autorización de John Deere.
+     * [DEPRECATED] Endpoint de prueba — solo se conserva para compatibilidad interna.
+     * Equivalente funcional a /auth/connect.
      */
     @GetMapping("/auth/authorize")
-    public ResponseEntity<Map<String, String>> authorize() {
-        String state = UUID.randomUUID().toString();
-        String authUrl = authService.buildAuthorizationUrl(REDIRECT_URI, state);
-
-        return ResponseEntity.ok(Map.of(
-                "authorizationUrl", authUrl,
-                "state", state
-        ));
+    public ResponseEntity<Map<String, String>> authorize(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        String nonce = oAuthStateStore.generateNonce(userId);
+        String authUrl = authService.buildAuthorizationUrl(redirectUri, nonce);
+        return ResponseEntity.ok(Map.of("authorizationUrl", authUrl, "state", nonce));
     }
 
     /**
-     * Callback de John Deere: recibe el code y lo intercambia por tokens.
-     * Nota: este endpoint es llamado como redirect desde JD sin JWT de AgroNex.
-     * El userId se pasa via el parámetro state (que codifica el userId).
+     * Callback de John Deere: recibe el authorization_code y lo intercambia por tokens.
+     * <p>
+     * SEGURIDAD (VUL-C01): el state es un nonce opaco gestionado por OAuthStateStore.
+     * El userId se resuelve desde el nonce, nunca desde el state directamente.
+     * Esto previene ataques CSRF donde un atacante podría vincular su code JD a otra cuenta.
      */
     @GetMapping("/auth/callback")
     public ResponseEntity<Void> callback(
             @RequestParam("code") String code,
             @RequestParam(value = "state", required = false) String state
     ) {
-        try {
-            // El state contiene el userId (lo codificamos en el authorize)
-            UUID userId;
-            try {
-                userId = UUID.fromString(state);
-            } catch (Exception e) {
-                // Fallback: intentar desde JWT si lo hay
-                log.warn("State inválido, no se pudo extraer userId: {}", state);
-                return ResponseEntity.status(HttpStatus.FOUND)
-                        .location(URI.create(FRONTEND_REDIRECT + "?jd_error=invalid_state"))
-                        .build();
-            }
-
-            authService.exchangeCodeForTokens(code, REDIRECT_URI, userId);
-
-            log.info("Usuario {} conectado exitosamente con John Deere.", userId);
-
+        // VUL-C01: consumeNonce valida que el nonce exista, no haya expirado y lo elimina (one-use)
+        UUID userId = oAuthStateStore.consumeNonce(state);
+        if (userId == null) {
+            log.warn("Callback JD rechazado: nonce inválido o expirado. state_prefix={}",
+                    state != null && state.length() > 8 ? state.substring(0, 8) + "..." : "null");
             return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(FRONTEND_REDIRECT + "?jd_connected=true"))
+                    .location(URI.create(frontendRedirect + "?jd_error=invalid_state"))
                     .build();
+        }
 
-        } catch (Exception e) {
-            log.error("Error en callback de JD: {}", e.getMessage());
+        try {
+            authService.exchangeCodeForTokens(code, redirectUri, userId);
+            log.info("Usuario {} conectado exitosamente con John Deere.", userId);
             return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(FRONTEND_REDIRECT + "?jd_error=" + e.getMessage()))
+                    .location(URI.create(frontendRedirect + "?jd_connected=true"))
+                    .build();
+        } catch (Exception e) {
+            // VUL-C02: mensaje interno NO se expone al cliente; se loguea internamente
+            log.error("Error intercambiando tokens JD para usuario {}: {}", userId, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(frontendRedirect + "?jd_error=connection_failed"))
                     .build();
         }
     }
 
     /**
-     * Genera URL de autorización con el userId embebido en state.
+     * Genera una URL de autorización segura con nonce embebido en el state.
+     * El userId queda vinculado al nonce en OAuthStateStore (TTL 10 min).
      */
     @GetMapping("/auth/connect")
     public ResponseEntity<Map<String, String>> connect(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
-        // Usamos el userId como state para recuperarlo en el callback
-        String authUrl = authService.buildAuthorizationUrl(REDIRECT_URI, userId.toString());
+        String nonce = oAuthStateStore.generateNonce(userId);
+        String authUrl = authService.buildAuthorizationUrl(redirectUri, nonce);
         return ResponseEntity.ok(Map.of("authorizationUrl", authUrl));
     }
 
@@ -215,25 +225,19 @@ public class JohnDeereController {
     @GetMapping("/equipos")
     public ResponseEntity<List<Map<String, Object>>> getEquiposUnificados(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
-        
-        // 1. Obtener organizaciones
+
         List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
         if (orgs == null || orgs.isEmpty()) {
-            return ResponseEntity.ok(List.of()); // Sin organizaciones, retornar lista vacía
+            return ResponseEntity.ok(List.of());
         }
-        
-        // 2. Tomar la primera organización
+
         Map<String, Object> firstOrg = orgs.get(0);
         String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
-        
         if (orgId == null) {
-            return ResponseEntity.ok(List.of()); // ID de org no válido
+            return ResponseEntity.ok(List.of());
         }
-        
-        // 3. Obtener máquinas de esa organización
-        List<Map<String, Object>> machines = machineService.listMachines(userId, orgId);
-        
-        return ResponseEntity.ok(machines);
+
+        return ResponseEntity.ok(machineService.listMachines(userId, orgId));
     }
 
     /**
@@ -242,24 +246,35 @@ public class JohnDeereController {
     @GetMapping("/campos")
     public ResponseEntity<List<Map<String, Object>>> getCamposUnificados(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
-        
-        // 1. Obtener organizaciones
+
         List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
         if (orgs == null || orgs.isEmpty()) {
-            return ResponseEntity.ok(List.of()); // Sin organizaciones, retornar lista vacía
+            return ResponseEntity.ok(List.of());
         }
-        
-        // 2. Tomar la primera organización
+
         Map<String, Object> firstOrg = orgs.get(0);
         String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
-        
         if (orgId == null) {
-            return ResponseEntity.ok(List.of()); // ID de org no válido
+            return ResponseEntity.ok(List.of());
         }
-        
-        // 3. Obtener campos de esa organización
-        List<Map<String, Object>> fields = machineService.listFields(userId, orgId);
-        
-        return ResponseEntity.ok(fields);
+
+        return ResponseEntity.ok(machineService.listFields(userId, orgId));
+    }
+
+    // ──────────────────────────────────────────────────
+    // ADMIN: diagnóstico (solo ROLE_ADMIN)
+    // ──────────────────────────────────────────────────
+
+    /**
+     * Endpoint de diagnóstico restringido a ADMIN.
+     * Reemplaza al antiguo JohnDeereOAuth2TestController que estaba abierto a todos.
+     * VUL-C03: el test controller ahora está correctamente protegido.
+     */
+    @GetMapping("/admin/test-organizations")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> testOrganizationsAdmin(
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listOrganizations(userId));
     }
 }

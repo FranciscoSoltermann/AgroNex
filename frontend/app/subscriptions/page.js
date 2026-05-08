@@ -164,6 +164,11 @@ export default function SubscriptionsPage() {
                 throw new Error("No se recibió la URL de checkout");
             }
 
+            const parsed = new URL(data.checkoutUrl);
+            if (!parsed.hostname.endsWith('mercadopago.com') && !parsed.hostname.endsWith('mercadopago.com.ar')) {
+                throw new Error("URL de redirección no autorizada");
+            }
+
             window.location.href = data.checkoutUrl;
         } catch (error) {
             const backendMessage = error?.response?.data?.message || error?.response?.data?.detail;

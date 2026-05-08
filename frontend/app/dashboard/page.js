@@ -195,10 +195,16 @@ export default function DashboardHome() {
                         setDynChartData(finalChartData);
                         setDynMaxVal(maxChartVal * 1.1);
 
-                    } catch (err) { console.error("Error fetching dashboard data", err); }
+                    } catch (err) { 
+                        if (process.env.NODE_ENV === 'development') {
+                            console.error("Error fetching dashboard data", err); 
+                        }
+                    }
                 }
             } catch (e) {
-                console.error("Error auth dashboard:", e);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error("Error auth dashboard:", e);
+                }
             } finally {
                 setLoading(false);
             }

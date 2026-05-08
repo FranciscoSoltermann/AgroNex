@@ -75,6 +75,10 @@ public class SecurityConfig {
                 .permissionsPolicyHeader(policy ->
                     policy.policy("camera=(), microphone=(), geolocation=()")
                 )
+                // VUL-M04: Content-Security-Policy para prevenir XSS en páginas de error y Swagger
+                .contentSecurityPolicy(csp ->
+                    csp.policyDirectives("default-src 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'")
+                )
             )
 
             // ── Sin sesión HTTP (JWT stateless) ────────────────────────
@@ -100,13 +104,9 @@ public class SecurityConfig {
                 // Resto de rutas públicas (checkout, webhook MP, etc.)
                 .requestMatchers("/api/public/**", "/public/**").permitAll()
 
-                // Swagger solo si SWAGGER_ENABLED=true (variable de entorno)
+                // VUL-M01: Swagger/OpenAPI requiere ROLE_ADMIN (no exponer la API a usuarios anónimos)
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
-                    .access((authz, ctx) -> {
-                        boolean enabled = "true".equalsIgnoreCase(
-                            System.getenv().getOrDefault("SWAGGER_ENABLED", "false"));
-                        return new org.springframework.security.authorization.AuthorizationDecision(enabled);
-                    })
+                    .hasAuthority("ROLE_ADMIN")
 
                 // Audit "todos" → solo ADMIN
                 .requestMatchers(HttpMethod.GET, "/api/audit/todos")

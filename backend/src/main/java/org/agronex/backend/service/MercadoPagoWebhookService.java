@@ -150,8 +150,14 @@ public class MercadoPagoWebhookService {
     }
 
     private void validarFirmaWebhook(String preapprovalId, String xSignature, String xRequestId) {
+        // VUL-B03: si la variable de configuración está en false, lanzar excepción explícita
+        // para que sea evidente que la validación NO puede ser bypasseada por configuración.
+        // Esta propiedad queda solo como salvaguarda; en producción siempre debe ser true.
         if (!webhookSignatureRequired) {
-            log.warn("Configuración insegura detectada: webhook-signature-required=false. Se fuerza validación de firma.");
+            throw new IllegalStateException(
+                "La validación de firma del webhook de MercadoPago está desactivada " +
+                "(mercadopago.webhook-signature-required=false). " +
+                "No se procesarán webhooks en este estado. Active la validación para continuar.");
         }
 
         if (webhookSecret == null || webhookSecret.isBlank()) {
@@ -161,6 +167,7 @@ public class MercadoPagoWebhookService {
         if (xSignature == null || xSignature.isBlank() || xRequestId == null || xRequestId.isBlank()) {
             throw new IllegalArgumentException("Webhook de MP rechazado: faltan headers de firma.");
         }
+
 
         Map<String, String> signatureData = parseSignatureHeader(xSignature);
         String ts = signatureData.get("ts");

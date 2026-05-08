@@ -36,7 +36,9 @@ export default function SelectorUbicacion({ onSelect }) {
 
                 setResults(formattedResults);
             } catch (err) {
-                console.error("Error en búsqueda:", err);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error("Error en búsqueda:", err);
+                }
             } finally {
                 setLoading(false);
             }

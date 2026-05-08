@@ -14,6 +14,7 @@ import org.agronex.backend.repository.ActividadInsumoRepository;
 import org.agronex.backend.repository.ActividadRepository;
 import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.CosechaRepository;
+import org.agronex.backend.repository.InsumoRepository;
 import org.agronex.backend.repository.LoteRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,8 @@ public class CampaniaService {
     private final ActividadInsumoRepository actividadInsumoRepository;
     private final ActividadRepository actividadRepository;
     private final CosechaRepository cosechaRepository;
+    private final InsumoRepository insumoRepository;
+    private final org.agronex.backend.repository.GastoFijoRepository gastoFijoRepository;
     private final UsuarioService usuarioService;
 
     @Transactional
@@ -125,6 +128,10 @@ public class CampaniaService {
 
         // 3. Borrar Cosechas físicamente (bypass del @SQLDelete soft-delete)
         cosechaRepository.deleteFisicoByCampaniaId(idCampania);
+
+        // 3.5 Borrar Gastos Fijos e Insumos vinculados
+        gastoFijoRepository.deleteByCampania_IdCampania(idCampania);
+        insumoRepository.deleteByCampania_IdCampania(idCampania);
 
         // 4. Finalmente eliminar la campaña
         campaniaRepository.delete(campania);

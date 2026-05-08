@@ -11,4 +11,7 @@ public interface GastoFijoRepository extends JpaRepository<GastoFijo, UUID> {
     List<GastoFijo> findByCampoIdCampo(UUID idCampo);
     List<GastoFijo> findByCampoUsuarioIdUsuario(UUID idUsuario);
     List<GastoFijo> findByCampania_IdCampania(UUID idCampania);
+
+    void deleteByCampania_IdCampania(UUID idCampania);
+    void deleteByCampo_IdCampo(UUID idCampo);
 }

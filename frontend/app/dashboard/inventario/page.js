@@ -39,7 +39,9 @@ export default function InventarioPage() {
             setCampanias(campRes.data || []);
             setActividades(actRes.data || []);
         } catch (error) {
-            console.error("Error al cargar inventario", error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error("Error al cargar inventario", error);
+            }
         } finally {
             setLoading(false);
         }

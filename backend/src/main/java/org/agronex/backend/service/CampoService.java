@@ -9,6 +9,11 @@ import org.agronex.backend.entity.EntidadAudit;
 import org.agronex.backend.entity.Usuario;
 import org.agronex.backend.mapper.CampoMapper;
 import org.agronex.backend.repository.CampoRepository;
+import org.agronex.backend.entity.Campania;
+import org.agronex.backend.repository.CampaniaRepository;
+import org.agronex.backend.repository.GastoFijoRepository;
+import org.agronex.backend.repository.InsumoRepository;
+import org.agronex.backend.repository.RegistroClimaRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +30,11 @@ public class CampoService {
     private final CampoMapper campoMapper;
     private final UsuarioService usuarioService;
     private final AuditService auditService;
+    private final CampaniaService campaniaService;
+    private final CampaniaRepository campaniaRepository;
+    private final GastoFijoRepository gastoFijoRepository;
+    private final InsumoRepository insumoRepository;
+    private final RegistroClimaRepository registroClimaRepository;
 
     @Transactional
     public CampoResponse crearCampo(CampoRequest request, Jwt jwt) {
@@ -95,6 +105,20 @@ public class CampoService {
                 campo.getNombre(), AccionAudit.ELIMINAR,
                 "Campo eliminado. Superficie total: " + campo.getSuperficieTotal() + " Ha"
         );
+
+        // Borrar campañas asociadas
+        List<Campania> campanias = campaniaRepository.findByLoteCampoUsuarioIdUsuario(idUsuarioToken).stream()
+                .filter(c -> c.getLote().getCampo().getIdCampo().equals(idCampo))
+                .collect(Collectors.toList());
+
+        for (Campania c : campanias) {
+            campaniaService.eliminarCampania(c.getIdCampania(), idUsuarioToken);
+        }
+
+        // Borrar Gastos Fijos e Insumos vinculados al Campo
+        gastoFijoRepository.deleteByCampo_IdCampo(idCampo);
+        insumoRepository.deleteByCampo_IdCampo(idCampo);
+        registroClimaRepository.deleteByCampo_IdCampo(idCampo);
 
         campoRepository.delete(campo);
     }

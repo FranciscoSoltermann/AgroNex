@@ -39,7 +39,9 @@ export default function MonitoreoSatelitalViewer({ lote }) {
             }
         }
     } catch (e) {
-        console.error("Invalid GeoJSON in Lote", e);
+        if (process.env.NODE_ENV === 'development') {
+            console.error("Invalid GeoJSON in Lote", e);
+        }
     }
 
     const fetchHistorial = async () => {
@@ -53,7 +55,9 @@ export default function MonitoreoSatelitalViewer({ lote }) {
                 if (latest) setSelectedImage(latest.urlMapa);
             }
         } catch (error) {
-            console.error("Error fetching satelital history", error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error("Error fetching satelital history", error);
+            }
         } finally {
             setLoading(false);
         }
@@ -65,7 +69,9 @@ export default function MonitoreoSatelitalViewer({ lote }) {
             await apiClient.post(`/monitoreoSatelital/lote/${lote.idLote}/sync`);
             await fetchHistorial();
         } catch (error) {
-            console.error("Sync failed", error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error("Sync failed", error);
+            }
             alert("No se pudo sincronizar. Validá que el lote tenga polígono.");
         } finally {
             setSyncing(false);
@@ -84,7 +90,9 @@ export default function MonitoreoSatelitalViewer({ lote }) {
                 alert("Polígono guardado exitosamente. Ahora puedes sincronizar NDVI.");
                 window.location.reload();
             } catch (error) {
-                console.error(error);
+                if (process.env.NODE_ENV === 'development') {
+                    console.error(error);
+                }
                 alert("Error al guardar polígono.");
             } finally {
                 setSyncing(false);

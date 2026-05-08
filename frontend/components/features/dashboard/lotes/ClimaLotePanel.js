@@ -132,7 +132,9 @@ export default function ClimaLotePanel({ lote }) {
                         // Emitimos un evento personalizado para que la campanita de notificaciones se actualice
                         window.dispatchEvent(new Event('notificacion-nueva'));
                     } catch (error) {
-                        console.error("Error enviando alerta al sistema de notificaciones:", error);
+                        if (process.env.NODE_ENV === 'development') {
+                            console.error("Error enviando alerta al sistema de notificaciones:", error);
+                        }
                     }
                 }
             }

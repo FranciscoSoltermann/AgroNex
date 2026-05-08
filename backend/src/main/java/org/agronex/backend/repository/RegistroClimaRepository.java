@@ -18,5 +18,7 @@ public interface RegistroClimaRepository extends JpaRepository<RegistroClima, UU
     java.util.Optional<RegistroClima> findByCampo_IdCampoAndFecha(UUID idCampo, LocalDate fecha);
 
     java.util.Optional<RegistroClima> findTopByCampo_IdCampoAndFechaBeforeOrderByFechaDesc(UUID idCampo, LocalDate fecha);
+    
+    void deleteByCampo_IdCampo(UUID idCampo);
 }
 

@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.entity.JohnDeereToken;
 import org.agronex.backend.infrastructure.config.JohnDeereConfig;
+import org.agronex.backend.infrastructure.security.AesFieldEncryptor;
 import org.agronex.backend.repository.JohnDeereTokenRepository;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,10 @@ import java.util.*;
  * Soporta dos flujos:
  *  1. client_credentials → para la API de Connection Management (app-level)
  *  2. authorization_code → para APIs de usuario (Machine Locations, Equipment, etc.)
+ *
+ * SEGURIDAD (VUL-A03): los tokens de acceso y refresh se almacenan cifrados en BD
+ * usando AesFieldEncryptor (AES-256-CBC). Se cifran antes de persistir y se
+ * descifran al recuperar, de forma que una brecha en BD no expone los tokens en claro.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,6 +33,7 @@ public class JohnDeereAuthService {
 
     private final JohnDeereConfig config;
     private final JohnDeereTokenRepository tokenRepository;
+    private final AesFieldEncryptor encryptor;
     private final RestClient restClient = RestClient.create();
 
     // ── Cache de token app-level (client_credentials) ──
@@ -91,18 +97,21 @@ public class JohnDeereAuthService {
 
     /**
      * Genera la URL de autorización para que el usuario inicie sesión en JD.
+     * El parámetro {@code state} debe ser un nonce opaco generado por OAuthStateStore,
+     * no el userId directamente (VUL-C01).
      */
-    public String buildAuthorizationUrl(String redirectUri, String state) {
+    public String buildAuthorizationUrl(String redirectUri, String stateNonce) {
         return AUTHORIZE_URL
                 + "?client_id=" + config.getClientId()
                 + "&response_type=code"
                 + "&scope=" + USER_SCOPES.replace(" ", "%20")
                 + "&redirect_uri=" + redirectUri
-                + "&state=" + state;
+                + "&state=" + stateNonce;
     }
 
     /**
-     * Intercambia el authorization_code por tokens y los persiste en BD.
+     * Intercambia el authorization_code por tokens y los persiste en BD cifrados.
+     * SEGURIDAD (VUL-A03): access_token y refresh_token se cifran antes de guardar.
      */
     @Transactional
     @SuppressWarnings("unchecked")
@@ -125,30 +134,31 @@ public class JohnDeereAuthService {
             throw new RuntimeException("No se pudo obtener tokens de John Deere");
         }
 
-        String accessToken = (String) response.get("access_token");
+        String accessToken  = (String) response.get("access_token");
         String refreshToken = (String) response.get("refresh_token");
         int expiresIn = extractExpiresIn(response);
         String scope = response.containsKey("scope") ? (String) response.get("scope") : USER_SCOPES;
 
-        // Upsert: actualizar si ya existe, crear si es nuevo
+        // VUL-A03: cifrar antes de persistir
         JohnDeereToken token = tokenRepository.findByIdUsuario(userId)
                 .orElse(JohnDeereToken.builder().idUsuario(userId).build());
 
-        token.setAccessToken(accessToken);
-        token.setRefreshToken(refreshToken);
+        token.setAccessToken(encryptor.encrypt(accessToken));
+        token.setRefreshToken(encryptor.encrypt(refreshToken));
         token.setScopes(scope);
         token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
         token.setUpdatedAt(Instant.now());
 
         tokenRepository.save(token);
-        log.info("Tokens JD guardados para usuario {}. Expiran en {} segundos.", userId, expiresIn);
+        log.info("Tokens JD guardados (cifrados) para usuario {}. Expiran en {} segundos.", userId, expiresIn);
 
         return token;
     }
 
     /**
-     * Obtiene un access_token válido para un usuario específico.
+     * Obtiene un access_token válido (en texto plano) para un usuario específico.
      * Si expiró, intenta refrescar automáticamente.
+     * SEGURIDAD (VUL-A03): descifra el token antes de retornarlo.
      */
     @Transactional
     public String getUserAccessToken(UUID userId) {
@@ -157,7 +167,7 @@ public class JohnDeereAuthService {
                         "No hay conexión con John Deere. Conectá tu cuenta primero."));
 
         if (!token.isExpired()) {
-            return token.getAccessToken();
+            return encryptor.decrypt(token.getAccessToken());
         }
 
         // Token expirado → intentar refresh
@@ -176,7 +186,7 @@ public class JohnDeereAuthService {
     }
 
     /**
-     * Desconecta al usuario de JD (elimina los tokens).
+     * Desconecta al usuario de JD (elimina los tokens cifrados).
      */
     @Transactional
     public void disconnectUser(UUID userId) {
@@ -192,7 +202,9 @@ public class JohnDeereAuthService {
     private String refreshUserToken(JohnDeereToken token) {
         log.info("Refrescando token JD para usuario {}...", token.getIdUsuario());
 
-        String body = "grant_type=refresh_token&refresh_token=" + token.getRefreshToken();
+        // VUL-A03: descifrar refresh_token para enviarlo a JD
+        String plainRefreshToken = encryptor.decrypt(token.getRefreshToken());
+        String body = "grant_type=refresh_token&refresh_token=" + plainRefreshToken;
 
         try {
             Map<String, Object> response = restClient.post()
@@ -207,9 +219,10 @@ public class JohnDeereAuthService {
                 throw new RuntimeException("Refresh fallido");
             }
 
-            token.setAccessToken((String) response.get("access_token"));
+            // VUL-A03: volver a cifrar antes de persistir
+            token.setAccessToken(encryptor.encrypt((String) response.get("access_token")));
             if (response.containsKey("refresh_token")) {
-                token.setRefreshToken((String) response.get("refresh_token"));
+                token.setRefreshToken(encryptor.encrypt((String) response.get("refresh_token")));
             }
             int expiresIn = extractExpiresIn(response);
             token.setExpiresAt(Instant.now().plusSeconds(expiresIn));
@@ -217,10 +230,10 @@ public class JohnDeereAuthService {
             tokenRepository.save(token);
 
             log.info("Token JD refrescado. Expira en {} segundos.", expiresIn);
-            return token.getAccessToken();
+            return encryptor.decrypt(token.getAccessToken());
 
         } catch (Exception e) {
-            log.error("Error al refrescar token JD: {}", e.getMessage());
+            log.error("Error al refrescar token JD para usuario {}: {}", token.getIdUsuario(), e.getMessage());
             throw new IllegalStateException("No se pudo refrescar el token. Volvé a conectar tu cuenta de John Deere.");
         }
     }

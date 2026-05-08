@@ -31,7 +31,11 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env (secretos)
-
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
 
 # vercel
 .vercel

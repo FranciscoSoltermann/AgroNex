@@ -197,7 +197,7 @@ export default function CamposPage() {
     };
 
     const handleEliminarCampo = async (campo) => {
-        if (!window.confirm(`¿Estás seguro que querés eliminar el campo "${campo.nombre}"?\nEsto eliminará permanentemente todos sus lotes y el historial de progreso asociado. Esta acción NO se puede deshacer.`)) return;
+        if (!window.confirm(`¿Estás seguro que querés eliminar el campo "${campo.nombre}"?\n\n¡ATENCIÓN! Esto eliminará permanentemente TODOS sus lotes, campañas asociadas, gastos fijos, insumos y registros climáticos. Esta acción NO se puede deshacer.`)) return;
         try {
             await apiClient.delete(`/campos/${campo.idCampo}`);
             toast.success("¡Campo eliminado!");
