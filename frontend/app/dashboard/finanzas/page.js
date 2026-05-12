@@ -21,6 +21,7 @@ export default function FinanzasPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [filtroCampoId, setFiltroCampoId] = useState("");
+    const [filtroCampaniaId, setFiltroCampaniaId] = useState("");
 
     const [idCampaniaEconomia, setIdCampaniaEconomia] = useState("");
     const [resumenCampania, setResumenCampania] = useState(null);
@@ -28,7 +29,11 @@ export default function FinanzasPage() {
     const [cerrarLoading, setCerrarLoading] = useState(false);
     const [eliminarLoading, setEliminarLoading] = useState(false);
 
-    const gastosFiltrados = filtroCampoId ? gastos.filter(g => g.idCampo === filtroCampoId) : gastos;
+    const gastosFiltrados = gastos.filter(g => {
+        if (filtroCampoId && g.idCampo !== filtroCampoId) return false;
+        if (filtroCampaniaId && g.idCampania !== filtroCampaniaId) return false;
+        return true;
+    });
 
     const [formGasto, setFormGasto] = useState({
         fecha: new Date().toISOString().split("T")[0],
@@ -37,6 +42,7 @@ export default function FinanzasPage() {
         montoTotal: "",
         idCampo: "",
         idCampania: "",
+        tipoSeguro: "Granizo",
     });
     const [gastoLoading, setGastoLoading] = useState(false);
     const [gastoSuccess, setGastoSuccess] = useState(null);
@@ -113,10 +119,15 @@ export default function FinanzasPage() {
         e.preventDefault();
         setGastoLoading(true);
         try {
+            let finalDescripcion = formGasto.descripcion;
+            if (formGasto.categoria === "Seguro") {
+                finalDescripcion = `[${formGasto.tipoSeguro}] ${finalDescripcion}`.trim();
+            }
+
             const body = {
                 fecha: formGasto.fecha,
                 categoria: formGasto.categoria,
-                descripcion: formGasto.descripcion,
+                descripcion: finalDescripcion,
                 montoTotal: parseFloat(formGasto.montoTotal),
                 moneda: "ARS",
                 idCampo: formGasto.idCampo,
@@ -483,6 +494,17 @@ export default function FinanzasPage() {
                                 </select>
                             </FormField>
                         </div>
+                        {formGasto.categoria === "Seguro" && (
+                            <FormField label="Tipo de Seguro">
+                                <select value={formGasto.tipoSeguro} onChange={e => setFormGasto(p => ({ ...p, tipoSeguro: e.target.value }))} className={INPUT_CLASS}>
+                                    <option value="Granizo">Granizo</option>
+                                    <option value="Helada">Helada</option>
+                                    <option value="Multiriesgo">Multiriesgo</option>
+                                    <option value="Sequía">Sequía</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </FormField>
+                        )}
                         <FormField label="Importe Total ($)">
                             <input type="number" step="0.01" max="999999999" required value={formGasto.montoTotal} onChange={e => setFormGasto(p => ({ ...p, montoTotal: e.target.value }))} className={INPUT_CLASS} />
                         </FormField>
@@ -570,14 +592,30 @@ export default function FinanzasPage() {
             <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm mt-6 overflow-hidden">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
                     <h3 className="text-[14px] sm:text-[15px] font-black text-gray-900 dark:text-gray-100">Historial de Gastos Estructurales Detallados</h3>
-                    <select
-                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-[11px] font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#2D6A4F] w-full sm:w-auto min-h-11"
-                        value={filtroCampoId}
-                        onChange={e => setFiltroCampoId(e.target.value)}
-                    >
-                        <option value="">Todos los campos</option>
-                        {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
-                    </select>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                        <select
+                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-[11px] font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#2D6A4F] w-full sm:w-auto min-h-11"
+                            value={filtroCampoId}
+                            onChange={e => {
+                                setFiltroCampoId(e.target.value);
+                                setFiltroCampaniaId("");
+                            }}
+                        >
+                            <option value="">Todos los campos</option>
+                            {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
+                        </select>
+                        <select
+                            className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-[11px] font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:border-[#2D6A4F] w-full sm:w-auto min-h-11"
+                            value={filtroCampaniaId}
+                            onChange={e => setFiltroCampaniaId(e.target.value)}
+                            disabled={!filtroCampoId}
+                        >
+                            <option value="">Todas las campañas</option>
+                            {campanias.filter(c => c.idCampo === filtroCampoId).map(c => (
+                                <option key={c.idCampania} value={c.idCampania}>{c.cultivo} · {c.nombreLote}</option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
                 <div className="dashboard-scroll-x overflow-x-auto -mx-1">
                     <table className="w-full min-w-[640px] text-left border-collapse">
@@ -586,7 +624,7 @@ export default function FinanzasPage() {
                                 <th className="pb-3 pr-4">Fecha</th>
                                 <th className="pb-3 pr-4">Categoría</th>
                                 <th className="pb-3 pr-4">Descripción</th>
-                                <th className="pb-3 pr-4">Campo Asociado</th>
+                                <th className="pb-3 pr-4">Campo / Campaña</th>
                                 <th className="pb-3 text-right pr-4">Importe ($)</th>
                                 <th className="pb-3 text-right"></th>
                             </tr>
@@ -599,7 +637,16 @@ export default function FinanzasPage() {
                                     <td className="py-3 pr-4 text-gray-500 font-medium whitespace-nowrap">{g.fecha}</td>
                                     <td className="py-3 pr-4 whitespace-nowrap"><span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md font-bold text-[11px]">{g.categoria}</span></td>
                                     <td className="py-3 pr-4 font-bold max-w-[200px] truncate" title={g.descripcion}>{g.descripcion || '-'}</td>
-                                    <td className="py-3 pr-4 text-gray-500">{campos.find(c => c.idCampo === g.idCampo)?.nombre || '-'}</td>
+                                    <td className="py-3 pr-4 text-gray-500">
+                                        <div className="flex flex-col">
+                                            <span>{campos.find(c => c.idCampo === g.idCampo)?.nombre || '-'}</span>
+                                            {g.idCampania && (
+                                                <span className="text-[10px] bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-gray-400 w-fit mt-1">
+                                                    {campanias.find(c => c.idCampania === g.idCampania)?.cultivo || 'Campaña'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td className="py-3 pr-4 font-black text-orange-500 text-right whitespace-nowrap">{formatCurrency(g.montoTotal)}</td>
                                     <td className="py-3 text-right relative">
                                         <button
