@@ -1,12 +1,18 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import apiClient from "@/lib/api-client";
 import {
     Tractor, Link2, Unlink, Loader2, AlertCircle, CheckCircle2,
     RefreshCw, Shield, Building2, Calendar, Wifi, WifiOff,
-    MapPin, Fuel, Gauge, Navigation, LogIn, LogOut, ChevronDown, ChevronUp
+    MapPin, Fuel, Gauge, Navigation, LogIn, LogOut, ChevronDown, ChevronUp, Maximize
 } from "lucide-react";
+
+const FieldMap = dynamic(() => import('@/components/features/dashboard/maquinaria/FieldMap'), {
+    ssr: false,
+    loading: () => <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
+});
 
 const PROVIDERS = [
     {
@@ -397,19 +403,35 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                                                 <MapPin size={16} className="text-green-600" />
                                                                 Campos ({fields[orgId].length})
                                                             </h4>
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                                 {fields[orgId].map((field) => (
-                                                                    <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
-                                                                        <div className="flex items-start justify-between">
+                                                                    <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+                                                                        <div className="relative h-40 bg-gray-50 dark:bg-gray-800">
+                                                                            <FieldMap field={field} />
+                                                                        </div>
+                                                                        <div className="p-4 flex-1 flex flex-col justify-between">
                                                                             <div>
-                                                                                <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100">{field.name}</p>
-                                                                                <p className="text-[10px] text-gray-400 font-medium mt-0.5">ID: {field.id}</p>
+                                                                                <div className="flex items-start justify-between gap-2">
+                                                                                    <p className="font-bold text-sm text-gray-900 dark:text-gray-100 line-clamp-2" title={field.name}>{field.name}</p>
+                                                                                    {field.area && (
+                                                                                        <span className="shrink-0 text-[11px] font-black bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-1 rounded-md border border-green-100 dark:border-green-800/30">
+                                                                                            {Number(field.area.value).toFixed(2)} {field.area.unitId}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <div className="mt-3 space-y-1.5">
+                                                                                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                                                                                        <MapPin size={12} className="shrink-0" />
+                                                                                        <span className="truncate">ID: {field.id}</span>
+                                                                                    </div>
+                                                                                    {field.clientName && (
+                                                                                        <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                                                                                            <Building2 size={12} className="shrink-0" />
+                                                                                            <span className="truncate">Cliente: {field.clientName}</span>
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
                                                                             </div>
-                                                                            {field.area && (
-                                                                                <span className="text-[11px] font-bold bg-green-50 text-green-700 px-2 py-1 rounded">
-                                                                                    {Number(field.area.value).toFixed(2)} {field.area.unitId}
-                                                                                </span>
-                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 ))}
@@ -685,19 +707,70 @@ function JohnDeereEquipos() {
                     <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                         <MapPin size={16} className="text-green-600" /> Campos
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {fields.map((field) => (
-                            <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm">
-                                <div className="flex items-start justify-between">
-                                    <div>
-                                        <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100">{field.name}</p>
-                                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">ID: {field.id}</p>
+                            <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md hover:border-green-200 dark:hover:border-green-900/50 group">
+                                <div className="relative h-48 bg-gray-50 dark:bg-gray-800">
+                                    <FieldMap field={field} />
+                                    <div className="absolute top-3 left-3 z-10">
+                                        <div className="bg-white/90 dark:bg-black/70 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-gray-200/50 dark:border-gray-700/50 shadow-sm flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                            <span className="text-[9px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">Geo</span>
+                                        </div>
                                     </div>
-                                    {field.area && (
-                                        <span className="text-[11px] font-bold bg-green-50 text-green-700 px-2 py-1 rounded">
-                                            {Number(field.area.value).toFixed(2)} {field.area.unitId}
-                                        </span>
-                                    )}
+                                </div>
+                                <div className="p-5 flex-1 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-start justify-between gap-3 mb-4">
+                                            <h4 className="font-black text-base text-gray-900 dark:text-gray-100 leading-tight group-hover:text-green-700 dark:group-hover:text-green-400 transition-colors line-clamp-2" title={field.name}>
+                                                {field.name}
+                                            </h4>
+                                            {field.area && (
+                                                <div className="shrink-0 flex flex-col items-end">
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Área</span>
+                                                    <span className="text-[13px] font-black bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-lg border border-green-100 dark:border-green-800/30">
+                                                        {Number(field.area.value).toFixed(2)} {field.area.unitId}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="space-y-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 border border-gray-100 dark:border-gray-700/50">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-md bg-white dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700 shrink-0">
+                                                    <MapPin size={12} className="text-gray-500 dark:text-gray-400" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">ID del Campo</p>
+                                                    <p className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate">{field.id}</p>
+                                                </div>
+                                            </div>
+                                            
+                                            {field.clientName && (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-md bg-white dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700 shrink-0">
+                                                        <Building2 size={12} className="text-gray-500 dark:text-gray-400" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Cliente</p>
+                                                        <p className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate">{field.clientName}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {field.farmName && (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-6 h-6 rounded-md bg-white dark:bg-gray-800 flex items-center justify-center border border-gray-200 dark:border-gray-700 shrink-0">
+                                                        <MapPin size={12} className="text-gray-500 dark:text-gray-400" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Granja</p>
+                                                        <p className="text-[11px] font-medium text-gray-700 dark:text-gray-300 truncate">{field.farmName}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         ))}
