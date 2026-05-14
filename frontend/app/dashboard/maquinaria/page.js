@@ -14,6 +14,10 @@ const FieldMap = dynamic(() => import('@/components/features/dashboard/maquinari
     loading: () => <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
 });
 
+const ReporteContratistaButton = dynamic(() => import('@/components/features/dashboard/maquinaria/ReporteContratistaButton'), { ssr: false });
+const MantenimientoPanel = dynamic(() => import('@/components/features/dashboard/maquinaria/MantenimientoPanel'), { ssr: false });
+
+
 const PROVIDERS = [
     {
         id: "john-deere",
@@ -140,15 +144,22 @@ export default function MaquinariaPage() {
                             </div>
                         </div>
                     </div>
-                    <button
-                        type="button"
-                        onClick={fetchProviderData}
-                        className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shrink-0 min-h-11"
-                    >
-                        <RefreshCw size={14} /> Actualizar
-                    </button>
+                    <div className="flex w-full sm:w-auto items-center gap-2">
+                        <ReporteContratistaButton />
+                        <button
+                            type="button"
+                            onClick={fetchProviderData}
+                            className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shrink-0 min-h-11"
+                        >
+                            <RefreshCw size={14} /> Actualizar
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            {/* Panel de Alertas de Mantenimiento */}
+            <MantenimientoPanel />
+
 
             {/* Unified Equipos Component (John Deere) */}
             {providers.find(p => p.id === "john-deere")?.userConnected && (

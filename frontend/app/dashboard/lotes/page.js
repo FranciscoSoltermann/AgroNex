@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import { toast } from "sonner";
 
 const MonitoreoSatelitalViewer = dynamic(() => import('@/components/features/dashboard/lotes/MonitoreoSatelitalViewer'), { ssr: false });
+const LibroCampoPanel = dynamic(() => import('@/components/features/dashboard/lotes/LibroCampoPanel'), { ssr: false });
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
@@ -434,6 +435,7 @@ export default function CiclosPage() {
 
             {/* Monitoreo Satelital */}
             {loteActual && <MonitoreoSatelitalViewer lote={loteActual} />}
+            {loteActual && <LibroCampoPanel idLote={loteActual.idLote} />}
 
             {/* Registrar Actividad — Horizontal */}
             <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg">

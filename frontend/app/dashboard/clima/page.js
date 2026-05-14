@@ -21,6 +21,12 @@ const ClimaLotePanel = dynamic(
     { ssr: false }
 );
 
+const PluviometroPanel = dynamic(
+    () => import("@/components/features/dashboard/clima/PluviometroPanel"),
+    { ssr: false }
+);
+
+
 // ──────────────────────────────────────────────
 // FENOLOGY STAGES CONFIG
 // ──────────────────────────────────────────────
@@ -190,7 +196,10 @@ export default function ClimaPage() {
                         </div>
                     </div>
                     {lotesFiltrados.find((l) => l.idLote === idLoteClima) && (
-                        <ClimaLotePanel lote={lotesFiltrados.find((l) => l.idLote === idLoteClima)} />
+                        <>
+                            <ClimaLotePanel lote={lotesFiltrados.find((l) => l.idLote === idLoteClima)} />
+                            <PluviometroPanel idLote={idLoteClima} />
+                        </>
                     )}
                 </div>
             )}
