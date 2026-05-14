@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.agronex.backend.enums.TipoArticulo;
 import org.agronex.backend.enums.UnidadMedida;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -15,8 +16,11 @@ import java.util.UUID;
 public class InsumoResponse {
     private UUID idInsumo;
     private String nombre;
+    private TipoArticulo tipoArticulo;
+    private String subtipo;
     private BigDecimal precioUnitario;
     private UnidadMedida unidad;
+    private BigDecimal pesoBolsaKg;
     private BigDecimal cantidad;
     private BigDecimal cantidadInicial;
     private Boolean alertaStockBajoEnviada;
@@ -25,3 +29,4 @@ public class InsumoResponse {
     private UUID idCampania;
     private String nombreCampania;
 }
+

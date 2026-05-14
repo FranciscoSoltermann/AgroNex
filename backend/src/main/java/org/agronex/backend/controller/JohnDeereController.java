@@ -226,18 +226,23 @@ public class JohnDeereController {
     public ResponseEntity<List<Map<String, Object>>> getEquiposUnificados(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
 
-        List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
-        if (orgs == null || orgs.isEmpty()) {
+        try {
+            List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
+            if (orgs == null || orgs.isEmpty()) {
+                return ResponseEntity.ok(List.of());
+            }
+
+            Map<String, Object> firstOrg = orgs.get(0);
+            String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
+            if (orgId == null) {
+                return ResponseEntity.ok(List.of());
+            }
+
+            return ResponseEntity.ok(machineService.listMachines(userId, orgId));
+        } catch (Exception e) {
+            log.warn("Error al obtener equipos unificados para usuario {}: {}", userId, e.getMessage());
             return ResponseEntity.ok(List.of());
         }
-
-        Map<String, Object> firstOrg = orgs.get(0);
-        String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
-        if (orgId == null) {
-            return ResponseEntity.ok(List.of());
-        }
-
-        return ResponseEntity.ok(machineService.listMachines(userId, orgId));
     }
 
     /**
@@ -247,18 +252,23 @@ public class JohnDeereController {
     public ResponseEntity<List<Map<String, Object>>> getCamposUnificados(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
 
-        List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
-        if (orgs == null || orgs.isEmpty()) {
+        try {
+            List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
+            if (orgs == null || orgs.isEmpty()) {
+                return ResponseEntity.ok(List.of());
+            }
+
+            Map<String, Object> firstOrg = orgs.get(0);
+            String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
+            if (orgId == null) {
+                return ResponseEntity.ok(List.of());
+            }
+
+            return ResponseEntity.ok(machineService.listFields(userId, orgId));
+        } catch (Exception e) {
+            log.warn("Error al obtener campos unificados para usuario {}: {}", userId, e.getMessage());
             return ResponseEntity.ok(List.of());
         }
-
-        Map<String, Object> firstOrg = orgs.get(0);
-        String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
-        if (orgId == null) {
-            return ResponseEntity.ok(List.of());
-        }
-
-        return ResponseEntity.ok(machineService.listFields(userId, orgId));
     }
 
     // ──────────────────────────────────────────────────

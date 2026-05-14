@@ -114,4 +114,73 @@ public class InsumoService {
         }
         return insumoMapper.toResponse(insumo);
     }
+
+    @Transactional
+    public InsumoResponse actualizarInsumo(UUID id, InsumoRequest request, UUID idUsuarioToken) {
+        Insumo insumo = insumoRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (insumo.getCampo() == null || !insumo.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tenés permiso para editar este insumo");
+        }
+
+        insumo.setNombre(request.getNombre());
+        insumo.setTipoArticulo(request.getTipoArticulo());
+        insumo.setSubtipo(request.getSubtipo());
+        insumo.setPrecioUnitario(request.getPrecioUnitario());
+        insumo.setUnidad(request.getUnidad());
+        insumo.setPesoBolsaKg(request.getPesoBolsaKg());
+        insumo.setCantidad(request.getCantidad());
+
+        // Actualizar campaña si viene
+        if (request.getIdCampania() != null) {
+            Campania campania = campaniaRepository.findById(request.getIdCampania())
+                    .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
+            if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+                throw new AccessDeniedException("No tenés permiso para vincular insumos a esta campaña");
+            }
+            insumo.setCampania(campania);
+        } else {
+            insumo.setCampania(null);
+        }
+
+        Insumo guardado = insumoRepository.save(insumo);
+
+        auditService.registrar(
+                idUsuarioToken, insumo.getCampo().getUsuario().getEmail(),
+                EntidadAudit.INSUMO, guardado.getIdInsumo().toString(),
+                guardado.getNombre(),
+                AccionAudit.ACTUALIZAR,
+                "Insumo actualizado"
+        );
+
+        return insumoMapper.toResponse(guardado);
+    }
+
+    @Transactional
+    public void eliminarInsumo(UUID id, UUID idUsuarioToken) {
+        Insumo insumo = insumoRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (insumo.getCampo() == null || !insumo.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tenés permiso para eliminar este insumo");
+        }
+
+        String nombre = insumo.getNombre();
+        String email = insumo.getCampo().getUsuario().getEmail();
+
+        insumoRepository.delete(insumo);
+
+        auditService.registrar(
+                idUsuarioToken, email,
+                EntidadAudit.INSUMO, id.toString(),
+                nombre,
+                AccionAudit.ELIMINAR,
+                "Insumo eliminado del catálogo"
+        );
+    }
 }

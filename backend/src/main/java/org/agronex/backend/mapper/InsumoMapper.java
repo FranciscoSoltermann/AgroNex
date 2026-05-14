@@ -12,10 +12,13 @@ public class InsumoMapper {
         if (request == null) return null;
         return Insumo.builder()
                 .nombre(request.getNombre())
+                .tipoArticulo(request.getTipoArticulo())
+                .subtipo(request.getSubtipo())
                 .precioUnitario(request.getPrecioUnitario())
                 .unidad(request.getUnidad())
+                .pesoBolsaKg(request.getPesoBolsaKg())
                 .cantidad(request.getCantidad())
-            .cantidadInicial(request.getCantidad())
+                .cantidadInicial(request.getCantidad())
                 .build();
     }
 
@@ -24,8 +27,11 @@ public class InsumoMapper {
         return InsumoResponse.builder()
                 .idInsumo(insumo.getIdInsumo())
                 .nombre(insumo.getNombre())
+                .tipoArticulo(insumo.getTipoArticulo())
+                .subtipo(insumo.getSubtipo())
                 .precioUnitario(insumo.getPrecioUnitario())
                 .unidad(insumo.getUnidad())
+                .pesoBolsaKg(insumo.getPesoBolsaKg())
                 .cantidad(insumo.getCantidad())
                 .cantidadInicial(insumo.getCantidadInicial())
                 .alertaStockBajoEnviada(insumo.getAlertaStockBajoEnviada())

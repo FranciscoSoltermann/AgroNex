@@ -4,8 +4,36 @@ import { useState, useEffect, useCallback } from "react";
 import apiClient from "@/lib/api-client";
 import {
     Plus, Search, AlertTriangle, TrendingUp, Package,
-    Droplets, Loader2, X, Wheat, BugOff, Tractor
+    Droplets, Loader2, X, Wheat, BugOff, Tractor, Fuel, Wrench, Box, Pencil, Trash2
 } from "lucide-react";
+
+// Mapa de subtipos por tipo de artículo
+const SUBTIPOS_POR_TIPO = {
+    SEMILLA: ["Maíz", "Trigo", "Soja", "Girasol", "Sorgo", "Cebada", "Arroz", "Avena", "Algodón", "Otro"],
+    HERBICIDA: ["Glifosato", "Atrazina", "2,4-D", "Dicamba", "Metsulfurón", "Paraquat", "Otro"],
+    FERTILIZANTE: ["Urea", "Fosfato Diamónico (DAP)", "MAP", "Sulfato de Amonio", "Nitrato de Amonio", "KCl", "NPK", "Otro"],
+    COMBUSTIBLE: ["Gasoil", "Nafta", "GNC", "Otro"],
+    REPUESTO: ["Filtro", "Correa", "Cuchilla", "Rodamiento", "Otro"],
+    OTRO: ["Otro"]
+};
+
+const TIPO_LABELS = {
+    SEMILLA: "Semilla",
+    HERBICIDA: "Herbicida",
+    FERTILIZANTE: "Fertilizante",
+    COMBUSTIBLE: "Combustible",
+    REPUESTO: "Repuesto",
+    OTRO: "Otro"
+};
+
+const TIPO_ICONS = {
+    SEMILLA: Wheat,
+    HERBICIDA: BugOff,
+    FERTILIZANTE: Droplets,
+    COMBUSTIBLE: Fuel,
+    REPUESTO: Wrench,
+    OTRO: Box
+};
 
 export default function InventarioPage() {
     const [insumos, setInsumos] = useState([]);
@@ -20,9 +48,9 @@ export default function InventarioPage() {
 
     const [showModal, setShowModal] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
-    const [formInsumo, setFormInsumo] = useState({
-        nombre: "", precioUnitario: "", unidad: "LITROS", cantidad: "", idCampo: "", idCampania: ""
-    });
+    const [editingId, setEditingId] = useState(null);
+    const emptyForm = { nombre: "", tipoArticulo: "", subtipo: "", precioUnitario: "", unidad: "", pesoBolsaKg: "", cantidad: "", idCampo: "", idCampania: "" };
+    const [formInsumo, setFormInsumo] = useState(emptyForm);
 
     const fetchData = useCallback(async () => {
         try {
@@ -60,16 +88,52 @@ export default function InventarioPage() {
                 cantidad: parseFloat(formInsumo.cantidad),
                 idCampo: formInsumo.idCampo
             };
+            if (formInsumo.tipoArticulo) body.tipoArticulo = formInsumo.tipoArticulo;
+            if (formInsumo.subtipo) body.subtipo = formInsumo.subtipo;
+            if (formInsumo.unidad === "BOLSAS" && formInsumo.pesoBolsaKg) {
+                body.pesoBolsaKg = parseFloat(formInsumo.pesoBolsaKg);
+            }
             if (formInsumo.idCampania) body.idCampania = formInsumo.idCampania;
-            const res = await apiClient.post("/insumos", body);
-            setInsumos(prev => [res.data, ...prev]);
+            let res;
+            if (editingId) {
+                res = await apiClient.put(`/insumos/${editingId}`, body);
+                setInsumos(prev => prev.map(i => i.idInsumo === editingId ? res.data : i));
+            } else {
+                res = await apiClient.post("/insumos", body);
+                setInsumos(prev => [res.data, ...prev]);
+            }
             setShowModal(false);
-            setFormInsumo({ nombre: "", precioUnitario: "", unidad: "LITROS", cantidad: "", idCampo: "", idCampania: "" });
+            setEditingId(null);
+            setFormInsumo(emptyForm);
         } catch (error) {
             alert("Error al registrar insumo. Verificá que todos los datos sean correctos.");
         } finally {
             setSubmitLoading(false);
         }
+    };
+
+    const handleEditar = (item) => {
+        setEditingId(item.idInsumo);
+        setFormInsumo({
+            nombre: item.nombre || "",
+            tipoArticulo: item.tipoArticulo || "",
+            subtipo: item.subtipo || "",
+            precioUnitario: item.precioUnitario ?? "",
+            unidad: item.unidad || "",
+            pesoBolsaKg: item.pesoBolsaKg ?? "",
+            cantidad: item.cantidad ?? "",
+            idCampo: item.idCampo || "",
+            idCampania: item.idCampania || ""
+        });
+        setShowModal(true);
+    };
+
+    const handleEliminar = async (id) => {
+        if (!confirm("¿Estás seguro de eliminar este insumo?")) return;
+        try {
+            await apiClient.delete(`/insumos/${id}`);
+            setInsumos(prev => prev.filter(i => i.idInsumo !== id));
+        } catch { alert("Error al eliminar insumo."); }
     };
 
     // Campañas filtradas por campo seleccionado en el modal
@@ -82,12 +146,15 @@ export default function InventarioPage() {
         ? campanias.filter(c => c.idCampo === filtroCampoId)
         : campanias;
 
+    // Mapeo de tabs a tipoArticulo enum
+    const FILTRO_TAB_TO_TIPO = { "Fertilizante": "FERTILIZANTE", "Semilla": "SEMILLA", "Herbicida": "HERBICIDA" };
+
     const displayInsumos = insumos.filter(i => {
         if (filtroCampoId !== "Todos" && i.idCampo !== filtroCampoId) return false;
         if (filtroCampaniaId !== "Todos" && i.idCampania !== filtroCampaniaId) return false;
         if (filtroActivo !== "Todos") {
-            const normFilter = filtroActivo.toLowerCase().slice(0, 4);
-            if (!i.nombre.toLowerCase().includes(normFilter)) return false;
+            const tipoEsperado = FILTRO_TAB_TO_TIPO[filtroActivo];
+            if (tipoEsperado && i.tipoArticulo !== tipoEsperado) return false;
         }
         if (searchTerm) return i.nombre.toLowerCase().includes(searchTerm.toLowerCase());
         return true;
@@ -223,16 +290,19 @@ export default function InventarioPage() {
                         </div>
 
                         <div className="dashboard-scroll-x overflow-x-auto">
-                            <table className="w-full min-w-[720px] text-left border-collapse">
+                            <table className="w-full min-w-[1050px] text-left border-collapse">
                                 <thead>
                                     <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Artículo / Campo</th>
-                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Campaña</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Tipo</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Unidad</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio Unit.</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Stock Actual</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Peso Total</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Valor Total</th>
-                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Unidad</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Campaña</th>
                                         <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</th>
+                                        <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center w-20"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -241,9 +311,14 @@ export default function InventarioPage() {
                                             <td className="p-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-10 h-10 rounded-xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-700 dark:text-green-500 shrink-0">
-                                                        {item.nombre.toLowerCase().includes("semilla") ? <Wheat size={18} /> :
-                                                            item.nombre.toLowerCase().includes("ferti") ? <Droplets size={18} /> :
-                                                                item.nombre.toLowerCase().includes("herbici") ? <BugOff size={18} /> : <Tractor size={18} />}
+                                                        {(() => {
+                                                            const IconComp = item.tipoArticulo ? TIPO_ICONS[item.tipoArticulo] : null;
+                                                            if (IconComp) return <IconComp size={18} />;
+                                                            if (item.nombre.toLowerCase().includes("semilla")) return <Wheat size={18} />;
+                                                            if (item.nombre.toLowerCase().includes("ferti")) return <Droplets size={18} />;
+                                                            if (item.nombre.toLowerCase().includes("herbici")) return <BugOff size={18} />;
+                                                            return <Tractor size={18} />;
+                                                        })()}
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-gray-900 dark:text-gray-100 text-sm">{item.nombre}</p>
@@ -252,13 +327,18 @@ export default function InventarioPage() {
                                                 </div>
                                             </td>
                                             <td className="p-4">
-                                                {item.nombreCampania ? (
-                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 text-[11px] font-bold border border-teal-100 dark:border-teal-800">
-                                                        {item.nombreCampania}
+                                                {item.tipoArticulo ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-[11px] font-bold border border-gray-100 dark:border-gray-700">
+                                                        {(() => { const Icon = TIPO_ICONS[item.tipoArticulo]; return Icon ? <Icon size={12} /> : null; })()}
+                                                        {TIPO_LABELS[item.tipoArticulo] || item.tipoArticulo}
+                                                        {item.subtipo && item.subtipo !== 'Otro' ? <span className="text-gray-400 font-medium">· {item.subtipo}</span> : null}
                                                     </span>
-                                                ) : (
-                                                    <span className="text-[11px] text-gray-400 font-medium">General</span>
-                                                )}
+                                                ) : <span className="text-[11px] text-gray-400 font-medium">—</span>}
+                                            </td>
+                                            <td className="p-4">
+                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                                    {item.unidad === 'BOLSAS' && item.pesoBolsaKg ? `Bolsas de ${item.pesoBolsaKg} Kg` : item.unidad?.toLowerCase().replace('_', ' ') || '—'}
+                                                </p>
                                             </td>
                                             <td className="p-4 text-sm text-gray-500 dark:text-gray-400 font-semibold text-right">
                                                 ${Number(item.precioUnitario).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
@@ -276,19 +356,51 @@ export default function InventarioPage() {
                                                     )}
                                                 </div>
                                             </td>
+                                            {/* Peso Total */}
+                                            <td className="p-4 text-right">
+                                                {(() => {
+                                                    const qty = Number(item.cantidad || 0);
+                                                    if (item.unidad === 'BOLSAS' && item.pesoBolsaKg) {
+                                                        const pt = qty * Number(item.pesoBolsaKg);
+                                                        return <div><p className="text-sm font-black text-gray-900 dark:text-gray-100">{pt.toLocaleString("es-AR", {maximumFractionDigits:2})} Kg</p><p className="text-[10px] text-gray-400">{qty} &times; {item.pesoBolsaKg} Kg</p></div>;
+                                                    }
+                                                    if (item.unidad === 'KILOGRAMOS' && qty >= 1000) return <div><p className="text-sm font-black text-gray-900 dark:text-gray-100">{(qty/1000).toLocaleString("es-AR",{minimumFractionDigits:1,maximumFractionDigits:2})} Tn</p><p className="text-[10px] text-gray-400">{qty.toLocaleString("es-AR")} Kg</p></div>;
+                                                    if (item.unidad === 'TONELADAS') return <p className="text-sm font-black text-gray-900 dark:text-gray-100">{(qty*1000).toLocaleString("es-AR")} Kg</p>;
+                                                    if (item.unidad === 'KILOGRAMOS') return <p className="text-sm font-black text-gray-900 dark:text-gray-100">{qty.toLocaleString("es-AR")} Kg</p>;
+                                                    return <span className="text-[11px] text-gray-400">&mdash;</span>;
+                                                })()}
+                                            </td>
+                                            {/* Valor Total */}
                                             <td className="p-4 text-sm font-black text-gray-900 dark:text-gray-100 text-right">
                                                 ${(Number(item.precioUnitario) * Number(item.cantidad || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                                             </td>
+                                            {/* Campaña */}
                                             <td className="p-4">
-                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{item.unidad?.toLowerCase().replace('_', ' ') || '—'}</p>
+                                                {item.nombreCampania ? (
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 text-[11px] font-bold border border-teal-100 dark:border-teal-800">{item.nombreCampania}</span>
+                                                ) : <span className="text-[11px] text-gray-400 font-medium">General</span>}
                                             </td>
+                                            {/* Estado */}
                                             <td className="p-4">
                                                 <BadgeEstado stock={item.cantidad} inicial={item.cantidadInicial} />
+                                            </td>
+                                            {/* Acciones */}
+                                            <td className="p-4">
+                                                <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button type="button" onClick={() => handleEditar(item)} title="Editar"
+                                                        className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 transition-colors">
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                    <button type="button" onClick={() => handleEliminar(item.idInsumo)} title="Eliminar"
+                                                        className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
                                     {displayInsumos.length === 0 && (
-                                        <tr><td colSpan="7" className="text-center py-10 text-gray-400 font-medium">No se encontraron artículos con estos filtros.</td></tr>
+                                        <tr><td colSpan="10" className="text-center py-10 text-gray-400 font-medium">No se encontraron artículos con estos filtros.</td></tr>
                                     )}
                                 </tbody>
                             </table>
@@ -356,14 +468,50 @@ export default function InventarioPage() {
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-[#1a1f25] rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">Registrar Nuevo Insumo</h3>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-lg"><X size={18} /></button>
+                            <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">{editingId ? 'Editar Insumo' : 'Registrar Nuevo Insumo'}</h3>
+                            <button onClick={() => { setShowModal(false); setEditingId(null); setFormInsumo(emptyForm); }} className="text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-lg"><X size={18} /></button>
                         </div>
                         <form onSubmit={handleRegistrarInsumo} className="space-y-4">
                             <div>
                                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Nombre del Artículo</label>
                                 <input required type="text" value={formInsumo.nombre} onChange={e => setFormInsumo(p => ({ ...p, nombre: e.target.value }))}
                                     className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] focus:bg-white outline-none transition-colors" placeholder="ej. Semilla de Maíz" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Tipo de Artículo</label>
+                                    <select value={formInsumo.tipoArticulo} onChange={e => {
+                                        const tipo = e.target.value;
+                                        const isSemilla = tipo === "SEMILLA";
+                                        setFormInsumo(p => ({
+                                            ...p,
+                                            tipoArticulo: tipo,
+                                            subtipo: "",
+                                            unidad: isSemilla ? "BOLSAS" : "",
+                                            pesoBolsaKg: isSemilla ? p.pesoBolsaKg : ""
+                                        }));
+                                    }}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
+                                        <option value="" disabled>-- Seleccionar --</option>
+                                        {Object.entries(TIPO_LABELS).map(([key, label]) => (
+                                            <option key={key} value={key}>{label}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Variedad / Subtipo</label>
+                                    <select value={formInsumo.subtipo} onChange={e => setFormInsumo(p => ({ ...p, subtipo: e.target.value }))}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none"
+                                        disabled={!formInsumo.tipoArticulo}>
+                                        <option value="" disabled>-- Seleccionar --</option>
+                                        {(SUBTIPOS_POR_TIPO[formInsumo.tipoArticulo] || []).map(sub => (
+                                            <option key={sub} value={sub}>{sub}</option>
+                                        ))}
+                                    </select>
+                                    {!formInsumo.tipoArticulo && (
+                                        <p className="text-[10px] text-gray-400 mt-1">Seleccioná un tipo primero.</p>
+                                    )}
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Campo Asociado</label>
@@ -399,17 +547,36 @@ export default function InventarioPage() {
                             </div>
                             <div>
                                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Unidad de Medida</label>
-                                <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))}
-                                    className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
-                                    <option value="UNIDADES">UNIDADES</option>
-                                    <option value="LITROS">LITROS</option>
-                                    <option value="KILOGRAMOS">KILOGRAMOS</option>
-                                    <option value="TONELADAS">TONELADAS</option>
-                                </select>
+                                {formInsumo.tipoArticulo === "SEMILLA" ? (
+                                    <div className="space-y-2">
+                                        <div className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-3 py-2.5 text-sm font-medium flex items-center gap-2">
+                                            <Wheat size={14} className="text-[#2D6A4F]" />
+                                            Bolsas de
+                                            <input
+                                                required type="number" step="0.5" min="0.5"
+                                                value={formInsumo.pesoBolsaKg}
+                                                onChange={e => setFormInsumo(p => ({ ...p, pesoBolsaKg: e.target.value }))}
+                                                className="w-16 bg-white border border-gray-300 rounded-lg px-2 py-1 text-sm font-bold text-center focus:border-[#2D6A4F] outline-none"
+                                                placeholder="40"
+                                            />
+                                            <span className="font-bold">Kg</span>
+                                        </div>
+                                        <p className="text-[10px] text-gray-400">Configurá el peso de cada bolsa de semillas.</p>
+                                    </div>
+                                ) : (
+                                    <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
+                                        <option value="" disabled>-- Seleccionar --</option>
+                                        <option value="KILOGRAMOS">Kilogramos</option>
+                                        <option value="LITROS">Litros</option>
+                                        <option value="TONELADAS">Toneladas</option>
+                                        <option value="UNIDADES">Unidades</option>
+                                    </select>
+                                )}
                             </div>
                             <button type="submit" disabled={submitLoading || campos.length === 0}
                                 className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1B4332] transition-colors mt-2 shadow-lg shadow-green-900/20 flex items-center justify-center">
-                                {submitLoading ? <Loader2 size={16} className="animate-spin" /> : 'Guardar en Inventario'}
+                                {submitLoading ? <Loader2 size={16} className="animate-spin" /> : editingId ? 'Guardar Cambios' : 'Guardar en Inventario'}
                             </button>
                             {campos.length === 0 && <p className="text-[10px] text-red-500 text-center font-bold">Debes crear al menos un campo primero.</p>}
                         </form>

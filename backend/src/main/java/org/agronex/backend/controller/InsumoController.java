@@ -49,4 +49,22 @@ public class InsumoController {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
         return new ResponseEntity<>(insumoService.crearInsumo(request, idUsuario), HttpStatus.CREATED);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<InsumoResponse> actualizarInsumo(
+            @PathVariable UUID id,
+            @Valid @RequestBody InsumoRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(insumoService.actualizarInsumo(id, request, idUsuario));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarInsumo(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        insumoService.eliminarInsumo(id, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
 }
