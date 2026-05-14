@@ -192,7 +192,7 @@ public class JohnDeereMachineService {
     public List<Map<String, Object>> listFields(UUID userId, String orgId) {
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
         String token = authService.getUserAccessToken(idDatos);
-        String url = config.getApiBaseUrl() + "/organizations/" + orgId + "/fields";
+        String url = config.getApiBaseUrl() + "/organizations/" + orgId + "/fields?embed=boundaries";
 
         log.debug("Consultando campos JD en org {}", orgId);
         try {
