@@ -9,6 +9,7 @@ import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import dynamic from 'next/dynamic';
 import { toast } from "sonner";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 
 const MonitoreoSatelitalViewer = dynamic(() => import('@/components/features/dashboard/lotes/MonitoreoSatelitalViewer'), { ssr: false });
 const LibroCampoPanel = dynamic(() => import('@/components/features/dashboard/lotes/LibroCampoPanel'), { ssr: false });
@@ -35,6 +36,12 @@ export default function CiclosPage() {
     const [idCampaniaActiva, setIdCampaniaActiva] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     const [formAct, setFormAct] = useState({
         tipoActv: "Fertilización",
@@ -181,28 +188,40 @@ export default function CiclosPage() {
     };
 
     const handleEliminarActividad = async (idActividad) => {
-        if (!window.confirm("¿Seguro que querés eliminar esta actividad?")) return;
-        try {
-            await apiClient.delete(`/actividades/${idActividad}`);
-            toast.success("¡Actividad eliminada!");
-            setActividades((prev) => prev.filter(a => a.idActividad !== idActividad));
-        } catch (err) {
-            alert(err.response?.data?.message || "Error al eliminar actividad.");
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "Eliminar Actividad",
+            message: "¿Seguro que querés eliminar esta actividad?",
+            onConfirm: async () => {
+                try {
+                    await apiClient.delete(`/actividades/${idActividad}`);
+                    toast.success("¡Actividad eliminada!");
+                    setActividades((prev) => prev.filter(a => a.idActividad !== idActividad));
+                } catch (err) {
+                    toast.error(err.response?.data?.message || "Error al eliminar actividad.");
+                }
+            }
+        });
     };
 
     const handleEliminarLote = async () => {
         if (!idLoteSeleccionado) return;
-        if (!window.confirm("¿Estás seguro que querés eliminar este lote?\n\n¡ATENCIÓN! Esto eliminará permanentemente TODAS sus campañas, actividades, insumos usados, gastos imputados y registros de cosecha vinculados. Esta acción NO se puede deshacer.")) return;
-        try {
-            await apiClient.delete(`/lotes/${idLoteSeleccionado}`);
-            toast.success("¡Lote y campañas eliminados!");
-            invalidateDashboardBootstrapCache();
-            await fetchData({ forceRefresh: true });
-            setIdLoteSeleccionado("");
-        } catch (err) {
-            alert(err.response?.data?.message || "Error al eliminar lote.");
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "Eliminar Lote",
+            message: "¿Estás seguro que querés eliminar este lote?\n\n¡ATENCIÓN! Esto eliminará permanentemente TODAS sus campañas, actividades, insumos usados, gastos imputados y registros de cosecha vinculados. Esta acción NO se puede deshacer.",
+            onConfirm: async () => {
+                try {
+                    await apiClient.delete(`/lotes/${idLoteSeleccionado}`);
+                    toast.success("¡Lote y campañas eliminados!");
+                    invalidateDashboardBootstrapCache();
+                    await fetchData({ forceRefresh: true });
+                    setIdLoteSeleccionado("");
+                } catch (err) {
+                    toast.error(err.response?.data?.message || "Error al eliminar lote.");
+                }
+            }
+        });
     };
 
     const handleCrearCampania = async (e) => {
@@ -239,15 +258,21 @@ export default function CiclosPage() {
     const handleEliminarCampania = async (idCampania) => {
         const camp = campanias.find(c => c.idCampania === idCampania);
         if (!camp) return;
-        if (!window.confirm(`¿Seguro que querés eliminar la campaña "${camp.cultivo}"?\n\n¡ATENCIÓN! Esta acción eliminará permanentemente todos los datos de la campaña: actividades, insumos usados, gastos fijos imputados y registros de cosecha. No se puede deshacer.`)) return;
-        try {
-            await apiClient.delete(`/campanias/${idCampania}`);
-            toast.success("¡Campaña eliminada!");
-            invalidateDashboardBootstrapCache();
-            await fetchData({ forceRefresh: true });
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Error al eliminar la campaña.");
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "Eliminar Campaña",
+            message: `¿Seguro que querés eliminar la campaña "${camp.cultivo}"?\n\n¡ATENCIÓN! Esta acción eliminará permanentemente todos los datos de la campaña: actividades, insumos usados, gastos fijos imputados y registros de cosecha. No se puede deshacer.`,
+            onConfirm: async () => {
+                try {
+                    await apiClient.delete(`/campanias/${idCampania}`);
+                    toast.success("¡Campaña eliminada!");
+                    invalidateDashboardBootstrapCache();
+                    await fetchData({ forceRefresh: true });
+                } catch (err) {
+                    toast.error(err.response?.data?.message || "Error al eliminar la campaña.");
+                }
+            }
+        });
     };
 
     const actividadesFiltradas = actividades.filter(
@@ -631,6 +656,14 @@ export default function CiclosPage() {
                     </div>
                 </div>
             )}
+            
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+            />
         </div>
     );
 }

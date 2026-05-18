@@ -40,7 +40,9 @@ export default function ReporteContratistaButton() {
             setIsOpen(false);
             setForm({ maquina: "", hectareas: "", horas: "", combustible: "" });
         } catch (error) {
-            console.error("Error al generar PDF", error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error("Error al generar PDF", error);
+            }
             alert("No se pudo generar el reporte. Verifica tu conexión o el backend.");
         } finally {
             setLoading(false);

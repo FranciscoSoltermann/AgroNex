@@ -8,13 +8,16 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "registros_clima")
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class RegistroClima {
 
     @Id
+    @EqualsAndHashCode.Include
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(columnDefinition = "UUID", updatable = false, nullable = false)
     private UUID idRegistro;

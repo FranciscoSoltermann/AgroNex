@@ -6,6 +6,7 @@ import {
     Plus, Search, AlertTriangle, TrendingUp, Package,
     Droplets, Loader2, X, Wheat, BugOff, Tractor, Fuel, Wrench, Box, Pencil, Trash2
 } from "lucide-react";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 
 // Mapa de subtipos por tipo de artículo
 const SUBTIPOS_POR_TIPO = {
@@ -38,6 +39,7 @@ const TIPO_ICONS = {
 export default function InventarioPage() {
     const [insumos, setInsumos] = useState([]);
     const [campos, setCampos] = useState([]);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
     const [campanias, setCampanias] = useState([]);
     const [actividades, setActividades] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -128,12 +130,16 @@ export default function InventarioPage() {
         setShowModal(true);
     };
 
-    const handleEliminar = async (id) => {
-        if (!confirm("¿Estás seguro de eliminar este insumo?")) return;
+    const handleEliminar = (id) => {
+        setConfirmModal({ isOpen: true, id });
+    };
+
+    const confirmEliminar = async () => {
         try {
-            await apiClient.delete(`/insumos/${id}`);
-            setInsumos(prev => prev.filter(i => i.idInsumo !== id));
+            await apiClient.delete(`/insumos/${confirmModal.id}`);
+            setInsumos(prev => prev.filter(i => i.idInsumo !== confirmModal.id));
         } catch { alert("Error al eliminar insumo."); }
+        setConfirmModal({ isOpen: false, id: null });
     };
 
     // Campañas filtradas por campo seleccionado en el modal
@@ -583,6 +589,15 @@ export default function InventarioPage() {
                     </div>
                 </div>
             )}
+            
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title="Eliminar Insumo"
+                message="¿Estás seguro de que querés eliminar este insumo? Esta acción no se puede deshacer."
+                onConfirm={confirmEliminar}
+                onCancel={() => setConfirmModal({ isOpen: false, id: null })}
+                confirmText="Eliminar"
+            />
         </div>
     );
 }

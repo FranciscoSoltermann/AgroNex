@@ -2,7 +2,10 @@ import axios from 'axios';
 import { supabase } from './supabase';
 
 const normalizeApiBaseUrl = (rawBaseUrl) => {
-    const fallback = 'http://localhost:8080/api';
+    if (!rawBaseUrl && typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+        console.warn('NEXT_PUBLIC_API_URL no está configurada en producción.');
+    }
+    const fallback = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:8080/api';
     const value = (rawBaseUrl || fallback).trim().replace(/\/$/, '');
     return value.endsWith('/api') ? value : `${value}/api`;
 };

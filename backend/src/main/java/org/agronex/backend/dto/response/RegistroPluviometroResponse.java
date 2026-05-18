@@ -2,6 +2,7 @@ package org.agronex.backend.dto.response;
 
 import lombok.Builder;
 import lombok.Data;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -11,6 +12,6 @@ public class RegistroPluviometroResponse {
     private UUID id;
     private UUID loteId;
     private LocalDate fecha;
-    private Double mmCaidos;
+    private BigDecimal mmCaidos;
     private String notas;
 }

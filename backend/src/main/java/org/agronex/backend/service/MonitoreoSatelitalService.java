@@ -11,6 +11,7 @@ import org.agronex.backend.dto.request.MonitoreoSatelitalRequest;
 import org.agronex.backend.dto.response.MonitoreoSatelitalResponse;
 import org.agronex.backend.entity.Lote;
 import org.agronex.backend.entity.MonitoreoSatelital;
+import org.agronex.backend.mapper.MonitoreoSatelitalMapper;
 import org.agronex.backend.repository.LoteRepository;
 import org.agronex.backend.repository.MonitoreoSatelitalRepository;
 
@@ -22,7 +23,6 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +34,7 @@ public class MonitoreoSatelitalService {
     private final AgromonitoringService agromonitoringService;
     private final AlertaUsuarioService alertaUsuarioService;
     private final UsuarioService usuarioService;
+    private final MonitoreoSatelitalMapper monitoreoSatelitalMapper;
 
     @Transactional
     public MonitoreoSatelitalResponse registrarMonitoreo(MonitoreoSatelitalRequest request, UUID idUsuarioToken) {
@@ -46,19 +47,12 @@ public class MonitoreoSatelitalService {
             throw new AccessDeniedException("No tenés permiso para registrar monitoreo en este lote.");
         }
 
-        MonitoreoSatelital ms = MonitoreoSatelital.builder()
-                .lote(lote)
-                .fechaImagen(request.getFechaImagen())
-                .valorNdvi(request.getValorNdvi())
-                .urlMapa(request.getUrlMapa())
-                .nubosidad(request.getNubosidad())
-                .tipoSatelite(request.getTipoSatelite())
-                .build();
+        MonitoreoSatelital ms = monitoreoSatelitalMapper.toEntity(request, lote);
 
         evaluarAlertaCaidaNdvi(lote, ms.getValorNdvi());
 
         MonitoreoSatelital guardado = monitoreoRepository.save(ms);
-        return mapToResponse(guardado);
+        return monitoreoSatelitalMapper.toResponse(guardado);
     }
 
     @Transactional(readOnly = true)
@@ -74,8 +68,8 @@ public class MonitoreoSatelitalService {
 
         return monitoreoRepository.findByLote_IdLoteOrderByFechaImagenDesc(idLote)
                 .stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .map(monitoreoSatelitalMapper::toResponse)
+                .toList();
     }
 
     // ─── Sincronización automática ─────────────────────────────────────────────
@@ -244,18 +238,5 @@ public class MonitoreoSatelitalService {
         }
     }
 
-    // ─── Mapper ───────────────────────────────────────────────────────────────
-
-    private MonitoreoSatelitalResponse mapToResponse(MonitoreoSatelital m) {
-        return MonitoreoSatelitalResponse.builder()
-                .idMonitoreo(m.getIdMonitoreo())
-                .idLote(m.getLote().getIdLote())
-                .fechaImagen(m.getFechaImagen())
-                .valorNdvi(m.getValorNdvi())
-                .urlMapa(m.getUrlMapa())
-                .nubosidad(m.getNubosidad())
-                .tipoSatelite(m.getTipoSatelite())
-                .build();
-    }
 }
 

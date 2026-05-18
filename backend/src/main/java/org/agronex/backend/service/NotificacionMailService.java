@@ -18,7 +18,8 @@ public class NotificacionMailService {
     private String fromEmail;
 
     public void enviarAlerta(String destinatario, String asunto, String mensaje) {
-        log.info("📧 Preparando alerta por email para {}: {}", destinatario, asunto);
+        String maskedEmail = maskEmail(destinatario);
+        log.info("📧 Preparando alerta por email para {}: {}", maskedEmail, asunto);
         try {
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             mailMessage.setFrom(fromEmail);
@@ -27,11 +28,20 @@ public class NotificacionMailService {
             mailMessage.setText(mensaje);
             
             javaMailSender.send(mailMessage);
-            log.info("✅ Email de alerta enviado exitosamente a {}", destinatario);
+            log.info("✅ Email de alerta enviado exitosamente a {}", maskedEmail);
         } catch (Exception e) {
-            log.error("❌ Error al enviar email de alerta a {}: {}", destinatario, e.getMessage());
+            log.error("❌ Error al enviar email de alerta a {}: {}", maskedEmail, e.getMessage());
             // No bloqueamos la ejecución principal si el mail falla
         }
+    }
+
+    /** Ofusca el email para logs: "usuario@gmail.com" → "u***o@gmail.com" */
+    private String maskEmail(String email) {
+        if (email == null || !email.contains("@")) return "***";
+        String[] parts = email.split("@");
+        String local = parts[0];
+        if (local.length() <= 2) return local.charAt(0) + "***@" + parts[1];
+        return local.charAt(0) + "***" + local.charAt(local.length() - 1) + "@" + parts[1];
     }
 }
 

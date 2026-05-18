@@ -6,6 +6,7 @@ import org.agronex.backend.dto.request.MantenimientoMaquinaRequest;
 import org.agronex.backend.dto.response.MantenimientoMaquinaResponse;
 import org.agronex.backend.entity.MantenimientoMaquina;
 import org.agronex.backend.entity.Usuario;
+import org.agronex.backend.mapper.MantenimientoMaquinaMapper;
 import org.agronex.backend.repository.MantenimientoMaquinaRepository;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -13,9 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +24,7 @@ public class MantenimientoMaquinaService {
     private final MantenimientoMaquinaRepository mantenimientoRepository;
     private final AlertaUsuarioService alertaUsuarioService;
     private final UsuarioRepository usuarioRepository;
+    private final MantenimientoMaquinaMapper mantenimientoMaquinaMapper;
 
     @Transactional
     public MantenimientoMaquinaResponse configurarMantenimiento(MantenimientoMaquinaRequest request, UUID idUsuario) {
@@ -50,13 +50,13 @@ public class MantenimientoMaquinaService {
         MantenimientoMaquina guardado = mantenimientoRepository.save(mantenimiento);
         evaluarAlertaMantenimiento(guardado);
         
-        return mapToResponse(guardado);
+        return mantenimientoMaquinaMapper.toResponse(guardado);
     }
 
     public List<MantenimientoMaquinaResponse> listarMisMantenimientos(UUID idUsuario) {
         return mantenimientoRepository.findByUsuario_IdUsuario(idUsuario).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+                .map(mantenimientoMaquinaMapper::toResponse)
+                .toList();
     }
 
     // CRON JOB - Ejecutar todos los días a las 8 AM
@@ -95,22 +95,5 @@ public class MantenimientoMaquinaService {
                     "Alerta de Mantenimiento", 
                     mensaje); // Reutilizamos el enviador de alertas generico
         }
-    }
-
-    private MantenimientoMaquinaResponse mapToResponse(MantenimientoMaquina mant) {
-        Double horasFaltantes = null;
-        if (mant.getHorasProximoService() != null && mant.getUltimaLecturaHoras() != null) {
-            horasFaltantes = mant.getHorasProximoService() - mant.getUltimaLecturaHoras();
-        }
-        
-        return MantenimientoMaquinaResponse.builder()
-                .id(mant.getId())
-                .machineId(mant.getMachineId())
-                .nombreMaquina(mant.getNombreMaquina())
-                .horasUltimoService(mant.getHorasUltimoService())
-                .horasProximoService(mant.getHorasProximoService())
-                .ultimaLecturaHoras(mant.getUltimaLecturaHoras())
-                .horasFaltantes(horasFaltantes)
-                .build();
     }
 }

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.response.NotificacionResponse;
 import org.agronex.backend.entity.NotificacionUsuario;
 import org.agronex.backend.entity.Usuario;
+import org.agronex.backend.mapper.NotificacionMapper;
 import org.agronex.backend.repository.NotificacionUsuarioRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ public class NotificacionService {
 
     private final NotificacionUsuarioRepository notificacionUsuarioRepository;
     private final org.agronex.backend.repository.UsuarioRepository usuarioRepository;
+    private final NotificacionMapper notificacionMapper;
 
     @Transactional
     public NotificacionResponse crearNotificacionParaUsuario(UUID idUsuario, String titulo, String mensaje) {
@@ -30,7 +32,7 @@ public class NotificacionService {
                 .mensaje(mensaje)
                 .build();
         NotificacionUsuario guardada = notificacionUsuarioRepository.save(notificacion);
-        return toResponse(guardada);
+        return notificacionMapper.toResponse(guardada);
     }
 
     @Transactional
@@ -49,7 +51,7 @@ public class NotificacionService {
         return notificacionUsuarioRepository
                 .findByUsuario_IdUsuarioOrderByCreadoEnDesc(idUsuario, PageRequest.of(0, pageSize))
                 .stream()
-                .map(this::toResponse)
+                .map(notificacionMapper::toResponse)
                 .toList();
     }
 
@@ -78,14 +80,5 @@ public class NotificacionService {
         return notificacionUsuarioRepository.marcarTodasComoLeidas(idUsuario);
     }
 
-    private NotificacionResponse toResponse(NotificacionUsuario entity) {
-        return NotificacionResponse.builder()
-                .idNotificacion(entity.getIdNotificacion())
-                .titulo(entity.getTitulo())
-                .mensaje(entity.getMensaje())
-                .leida(entity.getLeida())
-                .creadoEn(entity.getCreadoEn())
-                .build();
-    }
 }
 

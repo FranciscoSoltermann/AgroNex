@@ -2,6 +2,7 @@ package org.agronex.backend.dto.request;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -14,7 +15,7 @@ public class RegistroPluviometroRequest {
     private LocalDate fecha;
 
     @NotNull(message = "La cantidad de lluvia es requerida")
-    private Double mmCaidos;
+    private BigDecimal mmCaidos;
     
     private String notas;
 }

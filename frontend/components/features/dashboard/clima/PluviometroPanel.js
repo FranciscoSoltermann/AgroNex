@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import apiClient from "@/lib/api-client";
 import { Droplets, Plus, Trash2, Loader2, AlertCircle, Calendar } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 
 export default function PluviometroPanel({ idLote }) {
     const [registros, setRegistros] = useState([]);
@@ -10,6 +11,7 @@ export default function PluviometroPanel({ idLote }) {
     const [error, setError] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
 
     const [form, setForm] = useState({
         fecha: new Date().toISOString().split('T')[0],
@@ -58,14 +60,18 @@ export default function PluviometroPanel({ idLote }) {
         }
     };
 
-    const handleDelete = async (idRegistro) => {
-        if (!confirm("¿Eliminar este registro de precipitación?")) return;
+    const handleDelete = (idRegistro) => {
+        setConfirmModal({ isOpen: true, id: idRegistro });
+    };
+
+    const confirmDelete = async () => {
         try {
-            await apiClient.delete(`/pluviometro/${idRegistro}`);
+            await apiClient.delete(`/pluviometro/${confirmModal.id}`);
             fetchRegistros();
         } catch (err) {
             alert("Error al eliminar.");
         }
+        setConfirmModal({ isOpen: false, id: null });
     };
 
     if (loading) {
@@ -238,6 +244,15 @@ export default function PluviometroPanel({ idLote }) {
                     </table>
                 </div>
             </div>
+            
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title="Eliminar Registro"
+                message="¿Estás seguro de que querés eliminar este registro de precipitación? Esta acción no se puede deshacer."
+                onConfirm={confirmDelete}
+                onCancel={() => setConfirmModal({ isOpen: false, id: null })}
+                confirmText="Eliminar"
+            />
         </div>
     );
 }

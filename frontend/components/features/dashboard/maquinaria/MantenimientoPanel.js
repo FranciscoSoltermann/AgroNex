@@ -2,12 +2,14 @@
 import { useState, useEffect, useCallback } from "react";
 import apiClient from "@/lib/api-client";
 import { Wrench, Plus, Loader2, AlertTriangle, CheckCircle2, Trash2 } from "lucide-react";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 
 export default function MantenimientoPanel() {
     const [mantenimientos, setMantenimientos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
 
     const [form, setForm] = useState({
         maquina: "",
@@ -18,10 +20,12 @@ export default function MantenimientoPanel() {
     const fetchMantenimientos = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await apiClient.get("/mantenimiento/mis-alertas");
+            const res = await apiClient.get("/mantenimiento/mis-maquinas");
             setMantenimientos(res.data || []);
         } catch (error) {
-            console.error("Error al obtener mantenimientos", error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error("Error al obtener mantenimientos", error);
+            }
         } finally {
             setLoading(false);
         }
@@ -50,14 +54,18 @@ export default function MantenimientoPanel() {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!confirm("¿Eliminar configuración de mantenimiento?")) return;
+    const handleDelete = (id) => {
+        setConfirmModal({ isOpen: true, id });
+    };
+
+    const confirmDelete = async () => {
         try {
-            await apiClient.delete(`/mantenimiento/${id}`);
+            await apiClient.delete(`/mantenimiento/${confirmModal.id}`);
             fetchMantenimientos();
         } catch (error) {
             alert("Error al eliminar.");
         }
+        setConfirmModal({ isOpen: false, id: null });
     };
 
     if (loading) {
@@ -200,6 +208,15 @@ export default function MantenimientoPanel() {
                     </div>
                 )}
             </div>
+            
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title="Eliminar Configuración"
+                message="¿Estás seguro de que querés eliminar esta configuración de mantenimiento? No podrás deshacer esta acción."
+                onConfirm={confirmDelete}
+                onCancel={() => setConfirmModal({ isOpen: false, id: null })}
+                confirmText="Eliminar"
+            />
         </div>
     );
 }

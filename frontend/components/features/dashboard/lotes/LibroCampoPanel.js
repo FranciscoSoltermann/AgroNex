@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import apiClient from "@/lib/api-client";
 import { ClipboardList, Plus, Trash2, Loader2, AlertCircle, Calendar } from "lucide-react";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 
 export default function LibroCampoPanel({ idLote }) {
     const [labores, setLabores] = useState([]);
@@ -9,6 +10,7 @@ export default function LibroCampoPanel({ idLote }) {
     const [error, setError] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
 
     const [form, setForm] = useState({
         tipoLabor: "Siembra",
@@ -67,14 +69,18 @@ export default function LibroCampoPanel({ idLote }) {
         }
     };
 
-    const handleDelete = async (idLabor) => {
-        if (!confirm("¿Eliminar este registro del libro de campo?")) return;
+    const handleDelete = (idLabor) => {
+        setConfirmModal({ isOpen: true, id: idLabor });
+    };
+
+    const confirmDelete = async () => {
         try {
-            await apiClient.delete(`/labores/${idLabor}`);
+            await apiClient.delete(`/labores/${confirmModal.id}`);
             fetchLabores();
         } catch (err) {
             alert("Error al eliminar.");
         }
+        setConfirmModal({ isOpen: false, id: null });
     };
 
     if (loading) {
@@ -257,6 +263,15 @@ export default function LibroCampoPanel({ idLote }) {
                     </tbody>
                 </table>
             </div>
+            
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title="Eliminar Registro"
+                message="¿Estás seguro de que querés eliminar este registro del libro de campo? No podrás deshacer esta acción."
+                onConfirm={confirmDelete}
+                onCancel={() => setConfirmModal({ isOpen: false, id: null })}
+                confirmText="Eliminar"
+            />
         </div>
     );
 }

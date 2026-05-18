@@ -8,6 +8,7 @@ import {
     RefreshCw, Shield, Building2, Calendar, Wifi, WifiOff,
     MapPin, Fuel, Gauge, Navigation, LogIn, LogOut, ChevronDown, ChevronUp, Maximize
 } from "lucide-react";
+import ConfirmModal from "@/components/shared/ConfirmModal";
 
 const FieldMap = dynamic(() => import('@/components/features/dashboard/maquinaria/FieldMap'), {
     ssr: false,
@@ -35,6 +36,8 @@ const PROVIDERS = [
 ];
 
 export default function MaquinariaPage() {
+    const [selectedProvider, setSelectedProvider] = useState(null);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
     const [providers, setProviders] = useState(
         PROVIDERS.map((p) => ({ ...p, configured: null, userConnected: null, connections: [], organizations: [], loading: true, error: null }))
     );
@@ -102,28 +105,42 @@ export default function MaquinariaPage() {
         }
     };
 
-    const handleDisconnect = async (providerId) => {
-        if (!window.confirm("¿Seguro que querés desconectar tu cuenta de John Deere?")) return;
-        const provider = PROVIDERS.find((p) => p.id === providerId);
-        if (!provider) return;
-        try {
-            await apiClient.delete(provider.disconnectEndpoint);
-            fetchProviderData();
-        } catch {
-            alert("Error al desconectar.");
-        }
+    const handleDisconnect = (providerId) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Desconectar Cuenta",
+            message: "¿Seguro que querés desconectar tu cuenta de John Deere?",
+            onConfirm: async () => {
+                const provider = PROVIDERS.find((p) => p.id === providerId);
+                if (!provider) return;
+                try {
+                    await apiClient.delete(provider.disconnectEndpoint);
+                    fetchProviderData();
+                } catch {
+                    alert("Error al desconectar.");
+                }
+                setConfirmModal({ isOpen: false, title: "", message: "", onConfirm: null });
+            }
+        });
     };
 
-    const handleDeleteConnection = async (providerId, connectionId) => {
-        if (!window.confirm("¿Seguro que querés desconectar esta organización?")) return;
-        const provider = PROVIDERS.find((p) => p.id === providerId);
-        if (!provider) return;
-        try {
-            await apiClient.delete(`${provider.connectionsEndpoint}/${connectionId}`);
-            fetchProviderData();
-        } catch {
-            alert("Error al eliminar la conexión.");
-        }
+    const handleDeleteConnection = (providerId, connectionId) => {
+        setConfirmModal({
+            isOpen: true,
+            title: "Desconectar Organización",
+            message: "¿Seguro que querés desconectar esta organización?",
+            onConfirm: async () => {
+                const provider = PROVIDERS.find((p) => p.id === providerId);
+                if (!provider) return;
+                try {
+                    await apiClient.delete(`${provider.connectionsEndpoint}/${connectionId}`);
+                    fetchProviderData();
+                } catch {
+                    alert("Error al eliminar la conexión.");
+                }
+                setConfirmModal({ isOpen: false, title: "", message: "", onConfirm: null });
+            }
+        });
     };
 
     return (
@@ -788,6 +805,15 @@ function JohnDeereEquipos() {
                     </div>
                 </div>
             )}
+            
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal({ isOpen: false, title: "", message: "", onConfirm: null })}
+                confirmText="Desconectar"
+            />
         </div>
     );
 }

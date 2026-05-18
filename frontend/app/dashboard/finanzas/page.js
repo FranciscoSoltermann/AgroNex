@@ -8,6 +8,8 @@ import {
     BarChart2, Tractor, TrendingUp, PieChart, Lock, Download, Trash2
 } from "lucide-react";
 import dynamic from 'next/dynamic';
+import ConfirmModal from "@/components/shared/ConfirmModal";
+import { toast } from "sonner";
 
 const PdfDownloadButton = dynamic(() => import('@/components/features/dashboard/finanzas/PdfDownloadButton'), {
     ssr: false
@@ -28,6 +30,12 @@ export default function FinanzasPage() {
     const [resumenCampLoading, setResumenCampLoading] = useState(false);
     const [cerrarLoading, setCerrarLoading] = useState(false);
     const [eliminarLoading, setEliminarLoading] = useState(false);
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     const gastosFiltrados = gastos.filter(g => {
         if (filtroCampoId && g.idCampo !== filtroCampoId) return false;
@@ -192,14 +200,21 @@ export default function FinanzasPage() {
     };
 
     const handleEliminarGasto = async (idGasto) => {
-        if (!window.confirm("¿Estás seguro que querés eliminar este gasto fijo?")) return;
-        try {
-            await apiClient.delete(`/gastos/${idGasto}`);
-            await fetchData();
-            if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
-        } catch (err) {
-            alert(err.response?.data?.message || "Error al eliminar gasto.");
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "Eliminar Gasto Fijo",
+            message: "¿Estás seguro que querés eliminar este gasto fijo?",
+            onConfirm: async () => {
+                try {
+                    await apiClient.delete(`/gastos/${idGasto}`);
+                    await fetchData();
+                    if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
+                    toast.success("Gasto eliminado correctamente.");
+                } catch (err) {
+                    toast.error(err.response?.data?.message || "Error al eliminar gasto.");
+                }
+            }
+        });
     };
 
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
@@ -210,36 +225,48 @@ export default function FinanzasPage() {
 
     const handleCerrarCampania = async () => {
         if (!idCampaniaEconomia || !resumenCampania || resumenCampania.estado === "CERRADA") return;
-        if (!confirm("¿Cerrar esta campaña? Se fijará la fecha de fin si no estaba definida.")) return;
-        setCerrarLoading(true);
-        try {
-            await apiClient.post(`/campanias/${idCampaniaEconomia}/cerrar`);
-            await fetchData();
-            await fetchResumenCampania(idCampaniaEconomia);
-        } catch {
-            alert("No se pudo cerrar la campaña.");
-        } finally {
-            setCerrarLoading(false);
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "Cerrar Campaña",
+            message: "¿Cerrar esta campaña? Se fijará la fecha de fin si no estaba definida.",
+            onConfirm: async () => {
+                setCerrarLoading(true);
+                try {
+                    await apiClient.post(`/campanias/${idCampaniaEconomia}/cerrar`);
+                    await fetchData();
+                    await fetchResumenCampania(idCampaniaEconomia);
+                    toast.success("Campaña cerrada correctamente.");
+                } catch {
+                    toast.error("No se pudo cerrar la campaña.");
+                } finally {
+                    setCerrarLoading(false);
+                }
+            }
+        });
     };
 
     const handleEliminarCampania = async () => {
         if (!idCampaniaEconomia || !resumenCampania) return;
-        if (!confirm(`¿Estás seguro de eliminar la campaña "${resumenCampania.nombreLote}"? \n\n¡ATENCIÓN! Esta acción eliminará permanentemente todos los datos de la campaña: actividades, insumos usados, gastos fijos imputados y registros de cosecha. No se puede deshacer.`)) return;
-        
-        setEliminarLoading(true);
-        try {
-            await apiClient.delete(`/campanias/${idCampaniaEconomia}`);
-            setIdCampaniaEconomia("");
-            setResumenCampania(null);
-            invalidateDashboardBootstrapCache();
-            await fetchData({ forceRefresh: true });
-            alert("Campaña eliminada correctamente.");
-        } catch (err) {
-            alert(err.response?.data?.message || "No se pudo eliminar la campaña.");
-        } finally {
-            setEliminarLoading(false);
-        }
+        setConfirmModal({
+            isOpen: true,
+            title: "Eliminar Campaña",
+            message: `¿Estás seguro de eliminar la campaña "${resumenCampania.nombreLote}"? \n\n¡ATENCIÓN! Esta acción eliminará permanentemente todos los datos de la campaña: actividades, insumos usados, gastos fijos imputados y registros de cosecha. No se puede deshacer.`,
+            onConfirm: async () => {
+                setEliminarLoading(true);
+                try {
+                    await apiClient.delete(`/campanias/${idCampaniaEconomia}`);
+                    setIdCampaniaEconomia("");
+                    setResumenCampania(null);
+                    invalidateDashboardBootstrapCache();
+                    await fetchData({ forceRefresh: true });
+                    toast.success("Campaña eliminada correctamente.");
+                } catch (err) {
+                    toast.error(err.response?.data?.message || "No se pudo eliminar la campaña.");
+                } finally {
+                    setEliminarLoading(false);
+                }
+            }
+        });
     };
 
     return (
@@ -662,6 +689,14 @@ export default function FinanzasPage() {
                     </table>
                 </div>
             </div>
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmModal.onConfirm}
+                title={confirmModal.title}
+                message={confirmModal.message}
+            />
         </div>
     );
 }

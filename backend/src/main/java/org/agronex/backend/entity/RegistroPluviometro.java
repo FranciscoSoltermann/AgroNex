@@ -2,6 +2,7 @@ package org.agronex.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -24,8 +25,8 @@ public class RegistroPluviometro {
     @Column(nullable = false)
     private LocalDate fecha;
 
-    @Column(name = "mm_caidos", nullable = false)
-    private Double mmCaidos;
+    @Column(name = "mm_caidos", nullable = false, precision = 8, scale = 2)
+    private BigDecimal mmCaidos;
     
     @Column(length = 200)
     private String notas;

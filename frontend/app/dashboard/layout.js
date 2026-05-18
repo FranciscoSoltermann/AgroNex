@@ -105,6 +105,7 @@ export default function DashboardLayout({ children }) {
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
+        sessionStorage.clear();
         router.push("/login");
         setTimeout(() => router.refresh(), 100);
     };

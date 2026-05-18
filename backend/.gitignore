@@ -33,6 +33,12 @@ build/
 .vscode/
 
 # Entorno local sensible — NUNCA commitear
+.env
+.env.*
+!.env.example
+*.class
+flyway_debug.log
+maven_output.txt
 *_logs.txt
 backend_logs.txt
 
