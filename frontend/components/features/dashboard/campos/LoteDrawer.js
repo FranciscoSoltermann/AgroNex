@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import * as turf from '@turf/turf';
 
-export default function LoteDrawer({ initialCenter, onDrawComplete }) {
+export default function LoteDrawer({ initialCenter, initialGeoJson, onDrawComplete }) {
     const featureGroupRef = useRef(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -65,6 +65,32 @@ export default function LoteDrawer({ initialCenter, onDrawComplete }) {
             shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
         });
     }, []);
+
+    // Load initialGeoJson if provided
+    useEffect(() => {
+        if (initialGeoJson && featureGroupRef.current) {
+            try {
+                // Clear any existing layers
+                featureGroupRef.current.clearLayers();
+                const parsed = JSON.parse(initialGeoJson);
+                const geoJsonLayer = L.geoJSON(parsed, {
+                    style: {
+                        color: '#ffffff',
+                        fillColor: '#10b981',
+                        fillOpacity: 0.3,
+                        weight: 2
+                    }
+                });
+                
+                // Add layers from GeoJSON to FeatureGroup so they are editable
+                geoJsonLayer.eachLayer((layer) => {
+                    featureGroupRef.current.addLayer(layer);
+                });
+            } catch (err) {
+                console.error("Error parsing initialGeoJson", err);
+            }
+        }
+    }, [initialGeoJson]);
 
     // Cerrar pantalla completa con Escape
     useEffect(() => {

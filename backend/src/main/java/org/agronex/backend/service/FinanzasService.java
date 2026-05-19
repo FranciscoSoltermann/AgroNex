@@ -131,12 +131,15 @@ public class FinanzasService {
         
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuario);
         
-        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+        if (campania.getLote() == null || !campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés acceso a esta campaña");
         }
 
-        Lote lote = campania.getLote();
-        BigDecimal supHa = lote.getSuperficie() != null ? lote.getSuperficie() : BigDecimal.ZERO;
+        // Superficie total = suma de todos los lotes de la campaña
+        Lote primerLote = campania.getLote();
+        BigDecimal supHa = campania.getLotes().stream()
+                .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         List<Actividad> actividades = actividadRepository.findByCampaniaIdCampania(idCampania);
         BigDecimal costoServicios = BigDecimal.ZERO;
@@ -216,9 +219,9 @@ public class FinanzasService {
                 .idCampania(campania.getIdCampania())
                 .cultivo(campania.getCultivo())
                 .estado(campania.getEstado() != null ? campania.getEstado() : "ABIERTA")
-                .idLote(lote.getIdLote())
-                .nombreLote(lote.getNombre())
-                .nombreCampo(lote.getCampo() != null ? lote.getCampo().getNombre() : "")
+                .idLote(primerLote != null ? primerLote.getIdLote() : null)
+                .nombreLote(primerLote != null ? primerLote.getNombre() : "")
+                .nombreCampo(primerLote != null && primerLote.getCampo() != null ? primerLote.getCampo().getNombre() : "")
                 .superficieLoteHa(supHa)
                 .fechaInicio(campania.getFechaInicio())
                 .fechaFin(campania.getFechaFin())

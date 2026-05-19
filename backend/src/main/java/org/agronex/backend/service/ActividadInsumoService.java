@@ -30,7 +30,7 @@ public class ActividadInsumoService {
         Actividad actividad = actividadRepository.findById(request.getIdActividad())
                 .orElseThrow(() -> new EntityNotFoundException("Actividad no encontrada"));
 
-        if (!actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        if (actividad.getCampania().getLote() == null || !actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
             throw new AccessDeniedException("No tienes permiso para modificar esta actividad");
         }
 

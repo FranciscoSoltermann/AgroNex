@@ -1,39 +1,66 @@
 package org.agronex.backend.mapper;
 
-import org.agronex.backend.dto.request.CampaniaRequest;
+import org.agronex.backend.dto.response.CampaniaLoteResponse;
 import org.agronex.backend.dto.response.CampaniaResponse;
 import org.agronex.backend.entity.Campania;
+import org.agronex.backend.entity.CampaniaLote;
 import org.agronex.backend.entity.Lote;
 import org.springframework.stereotype.Component;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class CampaniaMapper {
 
-    public Campania toEntity(CampaniaRequest request, Lote lote) {
-        if (request == null) return null;
-        return Campania.builder()
-                .cultivo(request.getCultivo())
-                .fechaInicio(request.getFechaInicio())
-                .fechaFin(request.getFechaFin())
-                .estado("ABIERTA")
-                .lote(lote)
+    public CampaniaLoteResponse toCampaniaLoteResponse(CampaniaLote cl) {
+        if (cl == null) return null;
+        Lote lote = cl.getLote();
+        return CampaniaLoteResponse.builder()
+                .idCampaniaLote(cl.getIdCampaniaLote())
+                .idLote(lote != null ? lote.getIdLote() : null)
+                .nombreLote(lote != null ? lote.getNombre() : "General")
+                .idCampo(lote != null && lote.getCampo() != null ? lote.getCampo().getIdCampo() : null)
+                .nombreCampo(lote != null && lote.getCampo() != null ? lote.getCampo().getNombre() : "Estancia Base")
+                .superficieHa(lote != null ? lote.getSuperficie() : null)
+                .fechaInicioLote(cl.getFechaInicioLote())
+                .fechaInicioEfectiva(cl.getFechaInicioEfectiva())
                 .build();
     }
 
     public CampaniaResponse toResponse(Campania campania) {
         if (campania == null) return null;
+
+        // Mapear todos los lotes asignados
+        List<CampaniaLoteResponse> lotesResp = campania.getCampaniaLotes() == null
+                ? Collections.emptyList()
+                : campania.getCampaniaLotes().stream()
+                        .map(this::toCampaniaLoteResponse)
+                        .collect(Collectors.toList());
+
+        // Para compatibilidad: datos del primer lote
+        Lote primerLote = campania.getLote(); // helper que devuelve el primer lote
+
         return CampaniaResponse.builder()
                 .idCampania(campania.getIdCampania())
                 .cultivo(campania.getCultivo())
-                .fechaInicio(campania.getFechaInicio() != null ? campania.getFechaInicio().atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null)
-                .fechaFin(campania.getFechaFin() != null ? campania.getFechaFin().atStartOfDay().atOffset(java.time.ZoneOffset.UTC) : null)
-                .idLote(campania.getLote() != null ? campania.getLote().getIdLote() : null)
-                .idCampo(campania.getLote() != null && campania.getLote().getCampo() != null
-                        ? campania.getLote().getCampo().getIdCampo() : null)
-                .nombreLote(campania.getLote() != null ? campania.getLote().getNombre() : "General")
-                .nombreCampo(campania.getLote() != null && campania.getLote().getCampo() != null ? campania.getLote().getCampo().getNombre() : "Estancia Base")
-                .superficieLoteHa(campania.getLote() != null ? campania.getLote().getSuperficie() : null)
+                .fechaInicio(campania.getFechaInicio() != null
+                        ? campania.getFechaInicio().atStartOfDay().atOffset(java.time.ZoneOffset.UTC)
+                        : null)
+                .fechaFin(campania.getFechaFin() != null
+                        ? campania.getFechaFin().atStartOfDay().atOffset(java.time.ZoneOffset.UTC)
+                        : null)
                 .estado(campania.getEstado() != null ? campania.getEstado() : "ABIERTA")
+                .lotes(lotesResp)
+                // Compat: primer lote
+                .idLote(primerLote != null ? primerLote.getIdLote() : null)
+                .idCampo(primerLote != null && primerLote.getCampo() != null
+                        ? primerLote.getCampo().getIdCampo() : null)
+                .nombreLote(primerLote != null ? primerLote.getNombre() : "General")
+                .nombreCampo(primerLote != null && primerLote.getCampo() != null
+                        ? primerLote.getCampo().getNombre() : "Estancia Base")
+                .superficieLoteHa(primerLote != null ? primerLote.getSuperficie() : null)
                 .build();
     }
 }

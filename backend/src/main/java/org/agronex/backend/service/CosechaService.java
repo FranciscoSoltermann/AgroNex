@@ -42,7 +42,7 @@ public class CosechaService {
 
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
 
-        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+        if (campania.getLote() == null || !campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tienes permiso sobre esta campaña");
         }
 

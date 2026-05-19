@@ -64,6 +64,7 @@ export default function CamposPage() {
     const [formLote, setFormLote] = useState({ nombre: "", superficie: "", coordenadasGeoJson: "" });
     const [loteInitialCenter, setLoteInitialCenter] = useState(null);
     const [resolvingCenter, setResolvingCenter] = useState(false);
+    const [editingLoteGeoId, setEditingLoteGeoId] = useState(null);
 
     const resolveCampoCenter = useCallback(async (campo) => {
         if (!campo) return null;
@@ -188,15 +189,24 @@ export default function CamposPage() {
         setSubmitLoading(true);
         setSubmitError(null);
         try {
-            await apiClient.post("/lotes", {
+            const payload = {
                 nombre: formLote.nombre,
                 superficie: parseFloat(formLote.superficie),
                 idCampo: campoSeleccionado.idCampo,
                 coordenadasGeoJson: formLote.coordenadasGeoJson || undefined
-            });
-            setSubmitSuccess("¡Lote creado con éxito!");
-            toast.success("¡Lote creado con éxito!");
+            };
+
+            if (editingLoteGeoId) {
+                await apiClient.put(`/lotes/${editingLoteGeoId}`, payload);
+                setSubmitSuccess("¡Mapeo del lote actualizado!");
+                toast.success("¡Mapeo actualizado!");
+            } else {
+                await apiClient.post("/lotes", payload);
+                setSubmitSuccess("¡Lote creado con éxito!");
+                toast.success("¡Lote creado con éxito!");
+            }
             setFormLote({ nombre: "", superficie: "1", coordenadasGeoJson: "" });
+            setEditingLoteGeoId(null);
             invalidateDashboardBootstrapCache();
             await fetchData(userId, { forceRefresh: true });
             setTimeout(() => { setShowModalLote(false); setSubmitSuccess(null); }, 800);
@@ -205,7 +215,7 @@ export default function CamposPage() {
             if (status === 401 || status === 403) {
                 setSubmitError("Tu sesión venció o no es válida. Volvé a iniciar sesión.");
             } else {
-                setSubmitError(err.response?.data?.message || "Error al crear el lote.");
+                setSubmitError(err.response?.data?.error || err.response?.data?.message || "Error al guardar el lote.");
             }
         } finally {
             setSubmitLoading(false);
@@ -255,7 +265,7 @@ export default function CamposPage() {
             setLotesGestion(prev => prev.filter(l => l.idLote !== lote.idLote));
             await fetchData(userId, { forceRefresh: true });
         } catch (err) {
-            toast.error(err.response?.data?.message || "Error al eliminar el lote.");
+            toast.error(err.response?.data?.error || err.response?.data?.message || "Error al eliminar el lote.");
         }
     };
 
@@ -274,7 +284,13 @@ export default function CamposPage() {
             setEditingLote(null);
             await fetchData(userId, { forceRefresh: true });
         } catch (err) {
-            toast.error(err.response?.data?.message || "Error al actualizar.");
+            let errMsg = err.response?.data?.error || err.response?.data?.message || "Error al actualizar.";
+            if (err.response?.data && typeof err.response.data === 'object' && !err.response.data.error && !err.response.data.message) {
+                // If it's a validation map
+                const values = Object.values(err.response.data);
+                if (values.length > 0 && typeof values[0] === 'string') errMsg = values[0];
+            }
+            toast.error(errMsg);
         } finally { setEditLoteLoading(false); }
     };
 
@@ -451,20 +467,21 @@ export default function CamposPage() {
                 </Modal>
             )}
 
-            {/* Modal: Nuevo Lote */}
+            {/* Modal: Nuevo Lote / Editar Lote Mapeo */}
             {showModalLote && campoSeleccionado && (
-                <Modal titulo="Agregar Lote" onClose={() => setShowModalLote(false)}>
+                <Modal titulo={editingLoteGeoId ? "Editar Mapeo del Lote" : "Agregar Lote"} onClose={() => { setShowModalLote(false); setEditingLoteGeoId(null); }}>
                     <p className="text-[12px] text-gray-500 mb-4">Campo: <strong>{campoSeleccionado.nombre}</strong></p>
                     <form onSubmit={handleCrearLote} className="space-y-4">
                         <FormField label="Nombre del lote" required>
                             <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
                         </FormField>
 
-                        {!formLote.coordenadasGeoJson && (
+                        {(!formLote.coordenadasGeoJson || editingLoteGeoId) ? (
                             <FormField label="Dibujá el lote en el mapa">
                                 <LoteDrawer
-                                    key={`${campoSeleccionado?.idCampo}-map`}
+                                    key={`${campoSeleccionado?.idCampo}-map-${editingLoteGeoId || 'new'}`}
                                     initialCenter={loteInitialCenter}
+                                    initialGeoJson={editingLoteGeoId ? formLote.coordenadasGeoJson : null}
                                     onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
                                         setFormLote(p => ({
                                             ...p,
@@ -474,11 +491,10 @@ export default function CamposPage() {
                                     }}
                                 />
                             </FormField>
-                        )}
-
-                        {formLote.coordenadasGeoJson && (
-                            <div className="bg-green-50 text-green-700 text-xs font-bold p-3 rounded-lg border border-green-200">
-                                ✓ Lote delimitado correctamente en el mapa.
+                        ) : (
+                            <div className="bg-green-50 text-green-700 text-xs font-bold p-3 rounded-lg border border-green-200 flex justify-between items-center">
+                                <span>✓ Lote delimitado correctamente en el mapa.</span>
+                                <button type="button" onClick={() => setFormLote(p => ({ ...p, coordenadasGeoJson: "" }))} className="text-green-800 underline hover:text-green-900 transition-colors">Volver a dibujar</button>
                             </div>
                         )}
 
@@ -591,7 +607,8 @@ export default function CamposPage() {
                                                         setResolvingCenter(false);
                                                         setLoteInitialCenter(center || [-34.6, -63.5]);
                                                         setCampoSeleccionado(showGestionLotes);
-                                                        setFormLote({ nombre: lote.nombre, superficie: String(lote.superficie), coordenadasGeoJson: "" });
+                                                        setFormLote({ nombre: lote.nombre, superficie: String(lote.superficie), coordenadasGeoJson: lote.coordenadasGeoJson || "" });
+                                                        setEditingLoteGeoId(lote.idLote);
                                                         setShowGestionLotes(null);
                                                         setShowModalLote(true);
                                                     });

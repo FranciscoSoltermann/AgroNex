@@ -46,16 +46,14 @@ public class Lote extends Auditable {
     @Builder.Default
     @JsonIgnore
     @OneToMany(mappedBy = "lote", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<Campania> campanias = new ArrayList<>();
+    private List<CampaniaLote> campaniaLotes = new ArrayList<>();
 
     // --- Helpers ---
-    public void addCampania(Campania campania) {
-        campanias.add(campania);
-        campania.setLote(this);
-    }
-
-    public void removeCampania(Campania campania) {
-        campanias.remove(campania);
-        campania.setLote(null);
+    /** Retorna las campañas asociadas a este lote. */
+    public List<Campania> getCampanias() {
+        if (campaniaLotes == null) return new ArrayList<>();
+        return campaniaLotes.stream()
+                .map(CampaniaLote::getCampania)
+                .toList();
     }
 }

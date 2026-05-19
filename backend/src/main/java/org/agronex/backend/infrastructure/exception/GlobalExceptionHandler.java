@@ -35,7 +35,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         log.error("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
         Map<String, String> error = new HashMap<>();
-        error.put("error", "Error al guardar: Es posible que el registro ya exista o los datos sean inválidos.");
+        error.put("error", "DataIntegrityViolationException: " + ex.getMostSpecificCause().getMessage());
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 

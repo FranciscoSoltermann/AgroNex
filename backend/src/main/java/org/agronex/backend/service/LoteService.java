@@ -132,4 +132,52 @@ public class LoteService {
 
         return loteMapper.toResponse(guardado);
     }
+
+    @Transactional
+    public LoteResponse actualizarLote(UUID idLote, LoteRequest request, UUID idUsuarioToken) {
+        Lote lote = loteRepository.findById(idLote)
+                .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tenés permiso para modificar este lote");
+        }
+
+        Campo campo = lote.getCampo();
+        java.math.BigDecimal superficieOtros = campo.getLotes().stream()
+                .filter(l -> !l.getIdLote().equals(idLote))
+                .map(Lote::getSuperficie)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+        if (superficieOtros.add(request.getSuperficie()).compareTo(campo.getSuperficieTotal()) > 0) {
+            // Permitir si al menos estamos reduciendo o manteniendo la superficie original del lote
+            if (request.getSuperficie().compareTo(lote.getSuperficie()) > 0) {
+                java.math.BigDecimal disponible = campo.getSuperficieTotal().subtract(superficieOtros);
+                if (disponible.compareTo(java.math.BigDecimal.ZERO) < 0) disponible = java.math.BigDecimal.ZERO;
+                throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Superficie excede el límite del campo. Disponible: " + disponible + " Ha");
+            }
+        }
+
+        lote.setNombre(request.getNombre());
+        lote.setSuperficie(request.getSuperficie());
+
+        if (request.getCoordenadasGeoJson() != null && !request.getCoordenadasGeoJson().isBlank() && !request.getCoordenadasGeoJson().equals(lote.getCoordenadasGeoJson())) {
+            lote.setCoordenadasGeoJson(request.getCoordenadasGeoJson());
+            String polyId = agromonitoringService.registrarPoligono(lote.getNombre(), request.getCoordenadasGeoJson());
+            if (polyId != null) {
+                lote.setIdPoligonoAgro(polyId);
+            }
+        }
+
+        Lote guardado = loteRepository.save(lote);
+
+        auditService.registrar(
+                idUsuarioToken, null,
+                EntidadAudit.LOTE, idLote.toString(),
+                guardado.getNombre(), AccionAudit.ACTUALIZAR,
+                "Lote actualizado"
+        );
+
+        return loteMapper.toResponse(guardado);
+    }
 }

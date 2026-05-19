@@ -34,6 +34,17 @@ public class CampaniaController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @PutMapping("/{idCampania}")
+    public ResponseEntity<CampaniaResponse> editarCampania(
+            @PathVariable UUID idCampania,
+            @Valid @RequestBody CampaniaRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        CampaniaResponse response = campaniaService.editarCampania(idCampania, request, idUsuario);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     public ResponseEntity<List<CampaniaResponse>> listarMisCampanias(@AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));

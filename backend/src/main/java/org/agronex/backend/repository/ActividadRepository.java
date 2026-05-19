@@ -12,7 +12,13 @@ import java.util.UUID;
 @Repository
 public interface ActividadRepository extends JpaRepository<Actividad, UUID> {
     List<Actividad> findByCampaniaIdCampania(UUID idCampania);
-    List<Actividad> findByCampaniaLoteCampoUsuarioIdUsuario(UUID idUsuario);
+
+    /** Actividades del usuario, navegando: Actividad → Campaña → CampaniaLote → Lote → Campo → Usuario. */
+    @Query("SELECT DISTINCT a FROM Actividad a " +
+           "JOIN a.campania c " +
+           "JOIN c.campaniaLotes cl " +
+           "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
+    List<Actividad> findByCampaniaLoteCampoUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario);
 
     @Modifying
     @Query("DELETE FROM Actividad a WHERE a.campania.idCampania = :idCampania")

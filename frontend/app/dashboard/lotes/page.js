@@ -57,7 +57,9 @@ export default function CiclosPage() {
     const [submitSuccess, setSubmitSuccess] = useState(null);
 
     const [showModalCampania, setShowModalCampania] = useState(false);
-    const [formCampania, setFormCampania] = useState({ cultivo: "", fechaInicio: "", fechaFin: "", idLote: "" });
+    const [formCampania, setFormCampania] = useState({ cultivo: "", fechaInicio: "", fechaFin: "", lotes: [] });
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [campaniaIdToEdit, setCampaniaIdToEdit] = useState(null);
     const [campLoading, setCampLoading] = useState(false);
     const [campError, setCampError] = useState(null);
     const [campSuccess, setCampSuccess] = useState(null);
@@ -187,6 +189,29 @@ export default function CiclosPage() {
         }
     };
 
+    const handleOpenModalCampania = (campaniaEdit = null) => {
+        if (campaniaEdit) {
+            setIsEditMode(true);
+            setCampaniaIdToEdit(campaniaEdit.idCampania);
+            setFormCampania({
+                cultivo: campaniaEdit.cultivo,
+                fechaInicio: campaniaEdit.fechaInicio ? campaniaEdit.fechaInicio.slice(0, 10) : "",
+                fechaFin: campaniaEdit.fechaFin ? campaniaEdit.fechaFin.slice(0, 10) : "",
+                lotes: campaniaEdit.lotes?.map(l => ({ idLote: l.idLote, fechaInicioLote: l.fechaInicioLote ? l.fechaInicioLote.slice(0,10) : "" })) || []
+            });
+        } else {
+            setIsEditMode(false);
+            setCampaniaIdToEdit(null);
+            setFormCampania({
+                cultivo: "",
+                fechaInicio: new Date().toISOString().split("T")[0],
+                fechaFin: "",
+                lotes: idLoteSeleccionado ? [{ idLote: idLoteSeleccionado, fechaInicioLote: "" }] : []
+            });
+        }
+        setShowModalCampania(true);
+    };
+
     const handleEliminarActividad = async (idActividad) => {
         setConfirmModal({
             isOpen: true,
@@ -226,30 +251,46 @@ export default function CiclosPage() {
 
     const handleCrearCampania = async (e) => {
         e.preventDefault();
+        if (formCampania.lotes.length === 0) {
+            setCampError("Debes seleccionar al menos un lote.");
+            return;
+        }
         setCampLoading(true);
         setCampError(null);
         try {
-            const res = await apiClient.post("/campanias", {
+            const payload = {
                 cultivo: formCampania.cultivo,
                 fechaInicio: formCampania.fechaInicio,
                 fechaFin: formCampania.fechaFin || null,
-                idLote: formCampania.idLote,
-            });
-            setCampanias((prev) => [res.data, ...prev]);
-            setIdLoteSeleccionado(formCampania.idLote);
-            setIdCampaniaActiva(res.data.idCampania);
-            setFormAct((p) => ({ ...p, idCampania: res.data.idCampania }));
-            setCampSuccess("Campaña creada.");
-            toast.success("¡Campaña iniciada!");
+                lotes: formCampania.lotes.map(l => ({
+                    idLote: l.idLote,
+                    fechaInicioLote: l.fechaInicioLote || null
+                })),
+            };
+
+            let res;
+            if (isEditMode) {
+                res = await apiClient.put(`/campanias/${campaniaIdToEdit}`, payload);
+                setCampanias(prev => prev.map(c => c.idCampania === campaniaIdToEdit ? res.data : c));
+                setCampSuccess("Campaña actualizada.");
+                toast.success("¡Campaña actualizada!");
+            } else {
+                res = await apiClient.post("/campanias", payload);
+                setCampanias((prev) => [res.data, ...prev]);
+                setIdCampaniaActiva(res.data.idCampania);
+                setFormAct((p) => ({ ...p, idCampania: res.data.idCampania }));
+                setCampSuccess("Campaña creada.");
+                toast.success("¡Campaña iniciada!");
+            }
+            
             invalidateDashboardBootstrapCache();
-            setFormCampania({ cultivo: "", fechaInicio: "", fechaFin: "", idLote: "" });
             setTimeout(() => {
                 setShowModalCampania(false);
                 setCampSuccess(null);
             }, 800);
         } catch (err) {
             const d = err.response?.data;
-            setCampError(d?.error || d?.message || "Error al crear la campaña.");
+            setCampError(d?.error || d?.message || (isEditMode ? "Error al actualizar." : "Error al crear la campaña."));
         } finally {
             setCampLoading(false);
         }
@@ -378,13 +419,22 @@ export default function CiclosPage() {
                             Campaña en este lote
                         </label>
                         {idCampaniaActiva && (
-                            <button
-                                onClick={() => handleEliminarCampania(idCampaniaActiva)}
-                                className="text-[10px] text-red-400 hover:text-red-500 font-bold flex items-center gap-1 transition-colors"
-                                title="Eliminar campaña"
-                            >
-                                <Trash2 size={10} /> Eliminar
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => handleOpenModalCampania(campanias.find(c => c.idCampania === idCampaniaActiva))}
+                                    className="text-[10px] text-blue-400 hover:text-blue-500 font-bold flex items-center gap-1 transition-colors"
+                                    title="Editar campaña"
+                                >
+                                    <ClipboardList size={10} /> Editar
+                                </button>
+                                <button
+                                    onClick={() => handleEliminarCampania(idCampaniaActiva)}
+                                    className="text-[10px] text-red-400 hover:text-red-500 font-bold flex items-center gap-1 transition-colors"
+                                    title="Eliminar campaña"
+                                >
+                                    <Trash2 size={10} /> Eliminar
+                                </button>
+                            </div>
                         )}
                     </div>
                     <select
@@ -426,7 +476,7 @@ export default function CiclosPage() {
                     <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Progreso del ciclo</h2>
                     <button
                         type="button"
-                        onClick={() => setShowModalCampania(true)}
+                        onClick={() => handleOpenModalCampania()}
                         className="flex w-full sm:w-auto items-center justify-center gap-2 bg-[#2D6A4F] text-white px-4 py-3 sm:py-2.5 rounded-xl text-[10px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/5 min-h-11 shrink-0"
                     >
                         <Plus size={14} /> Nueva campaña
@@ -574,7 +624,7 @@ export default function CiclosPage() {
                 <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
                     <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[min(92dvh,92vh)] overflow-y-auto p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="font-black text-[16px] text-gray-900 dark:text-gray-100">Nueva campaña</h3>
+                            <h3 className="font-black text-[16px] text-gray-900 dark:text-gray-100">{isEditMode ? "Editar campaña" : "Nueva campaña"}</h3>
                             <button
                                 type="button"
                                 onClick={() => setShowModalCampania(false)}
@@ -594,24 +644,52 @@ export default function CiclosPage() {
                                     placeholder="ej. Soja, Maíz…"
                                 />
                             </FormField>
-                            <FormField label="Lote" required>
-                                <select
-                                    required
-                                    value={formCampania.idLote}
-                                    onChange={(e) => setFormCampania((p) => ({ ...p, idLote: e.target.value }))}
-                                    className={INPUT_CLASS}
-                                >
-                                    <option value="" disabled>
-                                        Elegí un lote
-                                    </option>
-                                    {lotes
-                                        .filter(lote => !campanias.some(c => c.idLote === lote.idLote && c.estado === "ABIERTA"))
-                                        .map((lote) => (
-                                        <option key={lote.idLote} value={lote.idLote}>
-                                            {lote.nombre} ({lote.superficie} Ha) — {lote.nombreCampo}
-                                        </option>
-                                    ))}
-                                </select>
+                            <FormField label="Lotes asignados" required>
+                                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-2 bg-gray-50 dark:bg-[#15191e] dark:border-gray-800">
+                                    {lotes.map(lote => {
+                                        const selectedLote = formCampania.lotes.find(l => l.idLote === lote.idLote);
+                                        const isSelected = !!selectedLote;
+                                        return (
+                                            <div key={lote.idLote} className="flex flex-col gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`lote-${lote.idLote}`}
+                                                        checked={isSelected}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setFormCampania(p => ({ ...p, lotes: [...p.lotes, { idLote: lote.idLote, fechaInicioLote: "" }] }));
+                                                            } else {
+                                                                setFormCampania(p => ({ ...p, lotes: p.lotes.filter(l => l.idLote !== lote.idLote) }));
+                                                            }
+                                                        }}
+                                                        className="w-4 h-4 text-[#2D6A4F] rounded border-gray-300 focus:ring-[#2D6A4F]"
+                                                    />
+                                                    <label htmlFor={`lote-${lote.idLote}`} className="text-[12px] font-semibold cursor-pointer text-gray-800 dark:text-gray-200 select-none">
+                                                        {lote.nombre} ({lote.superficie} Ha) <span className="text-gray-400 font-normal">— {lote.nombreCampo}</span>
+                                                    </label>
+                                                </div>
+                                                {isSelected && (
+                                                    <div className="pl-6 pt-1 flex items-center gap-2">
+                                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Inicio (opcional):</span>
+                                                        <input 
+                                                            type="date"
+                                                            value={selectedLote.fechaInicioLote}
+                                                            onChange={(e) => {
+                                                                const newDate = e.target.value;
+                                                                setFormCampania(p => ({
+                                                                    ...p,
+                                                                    lotes: p.lotes.map(l => l.idLote === lote.idLote ? { ...l, fechaInicioLote: newDate } : l)
+                                                                }));
+                                                            }}
+                                                            className="text-[11px] px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:border-[#2D6A4F] bg-white"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </FormField>
                             <div className="grid grid-cols-2 gap-3">
                                 <FormField label="Inicio" required>
@@ -650,7 +728,7 @@ export default function CiclosPage() {
                                 className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#1B4332] transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg"
                             >
                                 {campLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                                Crear campaña
+                                {isEditMode ? "Guardar cambios" : "Crear campaña"}
                             </button>
                         </form>
                     </div>

@@ -12,7 +12,13 @@ import java.util.UUID;
 @Repository
 public interface CosechaRepository extends JpaRepository<Cosecha, UUID> {
     List<Cosecha> findByCampaniaIdCampania(UUID idCampania);
-    List<Cosecha> findByCampaniaLoteCampoUsuarioIdUsuario(UUID idUsuario);
+
+    /** Cosechas del usuario, navegando: Cosecha → Campaña → CampaniaLote → Lote → Campo → Usuario. */
+    @Query("SELECT DISTINCT co FROM Cosecha co " +
+           "JOIN co.campania c " +
+           "JOIN c.campaniaLotes cl " +
+           "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
+    List<Cosecha> findByCampaniaLoteCampoUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario);
 
     // Elimina físicamente (bypass del soft-delete @SQLDelete) para cascada al borrar campaña
     @Modifying

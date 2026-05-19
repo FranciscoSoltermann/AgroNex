@@ -41,12 +41,14 @@ public class ActividadService {
 
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
 
-        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+        if (campania.getLote() == null || !campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tienes permiso para agregar actividades a esta campaña");
         }
 
         if (request.getHectareasTratadas() != null) {
-            BigDecimal sup = campania.getLote().getSuperficie();
+            BigDecimal sup = campania.getLotes().stream()
+                    .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             if (request.getHectareasTratadas().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("Las hectáreas tratadas deben ser mayores a cero");
             }
@@ -59,8 +61,11 @@ public class ActividadService {
         Actividad guardada = actividadRepository.save(nuevaActividad);
 
         if (request.getInsumos() != null && !request.getInsumos().isEmpty()) {
+            BigDecimal supTotal = campania.getLotes().stream()
+                    .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             List<ActividadInsumo> vinculos = new ArrayList<>();
-            BigDecimal superficieBase = request.getHectareasTratadas() != null ? request.getHectareasTratadas() : campania.getLote().getSuperficie();
+            BigDecimal superficieBase = request.getHectareasTratadas() != null ? request.getHectareasTratadas() : supTotal;
 
             for (DetalleInsumoRequest detalle : request.getInsumos()) {
                 Insumo insumo = insumoRepository.findById(detalle.getIdInsumo())
@@ -135,7 +140,7 @@ public class ActividadService {
 
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
 
-        if (!actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+        if (actividad.getCampania().getLote() == null || !actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para eliminar esta actividad");
         }
 

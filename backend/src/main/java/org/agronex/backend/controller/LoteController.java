@@ -46,6 +46,16 @@ public class LoteController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{idLote}")
+    public ResponseEntity<LoteResponse> actualizarLote(
+            @PathVariable UUID idLote,
+            @Valid @RequestBody LoteRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        LoteResponse response = loteService.actualizarLote(idLote, request, idUsuario);
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/{idLote}/poligono")
     public ResponseEntity<LoteResponse> actualizarPoligono(
             @PathVariable UUID idLote,

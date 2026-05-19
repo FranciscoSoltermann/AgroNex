@@ -107,8 +107,8 @@ public class CampoService {
         );
 
         // Borrar campañas asociadas
-        List<Campania> campanias = campaniaRepository.findByLoteCampoUsuarioIdUsuario(idUsuarioToken).stream()
-                .filter(c -> c.getLote().getCampo().getIdCampo().equals(idCampo))
+        List<Campania> campanias = campaniaRepository.findByUsuarioIdUsuario(idUsuarioToken).stream()
+                .filter(c -> c.getLotes().stream().anyMatch(l -> l.getCampo().getIdCampo().equals(idCampo)))
                 .collect(Collectors.toList());
 
         for (Campania c : campanias) {
