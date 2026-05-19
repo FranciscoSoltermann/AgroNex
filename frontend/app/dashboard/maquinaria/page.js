@@ -202,6 +202,15 @@ export default function MaquinariaPage() {
                     Case IH, New Holland, CLAAS y más marcas estarán disponibles en futuras actualizaciones.
                 </p>
             </div>
+
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal({ isOpen: false, title: "", message: "", onConfirm: null })}
+                confirmText="Desconectar"
+            />
         </div>
     );
 }
@@ -805,15 +814,6 @@ function JohnDeereEquipos() {
                     </div>
                 </div>
             )}
-            
-            <ConfirmModal
-                isOpen={confirmModal.isOpen}
-                title={confirmModal.title}
-                message={confirmModal.message}
-                onConfirm={confirmModal.onConfirm}
-                onCancel={() => setConfirmModal({ isOpen: false, title: "", message: "", onConfirm: null })}
-                confirmText="Desconectar"
-            />
         </div>
     );
 }

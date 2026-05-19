@@ -8,6 +8,19 @@ import {
     Sprout, Droplets, ChevronRight, AlertTriangle, PieChart,
     FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers, Package
 } from "lucide-react";
+import dynamic from "next/dynamic";
+
+const CotizacionesBCR = dynamic(() => import("@/components/features/dashboard/CotizacionesBCR"), {
+    ssr: false,
+    loading: () => (
+        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 animate-pulse">
+            <div className="h-5 w-56 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                {[...Array(6)].map((_, i) => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl" />)}
+            </div>
+        </div>
+    )
+});
 
 const UNIDAD_LABEL = { UNIDADES: "und", LITROS: "L", KILOGRAMOS: "kg", TONELADAS: "tn" };
 const getUnidadLabel = (u) => UNIDAD_LABEL[u] ?? "und";
@@ -216,13 +229,13 @@ export default function DashboardHome() {
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 
     return (
-        <div className="flex flex-col gap-4 animate-in fade-in duration-500 h-full min-h-0">
+        <div className="flex flex-col gap-2 animate-in fade-in duration-500 h-full min-h-0 overflow-hidden">
             {/* Stats — 3 cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 flex-shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
                 <StatCard
                     label="Total Ha"
                     value={Number(stats.hectareasTotales).toLocaleString("es-AR", { maximumFractionDigits: 1 }) || "0"}
-                    icon={<TrendingUp size={18} className="text-green-600" />}
+                    icon={<TrendingUp size={14} className="text-green-600" />}
                     iconBg="bg-green-50"
                 />
                 <StatCard
@@ -230,7 +243,7 @@ export default function DashboardHome() {
                     value={stats.camposActivos || 0}
                     sub={stats.camposActivos === 1 ? "1 campo activo" : stats.camposActivos > 0 ? `${stats.camposActivos} campos activos` : "Sin campos registrados"}
                     subColor="text-gray-400"
-                    icon={<Grid2x2 size={18} className="text-indigo-600" />}
+                    icon={<Grid2x2 size={14} className="text-indigo-600" />}
                     iconBg="bg-indigo-50"
                 />
                 <StatCard
@@ -238,17 +251,17 @@ export default function DashboardHome() {
                     value={stats.ciclosActivos || 0}
                     sub={stats.ciclosActivos === 1 ? "1 campaña en curso" : stats.ciclosActivos > 0 ? `${stats.ciclosActivos} campañas en curso` : "Sin ciclos activos"}
                     subColor="text-teal-600"
-                    icon={<RefreshCw size={18} className="text-teal-600" />}
+                    icon={<RefreshCw size={14} className="text-teal-600" />}
                     iconBg="bg-teal-50"
                 />
             </div>
 
             {/* Alertas de Inventario + Gastos por Categoría + Actividades Recientes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 flex-1 min-h-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 flex-[1.5] min-h-0 overflow-hidden">
                 {/* Alertas de Inventario */}
                 {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_INVENTARIO")) && (
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
-                    <div className="flex items-center justify-between mb-4">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden">
+                    <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                             <div className="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
                                 <AlertTriangle size={16} className="text-orange-500" />
@@ -300,8 +313,8 @@ export default function DashboardHome() {
 
                 {/* Gastos por Categoría — Pie Chart */}
                 {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
-                    <div className="flex items-center gap-2 mb-4">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden">
+                    <div className="flex items-center gap-2 mb-3">
                         <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
                             <PieChart size={16} className="text-violet-500" />
                         </div>
@@ -334,9 +347,9 @@ export default function DashboardHome() {
                 )}
 
                 {/* Actividades Recientes */}
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col">
-                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-4">Actividades Recientes</h3>
-                    <div className="flex-1 flex flex-col space-y-3">
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden">
+                    <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-3">Actividades Recientes</h3>
+                    <div className="flex-1 flex flex-col space-y-2.5 overflow-hidden">
                         {actividades.length === 0 ? (
                             <p className="flex-1 flex items-center justify-center text-gray-400 text-xs">No hay actividades recientes.</p>
                         ) : actividades.slice(0, 5).map((act, i) => {
@@ -363,37 +376,42 @@ export default function DashboardHome() {
 
             {/* Crecimiento: Costos vs Cosechas — Full width */}
             {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-800">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-1">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex-[1.5] min-h-0 flex flex-col overflow-hidden">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-1">
                     <div className="min-w-0">
                         <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Crecimiento: Costos vs Cosechas</h3>
                         <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Análisis comparativo por quintal</p>
                     </div>
                     <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5 shrink-0 self-start">
                         {["Semanal", "Mensual"].map(mode => (
-                            <button key={mode} type="button" onClick={() => setChartMode(mode)} className={`px-3 py-2 sm:py-1 rounded-md text-[10px] font-bold uppercase tracking-wide transition-all min-h-10 sm:min-h-0 ${chartMode === mode ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}>{mode}</button>
+                            <button key={mode} type="button" onClick={() => setChartMode(mode)} className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wide transition-all ${chartMode === mode ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}>{mode}</button>
                         ))}
                     </div>
                 </div>
-                <div className="mt-4 sm:mt-6 overflow-x-auto">
-                    <div className="min-w-[280px] flex items-end justify-between gap-3 h-32 sm:h-40">
+                <div className="mt-1 flex-1 min-h-0 flex flex-col overflow-x-auto overflow-y-hidden">
+                    <div className="min-w-[280px] flex justify-between gap-3 flex-1 min-h-0 h-full">
                         {dynChartData.map((d, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                                <div className="w-full flex gap-1 items-end" style={{ height: "120px" }}>
-                                    <div className="flex-1 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${(d.costos / Math.max(1, dynMaxVal)) * 120}px` }} title={`$${d.costos.toFixed(2)}`} />
-                                    <div className="flex-1 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${(d.cosecha / Math.max(1, dynMaxVal)) * 120}px` }} title={`Rend.: ${d.cosecha}`} />
+                            <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
+                                <div className="w-full flex-1 flex items-end gap-1 min-h-0">
+                                    <div className="w-1/2 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.costos / Math.max(1, dynMaxVal)) * 100)}%` }} title={`$${d.costos.toFixed(2)}`} />
+                                    <div className="w-1/2 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.cosecha / Math.max(1, dynMaxVal)) * 100)}%` }} title={`Rend.: ${d.cosecha}`} />
                                 </div>
-                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">{d.mes}</span>
+                                <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">{d.mes}</span>
                             </div>
                         ))}
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-3 sm:gap-5 mt-3">
+                <div className="flex flex-wrap gap-3 sm:gap-5 mt-2">
                     <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C1DDD1] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Costos Acumulados</span></div>
                     <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Rendimiento de Cosecha (kg)</span></div>
                 </div>
             </div>
             )}
+
+            {/* Cotizaciones de Granos — BCR */}
+            <div className="flex-[1.5] min-h-0 flex flex-col">
+                <CotizacionesBCR />
+            </div>
 
         </div>
     );
@@ -440,13 +458,13 @@ function PieChartSVG({ data }) {
 
 function StatCard({ label, value, sub, subColor = "text-gray-400", icon, iconBg }) {
     return (
-        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-2 sm:mb-3">
-                <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-tight">{label}</p>
-                <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>{icon}</div>
+        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-3.5 shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between mb-1 sm:mb-1.5">
+                <p className="text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-tight">{label}</p>
+                <div className={`w-6 h-6 ${iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>{icon}</div>
             </div>
-            <p className="text-2xl sm:text-[28px] font-black text-gray-900 dark:text-gray-100 leading-none tracking-tight">{value}</p>
-            <div className={`text-[10px] font-semibold mt-1.5 ${subColor}`}>{sub}</div>
+            <p className="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-100 leading-none tracking-tight">{value}</p>
+            <div className={`text-[10px] font-semibold mt-1 ${subColor}`}>{sub}</div>
         </div>
     );
 }

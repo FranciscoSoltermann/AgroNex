@@ -286,8 +286,8 @@ export default function DashboardLayout({ children }) {
                 </header>
 
                 {/* Página: scroll + ancho máximo en pantallas muy anchas */}
-                <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain dark:bg-[#0f1419] pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:pt-3 sm:pb-4 lg:px-8 xl:px-10">
-                    <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto min-h-0">
+                <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain dark:bg-[#0f1419] pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:pt-2 sm:pb-2 lg:px-8 xl:px-10">
+                    <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto min-h-0 h-full">
                         {children}
                     </div>
                 </main>
