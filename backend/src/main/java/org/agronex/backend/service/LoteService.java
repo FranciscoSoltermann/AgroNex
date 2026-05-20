@@ -91,7 +91,8 @@ public class LoteService {
         Lote lote = loteRepository.findById(idLote)
                 .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
 
-        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para eliminar este lote");
         }
 
@@ -110,7 +111,9 @@ public class LoteService {
     public LoteResponse actualizarPoligono(UUID idLote, String coordenadasGeoJson, UUID idUsuarioToken) {
         Lote lote = loteRepository.findById(idLote)
                 .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
-        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para modificar este lote");
         }
         lote.setCoordenadasGeoJson(coordenadasGeoJson);

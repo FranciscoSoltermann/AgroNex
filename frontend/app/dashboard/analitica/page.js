@@ -57,8 +57,8 @@ export default function AnaliticaPage() {
     const getChartData = () => {
         let camps = campanias;
 
-        if (seleccionCampo) camps = camps.filter(c => c.idCampo === seleccionCampo);
-        if (seleccionLote) camps = camps.filter(c => c.idLote === seleccionLote);
+        if (seleccionCampo) camps = camps.filter(c => c.idCampo === seleccionCampo || c.lotes?.some(l => l.idCampo === seleccionCampo));
+        if (seleccionLote) camps = camps.filter(c => c.idLote === seleccionLote || c.lotes?.some(l => l.idLote === seleccionLote));
         if (seleccionCultivo) camps = camps.filter(c => c.cultivo === seleccionCultivo);
 
         const data = camps.map(c => {
@@ -66,10 +66,14 @@ export default function AnaliticaPage() {
             const anioInicio = new Date(c.fechaInicio).getFullYear().toString().slice(-2);
             const anioFin = c.fechaFin ? new Date(c.fechaFin).getFullYear().toString().slice(-2) : "Act";
 
+            const superficieTotalHa = c.lotes && c.lotes.length > 0
+                ? c.lotes.reduce((acc, curr) => acc + (Number(curr.superficieHa) || 0), 0)
+                : (Number(c.superficieLoteHa) || 0);
+
             let rindeHa = 0;
-            if (cosecha && cosecha.rendimientoTotalQq && c.superficieLoteHa) {
+            if (cosecha && cosecha.rendimientoTotalQq && superficieTotalHa > 0) {
                 // 1 Quintal = 0.1 Toneladas.
-                rindeHa = (cosecha.rendimientoTotalQq * 0.1) / c.superficieLoteHa;
+                rindeHa = (cosecha.rendimientoTotalQq * 0.1) / superficieTotalHa;
             }
 
             return {

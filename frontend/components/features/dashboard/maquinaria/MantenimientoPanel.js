@@ -80,7 +80,7 @@ export default function MantenimientoPanel() {
         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden mb-6">
             <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center text-orange-600 dark:text-orange-400">
+                    <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white shadow-md shadow-[#2D6A4F]/10">
                         <Wrench size={20} />
                     </div>
                     <div>

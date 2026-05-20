@@ -18,6 +18,18 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jose.proc.JWSKeySelector;
+import com.nimbusds.jose.proc.JWSVerificationKeySelector;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jwt.proc.DefaultJWTProcessor;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import java.util.Set;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -153,12 +165,18 @@ public class SecurityConfig {
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.toList());
 
+        // Para desarrollo local, agregamos también 127.0.0.1 de forma segura
+        String profiles = activeProfiles == null ? "" : activeProfiles.toLowerCase(Locale.ROOT);
+        boolean isProd = profiles.contains("prod") || profiles.contains("production");
+        if (!isProd) {
+            if (!origins.contains("http://127.0.0.1:3000")) origins.add("http://127.0.0.1:3000");
+            if (!origins.contains("http://127.0.0.1:3001")) origins.add("http://127.0.0.1:3001");
+        }
+
         if (origins.isEmpty()) {
             throw new IllegalStateException("CORS_ALLOWED_ORIGINS no puede estar vacío.");
         }
 
-        String profiles = activeProfiles == null ? "" : activeProfiles.toLowerCase(Locale.ROOT);
-        boolean isProd = profiles.contains("prod") || profiles.contains("production");
         if (isProd) {
             boolean invalidProdOrigin = origins.stream().anyMatch(origin ->
                     origin.contains("*") || origin.contains("localhost") || origin.startsWith("http://")
@@ -172,9 +190,8 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of(
-            "Authorization", "Content-Type", "X-Request-Id", "X-Signature"
-        ));
+        // VUL-CORS: Permitimos cualquier header en desarrollo y producción segura para evitar preflight blocks
+        config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("X-Total-Count", "Link"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L); // Cache preflight 1 hora
@@ -182,6 +199,23 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        try {
+            // JWK Set estático obtenido directamente de Supabase para evitar timeouts de red saliente
+            String jwkSetJson = "{\"keys\":[{\"alg\":\"ES256\",\"crv\":\"P-256\",\"ext\":true,\"key_ops\":[\"verify\"],\"kid\":\"af8da56c-0cd5-4109-841e-35de777acae2\",\"kty\":\"EC\",\"use\":\"sig\",\"x\":\"ZIcX5bHrnjqRPSz_Km-OaZA05REvA6hXUFFvX860b1w\",\"y\":\"vkuvP28i9Tvn3fjB7PjOtMCybZDKUJW7TKVkrDoNXW4\"}]}";
+            JWKSet jwkSet = JWKSet.parse(jwkSetJson);
+            JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(jwkSet);
+            DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
+            JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(
+                    Set.of(JWSAlgorithm.ES256), jwkSource);
+            jwtProcessor.setJWSKeySelector(keySelector);
+            return new NimbusJwtDecoder(jwtProcessor);
+        } catch (Exception e) {
+            throw new IllegalStateException("Error al inicializar JwtDecoder con JWK Set local", e);
+        }
     }
 }
 

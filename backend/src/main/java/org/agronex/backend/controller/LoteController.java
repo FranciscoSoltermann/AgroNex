@@ -28,6 +28,11 @@ public class LoteController {
     public ResponseEntity<LoteResponse> crearLote(
             @Valid @RequestBody LoteRequest request,
             @AuthenticationPrincipal Jwt jwt) {
+        if (request.getIdCampo() == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "El ID del campo es obligatorio"
+            );
+        }
 
         UUID idUsuario = UUID.fromString(jwt.getSubject());
         LoteResponse response = loteService.crearLote(request, idUsuario);

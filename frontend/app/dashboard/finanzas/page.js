@@ -57,7 +57,7 @@ export default function FinanzasPage() {
 
     const campaniasParaGasto = useMemo(() => {
         if (!formGasto.idCampo) return campanias;
-        return campanias.filter((c) => c.idCampo === formGasto.idCampo);
+        return campanias.filter((c) => c.idCampo === formGasto.idCampo || c.lotes?.some(l => l.idCampo === formGasto.idCampo));
     }, [formGasto.idCampo, campanias]);
 
     // Form cosecha
@@ -638,7 +638,7 @@ export default function FinanzasPage() {
                             disabled={!filtroCampoId}
                         >
                             <option value="">Todas las campañas</option>
-                            {campanias.filter(c => c.idCampo === filtroCampoId).map(c => (
+                            {campanias.filter(c => c.idCampo === filtroCampoId || c.lotes?.some(l => l.idCampo === filtroCampoId)).map(c => (
                                 <option key={c.idCampania} value={c.idCampania}>{c.cultivo} · {c.nombreLote}</option>
                             ))}
                         </select>

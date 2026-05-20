@@ -7,8 +7,58 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import * as turf from '@turf/turf';
 
+// Child component to load initial GeoJSON on map and fit map bounds
+function GeoJsonLoader({ initialGeoJson, featureGroup }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (initialGeoJson && featureGroup) {
+            try {
+                // Clear any existing layers
+                featureGroup.clearLayers();
+                
+                let parsed = initialGeoJson;
+                if (typeof parsed === 'string') {
+                    parsed = JSON.parse(parsed);
+                }
+                if (typeof parsed === 'string') {
+                    parsed = JSON.parse(parsed);
+                }
+
+                const geoJsonLayer = L.geoJSON(parsed, {
+                    style: {
+                        color: '#ffffff',
+                        fillColor: '#10b981',
+                        fillOpacity: 0.3,
+                        weight: 2
+                    }
+                });
+                
+                // Add layers from GeoJSON to FeatureGroup so they are editable
+                let hasLayers = false;
+                geoJsonLayer.eachLayer((layer) => {
+                    featureGroup.addLayer(layer);
+                    hasLayers = true;
+                });
+
+                // Fit bounds to show the polygon nicely
+                if (hasLayers) {
+                    const bounds = geoJsonLayer.getBounds();
+                    if (bounds.isValid()) {
+                        map.fitBounds(bounds, { padding: [20, 20] });
+                    }
+                }
+            } catch (err) {
+                console.error("Error parsing initialGeoJson", err);
+            }
+        }
+    }, [map, initialGeoJson, featureGroup]);
+
+    return null;
+}
+
 export default function LoteDrawer({ initialCenter, initialGeoJson, onDrawComplete }) {
-    const featureGroupRef = useRef(null);
+    const [featureGroup, setFeatureGroup] = useState(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
     const center = initialCenter || [-34.6, -63.5];
@@ -66,32 +116,6 @@ export default function LoteDrawer({ initialCenter, initialGeoJson, onDrawComple
         });
     }, []);
 
-    // Load initialGeoJson if provided
-    useEffect(() => {
-        if (initialGeoJson && featureGroupRef.current) {
-            try {
-                // Clear any existing layers
-                featureGroupRef.current.clearLayers();
-                const parsed = JSON.parse(initialGeoJson);
-                const geoJsonLayer = L.geoJSON(parsed, {
-                    style: {
-                        color: '#ffffff',
-                        fillColor: '#10b981',
-                        fillOpacity: 0.3,
-                        weight: 2
-                    }
-                });
-                
-                // Add layers from GeoJSON to FeatureGroup so they are editable
-                geoJsonLayer.eachLayer((layer) => {
-                    featureGroupRef.current.addLayer(layer);
-                });
-            } catch (err) {
-                console.error("Error parsing initialGeoJson", err);
-            }
-        }
-    }, [initialGeoJson]);
-
     // Cerrar pantalla completa con Escape
     useEffect(() => {
         const handleKey = (e) => {
@@ -106,14 +130,14 @@ export default function LoteDrawer({ initialCenter, initialGeoJson, onDrawComple
         if (layerType === 'polygon') {
             const geojson = layer.toGeoJSON();
             const areaInHectares = turf.area(geojson) / 10000;
-            if (featureGroupRef.current) {
-                const layers = featureGroupRef.current.getLayers();
-                if (layers.length > 1) featureGroupRef.current.removeLayer(layers[0]);
+            if (featureGroup) {
+                const layers = featureGroup.getLayers();
+                if (layers.length > 1) featureGroup.removeLayer(layers[0]);
             }
             onDrawComplete(JSON.stringify(geojson), areaInHectares.toFixed(2));
         } else if (layerType === 'marker') {
             const latlng = layer.getLatLng();
-            if (featureGroupRef.current) featureGroupRef.current.removeLayer(layer);
+            if (featureGroup) featureGroup.removeLayer(layer);
             onDrawComplete("MARKER", { lat: latlng.lat, lng: latlng.lng });
         }
     };
@@ -128,7 +152,7 @@ export default function LoteDrawer({ initialCenter, initialGeoJson, onDrawComple
     };
 
     const _onDeleted = () => {
-        if (featureGroupRef.current && featureGroupRef.current.getLayers().length === 0) {
+        if (featureGroup && featureGroup.getLayers().length === 0) {
             onDrawComplete("", "");
         }
     };
@@ -142,11 +166,12 @@ export default function LoteDrawer({ initialCenter, initialGeoJson, onDrawComple
         >
             <RecenterOnChange targetCenter={center} />
             <InvalidateSizeOnChange trigger={isFullscreen} />
+            <GeoJsonLoader initialGeoJson={initialGeoJson} featureGroup={featureGroup} />
             <TileLayer
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 attribution="Tiles &copy; Esri &mdash; USDA, USGS, AEX, GeoEye"
             />
-            <FeatureGroup ref={featureGroupRef}>
+            <FeatureGroup ref={setFeatureGroup}>
                 <EditControl
                     position="topright"
                     onCreated={_onCreate}

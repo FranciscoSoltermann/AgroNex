@@ -1,47 +1,44 @@
 package org.agronex.backend;
 
-import org.agronex.backend.dto.request.LoteRequest;
-import org.agronex.backend.entity.Lote;
-import org.agronex.backend.repository.LoteRepository;
-import org.agronex.backend.service.LoteService;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import java.sql.*;
 
-import java.math.BigDecimal;
-import java.util.List;
-
-@SpringBootTest
 public class DebugLoteTest {
 
-    @Autowired
-    private LoteService loteService;
-
-    @Autowired
-    private LoteRepository loteRepository;
-
     @Test
-    public void testActualizarLote() {
-        List<Lote> lotes = loteRepository.findAll();
-        if (lotes.isEmpty()) {
-            System.out.println("No hay lotes para probar.");
-            return;
-        }
-        Lote lote = lotes.get(0);
-        System.out.println("Probando actualizar lote: " + lote.getIdLote());
-        
-        LoteRequest request = new LoteRequest();
-        request.setNombre(lote.getNombre());
-        request.setSuperficie(new BigDecimal("99.99"));
-        request.setIdCampo(lote.getCampo().getIdCampo());
-        request.setCoordenadasGeoJson(lote.getCoordenadasGeoJson());
+    public void testDatabaseInfo() throws Exception {
+        String url = "jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres?prepareThreshold=0";
+        String user = "postgres.qgokssagrwpsfryhczug";
+        String pass = "Agronex04032026";
 
-        try {
-            loteService.actualizarLote(lote.getIdLote(), request, lote.getCampo().getUsuario().getIdUsuario());
-            System.out.println("ACTUALIZACION EXITOSA");
-        } catch (Exception e) {
-            System.out.println("EXCEPCION AL ACTUALIZAR:");
-            e.printStackTrace();
+        try (Connection conn = DriverManager.getConnection(url, user, pass)) {
+            System.out.println("====== REGISTRATION USERS ======");
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT id_usuario, email, rol FROM usuario")) {
+                while (rs.next()) {
+                    System.out.printf("User ID: %s | Email: %s | Rol: %s%n",
+                            rs.getString(1), rs.getString(2), rs.getString(3));
+                }
+            }
+
+            System.out.println("====== CAMPOS IN DB ======");
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT id_campo, nombre, superficie_total, id_usuario FROM campo")) {
+                while (rs.next()) {
+                    System.out.printf("Campo ID: %s | Nombre: %s | Superficie: %s | User ID: %s%n",
+                            rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4));
+                }
+            }
+
+            System.out.println("====== LOTES IN DB ======");
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT id_lote, nombre, superficie, id_campo FROM lote")) {
+                while (rs.next()) {
+                    System.out.printf("Lote ID: %s | Nombre: %s | Superficie: %s | Campo ID: %s%n",
+                            rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4));
+                }
+            }
         }
     }
 }
+

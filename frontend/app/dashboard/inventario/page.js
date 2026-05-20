@@ -144,12 +144,12 @@ export default function InventarioPage() {
 
     // Campañas filtradas por campo seleccionado en el modal
     const campaniasDelCampo = formInsumo.idCampo
-        ? campanias.filter(c => c.idCampo === formInsumo.idCampo)
+        ? campanias.filter(c => c.idCampo === formInsumo.idCampo || c.lotes?.some(l => l.idCampo === formInsumo.idCampo))
         : [];
 
     // Campañas para el filtro global
     const campaniasParaFiltro = filtroCampoId !== "Todos"
-        ? campanias.filter(c => c.idCampo === filtroCampoId)
+        ? campanias.filter(c => c.idCampo === filtroCampoId || c.lotes?.some(l => l.idCampo === filtroCampoId))
         : campanias;
 
     // Mapeo de tabs a tipoArticulo enum
@@ -200,7 +200,7 @@ export default function InventarioPage() {
         if (filtroCampaniaId !== "Todos" && h.idCampania !== filtroCampaniaId) return false;
         if (filtroCampoId !== "Todos") {
             const campaniaDelHistorial = campanias.find(c => c.idCampania === h.idCampania);
-            if (campaniaDelHistorial && campaniaDelHistorial.idCampo !== filtroCampoId) return false;
+            if (campaniaDelHistorial && campaniaDelHistorial.idCampo !== filtroCampoId && !campaniaDelHistorial.lotes?.some(l => l.idCampo === filtroCampoId)) return false;
         }
         if (searchTerm) return h.nombreInsumo.toLowerCase().includes(searchTerm.toLowerCase());
         return true;

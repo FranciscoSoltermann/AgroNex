@@ -31,6 +31,7 @@ const IMAGES = [
 
 export default function CamposPage() {
     const [campos, setCampos] = useState([]);
+    const [lotes, setLotes] = useState([]);
     const [stats, setStats] = useState({ totalHa: 0, camposActivos: 0, lotesTotales: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -97,6 +98,7 @@ export default function CamposPage() {
             const lList = bootstrap.lotes || [];
 
             setCampos(cList);
+            setLotes(lList);
 
             const totalHa = cList.reduce((acc, val) => acc + val.superficieTotal, 0);
             const lotesHa = lList.reduce((acc, val) => acc + val.superficie, 0);
@@ -186,12 +188,31 @@ export default function CamposPage() {
             return;
         }
 
+        const superficieIngresada = parseFloat(formLote.superficie);
+        if (isNaN(superficieIngresada) || superficieIngresada <= 0) {
+            setSubmitError("Ingresa una superficie válida mayor que 0.");
+            return;
+        }
+
+        // Validación: La suma de hectáreas no puede superar el límite del campo
+        const campoHa = parseFloat(campoSeleccionado.superficieTotal);
+        const lotesDelCampoActual = lotes.filter(
+            l => l.idCampo === campoSeleccionado.idCampo && l.idLote !== editingLoteGeoId
+        );
+        const superficieExistente = lotesDelCampoActual.reduce((acc, l) => acc + parseFloat(l.superficie), 0);
+        const disponible = campoHa - superficieExistente;
+
+        if (superficieIngresada > disponible + 0.001) {
+            setSubmitError(`La superficie excede el límite del campo. Disponible: ${disponible.toFixed(2)} Ha.`);
+            return;
+        }
+
         setSubmitLoading(true);
         setSubmitError(null);
         try {
             const payload = {
                 nombre: formLote.nombre,
-                superficie: parseFloat(formLote.superficie),
+                superficie: superficieIngresada,
                 idCampo: campoSeleccionado.idCampo,
                 coordenadasGeoJson: formLote.coordenadasGeoJson || undefined
             };
@@ -270,17 +291,36 @@ export default function CamposPage() {
     };
 
     const handleEditarLoteSuperficie = async (lote) => {
+        const superficieIngresada = parseFloat(editLoteForm.superficie);
+        if (isNaN(superficieIngresada) || superficieIngresada <= 0) {
+            toast.error("La superficie debe ser un número mayor a 0.");
+            return;
+        }
+
+        const campo = campos.find(c => c.idCampo === lote.idCampo);
+        if (campo) {
+            const campoHa = parseFloat(campo.superficieTotal);
+            const lotesDelCampoActual = lotes.filter(l => l.idCampo === lote.idCampo && l.idLote !== lote.idLote);
+            const superficieExistente = lotesDelCampoActual.reduce((acc, l) => acc + parseFloat(l.superficie), 0);
+            const disponible = campoHa - superficieExistente;
+
+            if (superficieIngresada > disponible + 0.001) {
+                toast.error(`La superficie excede el límite del campo. Disponible: ${disponible.toFixed(2)} Ha.`);
+                return;
+            }
+        }
+
         setEditLoteLoading(true);
         try {
             await apiClient.put(`/lotes/${lote.idLote}`, {
                 nombre: lote.nombre,
-                superficie: parseFloat(editLoteForm.superficie),
+                superficie: superficieIngresada,
                 idCampo: lote.idCampo,
                 coordenadasGeoJson: lote.coordenadasGeoJson || undefined
             });
             toast.success("¡Superficie actualizada!");
             invalidateDashboardBootstrapCache();
-            setLotesGestion(prev => prev.map(l => l.idLote === lote.idLote ? { ...l, superficie: parseFloat(editLoteForm.superficie) } : l));
+            setLotesGestion(prev => prev.map(l => l.idLote === lote.idLote ? { ...l, superficie: superficieIngresada } : l));
             setEditingLote(null);
             await fetchData(userId, { forceRefresh: true });
         } catch (err) {
@@ -405,7 +445,7 @@ export default function CamposPage() {
                         {vista === "grid" && (
                             <button
                                 onClick={() => { setShowModalCampo(true); setSubmitError(null); setSubmitSuccess(null); }}
-                                className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 flex flex-col items-center justify-center gap-3 hover:border-[#2D6A4F] hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-all group min-h-[280px]"
+                                className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 flex flex-col items-center justify-center gap-3 hover:border-[#2D6A4F] hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-all group h-full min-h-[210px]"
                             >
                                 <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
                                     <Plus size={22} className="text-[#2D6A4F]" />
@@ -572,6 +612,30 @@ export default function CamposPage() {
                                 ))}
                             </div>
                         )}
+
+                        {/* Botón para agregar un lote al campo actual */}
+                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                            <span className="text-[11px] text-gray-400 dark:text-gray-500">¿Querés añadir más subdivisiones?</span>
+                            <button
+                                onClick={() => {
+                                    setResolvingCenter(true);
+                                    resolveCampoCenter(campoDetalle).then(center => {
+                                        setResolvingCenter(false);
+                                        setLoteInitialCenter(center || [-34.6, -63.5]);
+                                        setCampoSeleccionado(campoDetalle);
+                                        setFormLote({ nombre: "", superficie: "10", coordenadasGeoJson: "" });
+                                        setEditingLoteGeoId(null);
+                                        setCampoDetalle(null);
+                                        setShowModalLote(true);
+                                    });
+                                }}
+                                disabled={resolvingCenter}
+                                className="flex items-center gap-1 bg-[#2D6A4F] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#1B4332] transition-all disabled:opacity-60 shadow"
+                            >
+                                {resolvingCenter ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                                Agregar Lote
+                            </button>
+                        </div>
                     </div>
                 </Modal>
             )}
@@ -697,7 +761,7 @@ function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarC
     return (
         <div
             onClick={!editMode ? onClickDetalle : undefined}
-            className={`bg-white dark:bg-[#1a1f25] rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow ${!editMode ? "cursor-pointer" : ""}`}
+            className={`bg-white dark:bg-[#1a1f25] rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow h-full flex flex-col justify-between ${!editMode ? "cursor-pointer" : ""}`}
         >
             <div className="h-36 relative" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }}>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -706,8 +770,8 @@ function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarC
                     <p className="font-black text-[15px] leading-tight">{campo.nombre}</p>
                 </div>
             </div>
-            <div className="p-4">
-                <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="p-4 flex-1 flex flex-col justify-between">
+                <div className={`grid grid-cols-2 gap-3 ${editMode ? "mb-3" : "mb-0"}`}>
                     <div>
                         <p className="text-[9px] font-bold uppercase text-gray-400 tracking-widest">Superficie</p>
                         <p className="font-black text-gray-900 dark:text-gray-100">{Number(campo.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>

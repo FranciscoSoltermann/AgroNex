@@ -31,7 +31,17 @@ function FitBounds({ lotes, center }) {
             map.setView(center, 13);
         }
 
-        setTimeout(() => map.invalidateSize(), 200);
+        const t = setTimeout(() => {
+            try {
+                if (map) {
+                    map.invalidateSize();
+                }
+            } catch (err) {
+                console.warn("Could not invalidate map size", err);
+            }
+        }, 200);
+
+        return () => clearTimeout(t);
     }, [map, lotes, center]);
 
     return null;

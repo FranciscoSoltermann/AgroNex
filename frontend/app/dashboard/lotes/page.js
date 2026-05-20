@@ -66,7 +66,7 @@ export default function CiclosPage() {
 
     const campaniasDelLote = useMemo(() => {
         if (!idLoteSeleccionado) return campanias;
-        return campanias.filter((c) => c.idLote === idLoteSeleccionado);
+        return campanias.filter((c) => c.idLote === idLoteSeleccionado || c.lotes?.some(l => l.idLote === idLoteSeleccionado));
     }, [campanias, idLoteSeleccionado]);
 
     const loteActual = useMemo(
@@ -123,7 +123,7 @@ export default function CiclosPage() {
 
     useEffect(() => {
         const list = idLoteSeleccionado
-            ? campanias.filter((c) => c.idLote === idLoteSeleccionado)
+            ? campanias.filter((c) => c.idLote === idLoteSeleccionado || c.lotes?.some(l => l.idLote === idLoteSeleccionado))
             : campanias;
         if (!list.length) {
             setIdCampaniaActiva("");

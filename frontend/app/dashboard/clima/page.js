@@ -108,7 +108,7 @@ export default function ClimaPage() {
     };
 
     const campaniasFiltradas = seleccion.campoId
-        ? campanias.filter(c => c.idCampo === seleccion.campoId)
+        ? campanias.filter(c => c.idCampo === seleccion.campoId || c.lotes?.some(l => l.idCampo === seleccion.campoId))
         : campanias;
 
     const lotesFiltrados = seleccion.campoId
