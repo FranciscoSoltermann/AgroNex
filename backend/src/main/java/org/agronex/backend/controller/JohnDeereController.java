@@ -220,6 +220,25 @@ public class JohnDeereController {
     }
 
     /**
+     * Endpoint de utilidad para simular maquinaria y telemetría en el Sandbox de John Deere.
+     */
+    @PostMapping("/sandbox/simulate")
+    public ResponseEntity<Map<String, Object>> simulateSandboxTelemetry(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(value = "orgId", defaultValue = "7711480") String orgId) {
+        try {
+            UUID userId = SecurityUtils.requireUserId(jwt);
+            Map<String, Object> result = machineService.simulateSandboxTelemetry(userId, orgId);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    /**
      * Endpoint unificado que busca la primera organización y devuelve sus equipos.
      */
     @GetMapping("/equipos")

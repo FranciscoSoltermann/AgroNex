@@ -49,6 +49,14 @@ public class FinanzasService {
         if (a.getHectareasTratadas() != null && a.getHectareasTratadas().compareTo(BigDecimal.ZERO) > 0) {
             return a.getHectareasTratadas();
         }
+        if (a.getCampania() != null) {
+            List<Lote> lotes = a.getCampania().getLotes();
+            if (lotes != null && !lotes.isEmpty()) {
+                return lotes.stream()
+                        .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
+        }
         Lote l = a.getCampania() != null ? a.getCampania().getLote() : null;
         return l != null && l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO;
     }
@@ -62,17 +70,17 @@ public class FinanzasService {
         List<Cosecha> cosechas = cosechaRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idDatos);
 
         Map<UUID, BigDecimal> gastosPorCampo = new HashMap<>();
+        Map<UUID, BigDecimal> costosActividadesPorCampo = new HashMap<>();
         for (GastoFijo g : gastosFijos) {
             UUID campoId = g.getCampo().getIdCampo();
             gastosPorCampo.put(campoId, gastosPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(nz(g.getMontoTotal())));
         }
 
-        Map<UUID, BigDecimal> costosActividadesPorCampo = new HashMap<>();
         for (Actividad a : actividades) {
             UUID campoId = a.getCampania().getLote().getCampo().getIdCampo();
-            BigDecimal costoServicio = nz(a.getCostoServicio());
-            BigDecimal costoInsumos = BigDecimal.ZERO;
             BigDecimal ha = hectareasParaCosteoInsumos(a);
+            BigDecimal costoServicio = nz(a.getCostoServicio()).multiply(ha);
+            BigDecimal costoInsumos = BigDecimal.ZERO;
 
             for (ActividadInsumo ai : a.getInsumosUtilizados()) {
                 BigDecimal dosis = nz(ai.getDosisHa());
@@ -147,8 +155,8 @@ public class FinanzasService {
         Map<UUID, DetalleInsumoGasto> detalleMap = new HashMap<>();
 
         for (Actividad a : actividades) {
-            costoServicios = costoServicios.add(nz(a.getCostoServicio()));
             BigDecimal ha = hectareasParaCosteoInsumos(a);
+            costoServicios = costoServicios.add(nz(a.getCostoServicio()).multiply(ha));
             for (ActividadInsumo ai : a.getInsumosUtilizados()) {
                 BigDecimal dosis = nz(ai.getDosisHa());
                 BigDecimal precio = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null

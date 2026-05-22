@@ -421,9 +421,14 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                             {/* Machines List */}
                                             {orgMachines && (
                                                 <div className="px-6 pb-4">
+                                                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Maquinaria conectada</h4>
+                                                        <SandboxSimulateButton orgId={orgId} onSimulated={() => fetchMachines(orgId)} />
+                                                    </div>
                                                     {orgMachines.length === 0 ? (
-                                                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 text-center mb-4">
-                                                            <p className="text-[11px] text-gray-400 font-medium">No se encontraron máquinas en esta organización.</p>
+                                                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center mb-4 border border-dashed border-gray-200 dark:border-gray-700">
+                                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-3">No se encontraron máquinas en esta organización.</p>
+                                                            <SandboxSimulateButton orgId={orgId} onSimulated={() => fetchMachines(orgId)} inline={true} />
                                                         </div>
                                                     ) : (
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -621,6 +626,80 @@ function MachineCard({ machine }) {
                     <p className="text-[10px] text-gray-400 font-medium">Sin datos de ubicación disponibles</p>
                 </div>
             )}
+        </div>
+    );
+}
+
+function SandboxSimulateButton({ orgId, onSimulated, inline = false }) {
+    const [loading, setLoading] = useState(false);
+    const [successMsg, setSuccessMsg] = useState("");
+
+    const handleSimulate = async () => {
+        setLoading(true);
+        setSuccessMsg("");
+        try {
+            const res = await apiClient.post(`/maquinaria/john-deere/sandbox/simulate?orgId=${orgId}`);
+            if (res.data?.success) {
+                setSuccessMsg("Tractor de simulación inyectado!");
+                if (onSimulated) onSimulated();
+                setTimeout(() => setSuccessMsg(""), 5000);
+            }
+        } catch (err) {
+            alert("Error al simular maquinaria: " + (err.response?.data?.message || err.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (inline) {
+        return (
+            <div className="flex flex-col items-center justify-center gap-2">
+                <button
+                    onClick={handleSimulate}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#367C2B] hover:bg-[#2D6A4F] text-white text-xs font-bold rounded-lg shadow transition-colors disabled:opacity-50"
+                >
+                    {loading ? (
+                        <>
+                            <Loader2 size={12} className="animate-spin" /> Simulando...
+                        </>
+                    ) : (
+                        <>
+                            <Tractor size={12} /> Simular Tractor de Prueba (Sandbox)
+                        </>
+                    )}
+                </button>
+                {successMsg && (
+                    <p className="text-[10px] text-green-600 dark:text-green-400 font-bold mt-1 animate-pulse">
+                        {successMsg}
+                    </p>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center gap-2">
+            {successMsg && (
+                <span className="text-[10px] text-green-600 dark:text-green-400 font-bold animate-pulse">
+                    {successMsg}
+                </span>
+            )}
+            <button
+                onClick={handleSimulate}
+                disabled={loading}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#367C2B]/10 hover:bg-[#367C2B]/20 text-[#367C2B] dark:text-[#52B788] text-[10px] font-bold rounded-lg border border-[#367C2B]/20 transition-colors disabled:opacity-50"
+            >
+                {loading ? (
+                    <>
+                        <Loader2 size={10} className="animate-spin" /> Creando...
+                    </>
+                ) : (
+                    <>
+                        <Tractor size={10} /> Simular Tractor
+                    </>
+                )}
+            </button>
         </div>
     );
 }

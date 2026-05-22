@@ -2,7 +2,7 @@
 
 import {
     Sprout, Wind, FlaskConical, BugOff, Droplets, Tractor, Microscope, Layers, Wheat,
-    MapPin, ClipboardList, Plus, Loader2, AlertCircle, CheckCircle2, X, RefreshCw, Leaf, Trash2
+    MapPin, ClipboardList, Plus, Loader2, AlertCircle, CheckCircle2, X, RefreshCw, Leaf, Trash2, Pencil
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
@@ -10,24 +10,30 @@ import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/
 import dynamic from 'next/dynamic';
 import { toast } from "sonner";
 import ConfirmModal from "@/components/shared/ConfirmModal";
+import { useCurrency } from "@/lib/currency-context";
 
 const MonitoreoSatelitalViewer = dynamic(() => import('@/components/features/dashboard/lotes/MonitoreoSatelitalViewer'), { ssr: false });
 const LibroCampoPanel = dynamic(() => import('@/components/features/dashboard/lotes/LibroCampoPanel'), { ssr: false });
 
-const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
+const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Inoculante/Curasemilla", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
 
 const UNIDAD_LABEL = {
-    UNIDADES: "und",
     LITROS: "L",
     KILOGRAMOS: "kg",
+    GRAMOS: "g",
     TONELADAS: "tn",
+    CENTIMETROS_CUBICOS: "cc",
+    BOLSAS: "bolsas",
 };
-const getUnidadLabel = (unidad) => UNIDAD_LABEL[unidad] ?? "und";
+const getUnidadLabel = (unidad) => UNIDAD_LABEL[unidad] ?? "kg";
+
+const TIPOS_CON_DOSIS = ["Siembra", "Pulverización", "Inoculante/Curasemilla"];
 
 const emptyInsumoRow = () => ({ idInsumo: "", dosisHa: "" });
 
 export default function CiclosPage() {
+    const { symbol } = useCurrency();
     const [campanias, setCampanias] = useState([]);
     const [actividades, setActividades] = useState([]);
     const [lotes, setLotes] = useState([]);
@@ -42,6 +48,7 @@ export default function CiclosPage() {
         message: '',
         onConfirm: () => { }
     });
+    const [editingActividad, setEditingActividad] = useState(null);
 
     const [formAct, setFormAct] = useState({
         tipoActv: "Fertilización",
@@ -147,11 +154,12 @@ export default function CiclosPage() {
         setSubmitLoading(true);
         setSubmitError(null);
         try {
+            const showDosis = TIPOS_CON_DOSIS.includes(formAct.tipoActv);
             const insumosPayload = formAct.insumos
-                .filter((row) => row.idInsumo && row.dosisHa !== "" && !Number.isNaN(parseFloat(row.dosisHa)))
+                .filter((row) => row.idInsumo && (!showDosis || (row.dosisHa !== "" && !Number.isNaN(parseFloat(row.dosisHa)))))
                 .map((row) => ({
                     idInsumo: row.idInsumo,
-                    dosisHa: parseFloat(row.dosisHa),
+                    dosisHa: showDosis ? parseFloat(row.dosisHa) : 0,
                 }));
 
             const haVal = formAct.hectareasTratadas === "" ? null : parseFloat(formAct.hectareasTratadas);
@@ -165,10 +173,18 @@ export default function CiclosPage() {
                 insumos: insumosPayload.length ? insumosPayload : undefined,
             };
 
-            const res = await apiClient.post("/actividades", payload);
-            setActividades((prev) => [res.data, ...prev]);
-            setSubmitSuccess("Actividad registrada correctamente.");
-            toast.success("¡Actividad registrada con éxito!");
+            if (editingActividad) {
+                const res = await apiClient.put(`/actividades/${editingActividad.idActividad}`, payload);
+                setActividades((prev) => prev.map(a => a.idActividad === editingActividad.idActividad ? res.data : a));
+                setSubmitSuccess("Actividad actualizada correctamente.");
+                toast.success("¡Actividad actualizada!");
+                setEditingActividad(null);
+            } else {
+                const res = await apiClient.post("/actividades", payload);
+                setActividades((prev) => [res.data, ...prev]);
+                setSubmitSuccess("Actividad registrada correctamente.");
+                toast.success("¡Actividad registrada con éxito!");
+            }
             setFormAct((p) => ({
                 ...p,
                 costoServicio: "",
@@ -176,6 +192,8 @@ export default function CiclosPage() {
                 notas: "",
                 insumos: [emptyInsumoRow()],
             }));
+            // Refresh insumos to reflect stock changes
+            if (loteActual?.idCampo) fetchInsumosCampo(loteActual.idCampo);
             setTimeout(() => setSubmitSuccess(null), 1500);
         } catch (err) {
             const d = err.response?.data;
@@ -202,11 +220,12 @@ export default function CiclosPage() {
         } else {
             setIsEditMode(false);
             setCampaniaIdToEdit(null);
+            const todayStr = new Date().toISOString().split("T")[0];
             setFormCampania({
                 cultivo: "",
-                fechaInicio: new Date().toISOString().split("T")[0],
+                fechaInicio: todayStr,
                 fechaFin: "",
-                lotes: idLoteSeleccionado ? [{ idLote: idLoteSeleccionado, fechaInicioLote: "" }] : []
+                lotes: idLoteSeleccionado ? [{ idLote: idLoteSeleccionado, fechaInicioLote: todayStr }] : []
             });
         }
         setShowModalCampania(true);
@@ -216,16 +235,48 @@ export default function CiclosPage() {
         setConfirmModal({
             isOpen: true,
             title: "Eliminar Actividad",
-            message: "¿Seguro que querés eliminar esta actividad?",
+            message: "¿Seguro que querés eliminar esta actividad? Los insumos utilizados serán devueltos al stock.",
             onConfirm: async () => {
                 try {
                     await apiClient.delete(`/actividades/${idActividad}`);
-                    toast.success("¡Actividad eliminada!");
+                    toast.success("¡Actividad eliminada! Stock de insumos restaurado.");
                     setActividades((prev) => prev.filter(a => a.idActividad !== idActividad));
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                    // Refresh insumos to reflect restored stock
+                    if (loteActual?.idCampo) fetchInsumosCampo(loteActual.idCampo);
                 } catch (err) {
                     toast.error(err.response?.data?.message || "Error al eliminar actividad.");
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 }
             }
+        });
+    };
+
+    const handleEditarActividad = (act) => {
+        setEditingActividad(act);
+        setFormAct({
+            tipoActv: act.tipoActv || "Fertilización",
+            fecha: act.fecha || new Date().toISOString().split("T")[0],
+            costoServicio: act.costoServicio ?? "",
+            idCampania: act.idCampania || idCampaniaActiva,
+            hectareasTratadas: act.hectareasTratadas ?? "",
+            notas: act.notas || "",
+            insumos: act.insumos?.length > 0
+                ? act.insumos.map(ins => ({ idInsumo: ins.idInsumo || "", dosisHa: ins.dosisHa ?? "" }))
+                : [emptyInsumoRow()],
+        });
+    };
+
+    const handleCancelarEdicion = () => {
+        setEditingActividad(null);
+        setFormAct({
+            tipoActv: "Fertilización",
+            fecha: new Date().toISOString().split("T")[0],
+            costoServicio: "",
+            idCampania: idCampaniaActiva,
+            hectareasTratadas: "",
+            notas: "",
+            insumos: [emptyInsumoRow()],
         });
     };
 
@@ -516,11 +567,16 @@ export default function CiclosPage() {
             <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg">
                 <div className="flex items-center justify-between mb-3">
                     <div>
-                        <h3 className="font-black text-[15px]">Registrar Actividad</h3>
+                        <h3 className="font-black text-[15px]">{editingActividad ? '✏️ Editando Actividad' : 'Registrar Actividad'}</h3>
                         <p className="text-[10px] text-green-100/90 leading-relaxed">
-                            Dosis en unidad del insumo por hectárea. Si no cargás Ha tratadas, se asume todo el lote para el costo de insumos.
+                            {editingActividad ? 'Modificá los datos y guardá los cambios.' : 'Dosis en unidad del insumo por hectárea. Si no cargás Ha tratadas, se asume todo el lote para el costo de insumos.'}
                         </p>
                     </div>
+                    {editingActividad && (
+                        <button type="button" onClick={handleCancelarEdicion} className="text-[11px] font-bold text-red-200 hover:text-white bg-red-500/20 hover:bg-red-500/40 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+                            <X size={12} /> Cancelar edición
+                        </button>
+                    )}
                 </div>
                 <form onSubmit={handleRegistrarActividad} className="space-y-3">
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -535,7 +591,7 @@ export default function CiclosPage() {
                             <input type="date" required value={formAct.fecha} onChange={(e) => setFormAct((p) => ({ ...p, fecha: e.target.value }))} className={INPUT_GREEN} />
                         </div>
                         <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Costo servicio ($)</label>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Costo servicio ({symbol}/Ha)</label>
                             <input type="number" step="0.01" min="0" value={formAct.costoServicio} onChange={(e) => setFormAct((p) => ({ ...p, costoServicio: e.target.value }))} className={INPUT_GREEN} placeholder="0" />
                         </div>
                         <div>
@@ -546,10 +602,10 @@ export default function CiclosPage() {
 
                     <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 items-end">
                         <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Insumos / dosis (por Ha)</label>
+                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Insumos{TIPOS_CON_DOSIS.includes(formAct.tipoActv) ? ' / dosis (por Ha)' : ''}</label>
                             <div className="flex flex-wrap gap-2">
                                 {formAct.insumos.map((row, idx) => (
-                                    <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 min-w-[220px] flex-1">
+                                    <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 w-[240px]">
                                         {formAct.insumos.length > 1 && (
                                             <button type="button" onClick={() => removeInsumoRow(idx)} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100" aria-label="Quitar insumo">
                                                 <X size={12} strokeWidth={3} />
@@ -568,20 +624,22 @@ export default function CiclosPage() {
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="flex items-center justify-between gap-3 pl-8">
-                                            <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
-                                            <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
-                                                <input type="number" step="0.0001" min="0" placeholder="0.00" value={row.dosisHa} onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)} className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20" />
-                                                <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all" style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}>
-                                                    {row.idInsumo ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad) : 'und'}
-                                                </span>
+                                        {TIPOS_CON_DOSIS.includes(formAct.tipoActv) && (
+                                            <div className="flex items-center justify-between gap-3 pl-8">
+                                                <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
+                                                <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
+                                                    <input type="number" step="0.0001" min="0" placeholder="0.00" value={row.dosisHa} onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)} className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20" />
+                                                    <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all" style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}>
+                                                        {row.idInsumo ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad) : 'kg'}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
-                            <button type="button" onClick={addInsumoRow} className="mt-2 text-[10px] font-bold text-green-100 hover:text-white flex items-center gap-1">
-                                <Plus size={12} /> Añadir insumo
+                            <button type="button" onClick={addInsumoRow} className="mt-2.5 text-[11px] font-black text-white bg-white/15 hover:bg-white/25 border border-white/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">
+                                <Plus size={14} /> Añadir insumo
                             </button>
                             {insumos.length === 0 && loteActual && (
                                 <p className="text-[9px] text-amber-200/90 mt-1">No hay insumos en el catálogo de este campo. Cargalos en Inventario.</p>
@@ -600,7 +658,7 @@ export default function CiclosPage() {
                             )}
                             <button type="submit" disabled={submitLoading || campaniasDelLote.length === 0} className="w-full bg-white text-[#2D6A4F] py-2.5 rounded-xl font-black text-[12px] hover:bg-green-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
                                 {submitLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                Guardar actividad
+                                {editingActividad ? 'Guardar cambios' : 'Guardar actividad'}
                             </button>
                         </div>
                     </div>
@@ -616,7 +674,7 @@ export default function CiclosPage() {
                         No hay actividades para esta campaña.
                     </div>
                 ) : (
-                    actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} onEliminar={handleEliminarActividad} />)
+                    actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} onEliminar={handleEliminarActividad} onEditar={handleEditarActividad} />)
                 )}
             </div>
 
@@ -658,7 +716,7 @@ export default function CiclosPage() {
                                                         checked={isSelected}
                                                         onChange={(e) => {
                                                             if (e.target.checked) {
-                                                                setFormCampania(p => ({ ...p, lotes: [...p.lotes, { idLote: lote.idLote, fechaInicioLote: "" }] }));
+                                                                setFormCampania(p => ({ ...p, lotes: [...p.lotes, { idLote: lote.idLote, fechaInicioLote: p.fechaInicio || "" }] }));
                                                             } else {
                                                                 setFormCampania(p => ({ ...p, lotes: p.lotes.filter(l => l.idLote !== lote.idLote) }));
                                                             }
@@ -697,7 +755,14 @@ export default function CiclosPage() {
                                         type="date"
                                         required
                                         value={formCampania.fechaInicio}
-                                        onChange={(e) => setFormCampania((p) => ({ ...p, fechaInicio: e.target.value }))}
+                                        onChange={(e) => {
+                                            const newDate = e.target.value;
+                                            setFormCampania((p) => ({
+                                                ...p,
+                                                fechaInicio: newDate,
+                                                lotes: p.lotes.map(l => ({ ...l, fechaInicioLote: newDate }))
+                                            }));
+                                        }}
                                         className={INPUT_CLASS}
                                     />
                                 </FormField>
@@ -737,20 +802,23 @@ export default function CiclosPage() {
             
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
-                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
                 onConfirm={confirmModal.onConfirm}
                 title={confirmModal.title}
                 message={confirmModal.message}
+                confirmText="Eliminar"
             />
         </div>
     );
 }
 
-function ActividadCard({ actividad, onEliminar }) {
+function ActividadCard({ actividad, onEliminar, onEditar }) {
+    const { symbol } = useCurrency();
     const colorMap = {
         Siembra: { icon: <Sprout size={16} /> },
         Pulverización: { icon: <BugOff size={16} /> },
         Fertilización: { icon: <FlaskConical size={16} /> },
+        "Inoculante/Curasemilla": { icon: <FlaskConical size={16} /> },
         Riego: { icon: <Droplets size={16} /> },
         Labranza: { icon: <Tractor size={16} /> },
         Cosecha: { icon: <Wheat size={16} /> },
@@ -761,14 +829,24 @@ function ActividadCard({ actividad, onEliminar }) {
 
     return (
         <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow relative group pr-14 md:pr-4">
-            <button
-                type="button"
-                onClick={() => onEliminar && onEliminar(actividad.idActividad)}
-                className="absolute top-3 right-3 text-gray-500 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100 transition-all font-bold text-[10px] flex items-center gap-1 bg-red-50 dark:bg-red-900/30 px-2 py-1.5 rounded-md min-h-9"
-                title="Eliminar actividad"
-            >
-                <X size={12} /> Eliminar
-            </button>
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-all">
+                <button
+                    type="button"
+                    onClick={() => onEditar && onEditar(actividad)}
+                    className="text-gray-500 hover:text-blue-600 font-bold text-[10px] flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1.5 rounded-md min-h-9 transition-colors"
+                    title="Editar actividad"
+                >
+                    <Pencil size={12} /> Editar
+                </button>
+                <button
+                    type="button"
+                    onClick={() => onEliminar && onEliminar(actividad.idActividad)}
+                    className="text-gray-500 hover:text-red-500 font-bold text-[10px] flex items-center gap-1 bg-red-50 dark:bg-red-900/30 px-2 py-1.5 rounded-md min-h-9 transition-colors"
+                    title="Eliminar actividad"
+                >
+                    <Trash2 size={12} /> Eliminar
+                </button>
+            </div>
             <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white flex-shrink-0">
                     {c.icon}
@@ -800,7 +878,7 @@ function ActividadCard({ actividad, onEliminar }) {
                             {insumos.map((ins) => (
                                 <li key={ins.idActividadInsumo || `${ins.idInsumo}-${ins.dosisHa}`} className="flex justify-between gap-2">
                                     <span className="truncate">{ins.nombreInsumo || "Insumo"}</span>
-                                    <span className="font-mono font-bold shrink-0">{ins.dosisHa} / Ha</span>
+                                    {ins.dosisHa > 0 && <span className="font-mono font-bold shrink-0">{ins.dosisHa} / Ha</span>}
                                 </li>
                             ))}
                         </ul>
@@ -811,11 +889,15 @@ function ActividadCard({ actividad, onEliminar }) {
                 </div>
                 <div className="text-right flex-shrink-0">
                     {actividad.costoServicio > 0 && (
-                        <p className="text-[11px] font-black text-gray-900">
-                            ${Number(actividad.costoServicio).toLocaleString("es-AR")}
-                        </p>
+                        <>
+                            <p className="text-[11px] font-black text-gray-900">
+                                {symbol}{Number((actividad.costoServicio || 0) * (actividad.hectareasTratadas != null ? actividad.hectareasTratadas : (actividad.superficieLoteHa || 0))).toLocaleString("es-AR")} total
+                            </p>
+                            <p className="text-[9px] text-gray-400 mt-0.5">
+                                ({symbol}{Number(actividad.costoServicio).toLocaleString("es-AR")}/Ha)
+                            </p>
+                        </>
                     )}
-                    <p className="text-[9px] text-gray-400 mt-0.5">servicio</p>
                 </div>
             </div>
         </div>

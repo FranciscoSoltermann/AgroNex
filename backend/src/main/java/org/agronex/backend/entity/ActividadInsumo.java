@@ -20,6 +20,10 @@ public class ActividadInsumo {
     @Column(name = "dosis_ha", nullable = false, precision = 10, scale = 2)
     private BigDecimal dosisHa;
 
+    /** Cantidad real consumida del insumo (tras clampear a stock disponible). Se usa para restaurar stock al eliminar la actividad. */
+    @Column(name = "cantidad_consumida", precision = 12, scale = 4)
+    private BigDecimal cantidadConsumida;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_actividad")
     private Actividad actividad;

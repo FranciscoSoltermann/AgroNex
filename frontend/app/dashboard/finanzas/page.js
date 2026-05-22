@@ -10,6 +10,7 @@ import {
 import dynamic from 'next/dynamic';
 import ConfirmModal from "@/components/shared/ConfirmModal";
 import { toast } from "sonner";
+import { useCurrency } from "@/lib/currency-context";
 
 const PdfDownloadButton = dynamic(() => import('@/components/features/dashboard/finanzas/PdfDownloadButton'), {
     ssr: false
@@ -22,6 +23,7 @@ export default function FinanzasPage() {
     const [gastos, setGastos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const { formatCurrency, symbol: currSymbol } = useCurrency();
     const [filtroCampoId, setFiltroCampoId] = useState("");
     const [filtroCampaniaId, setFiltroCampaniaId] = useState("");
 
@@ -51,9 +53,13 @@ export default function FinanzasPage() {
         idCampo: "",
         idCampania: "",
         tipoSeguro: "Granizo",
+        porcentajeImpuesto: "",
+        gradoHumedad: "",
+        precioPuntoText: "",
     });
     const [gastoLoading, setGastoLoading] = useState(false);
     const [gastoSuccess, setGastoSuccess] = useState(null);
+    const [resumenGastoCampania, setResumenGastoCampania] = useState(null);
 
     const campaniasParaGasto = useMemo(() => {
         if (!formGasto.idCampo) return campanias;
@@ -123,27 +129,58 @@ export default function FinanzasPage() {
         }
     }, [campanias, idCampaniaEconomia]);
 
+    // Fetch resumen for the campaign selected in the gasto form (for Impuestos % calc)
+    useEffect(() => {
+        if (formGasto.idCampania && formGasto.categoria === "Impuestos") {
+            const t = new Date().getTime();
+            apiClient.get(`/finanzas/campania/${formGasto.idCampania}/resumen?t=${t}`)
+                .then(res => setResumenGastoCampania(res.data))
+                .catch(() => setResumenGastoCampania(null));
+        } else {
+            setResumenGastoCampania(null);
+        }
+    }, [formGasto.idCampania, formGasto.categoria]);
+
     const handleRegistrarGasto = async (e) => {
         e.preventDefault();
         setGastoLoading(true);
         try {
             let finalDescripcion = formGasto.descripcion;
+            let finalMonto = parseFloat(formGasto.montoTotal);
+
             if (formGasto.categoria === "Seguro") {
                 finalDescripcion = `[${formGasto.tipoSeguro}] ${finalDescripcion}`.trim();
+            }
+
+            // For Impuestos: calculate amount from percentage of harvest income
+            if (formGasto.categoria === "Impuestos" && formGasto.idCampania && resumenGastoCampania) {
+                const pct = parseFloat(formGasto.porcentajeImpuesto);
+                const ingresos = resumenGastoCampania.ingresosTotales || 0;
+                finalMonto = (pct / 100) * ingresos;
+                finalDescripcion = `[${pct}% s/ingresos] ${finalDescripcion}`.trim();
+            }
+
+            // For Secada: read manual montoTotal and serialize text inputs to description
+            if (formGasto.categoria === "Secada") {
+                finalMonto = parseFloat(formGasto.montoTotal) || 0;
+                let details = "Secada";
+                if (formGasto.gradoHumedad) details += ` Humedad: ${formGasto.gradoHumedad}`;
+                if (formGasto.precioPuntoText) details += `, Precio Punto: ${formGasto.precioPuntoText}`;
+                finalDescripcion = `[${details}] ${finalDescripcion}`.trim();
             }
 
             const body = {
                 fecha: formGasto.fecha,
                 categoria: formGasto.categoria,
                 descripcion: finalDescripcion,
-                montoTotal: parseFloat(formGasto.montoTotal),
+                montoTotal: finalMonto,
                 moneda: "ARS",
                 idCampo: formGasto.idCampo,
             };
             if (formGasto.idCampania) body.idCampania = formGasto.idCampania;
             await apiClient.post("/gastos", body);
             setGastoSuccess("¡Gasto registrado con éxito!");
-            setFormGasto(p => ({ ...p, descripcion: "", montoTotal: "", idCampania: "" }));
+            setFormGasto(p => ({ ...p, descripcion: "", montoTotal: "", idCampania: "", porcentajeImpuesto: "", gradoHumedad: "", precioPuntoText: "" }));
             invalidateDashboardBootstrapCache();
             await fetchData({ forceRefresh: true });
             if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
@@ -210,8 +247,10 @@ export default function FinanzasPage() {
                     await fetchData();
                     if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
                     toast.success("Gasto eliminado correctamente.");
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 } catch (err) {
                     toast.error(err.response?.data?.message || "Error al eliminar gasto.");
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 }
             }
         });
@@ -219,7 +258,6 @@ export default function FinanzasPage() {
 
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 
-    const formatCurrency = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0);
     const formatNum = (val, dec = 2) =>
         val != null && !Number.isNaN(Number(val)) ? Number(val).toLocaleString("es-AR", { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "—";
 
@@ -236,8 +274,10 @@ export default function FinanzasPage() {
                     await fetchData();
                     await fetchResumenCampania(idCampaniaEconomia);
                     toast.success("Campaña cerrada correctamente.");
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 } catch {
                     toast.error("No se pudo cerrar la campaña.");
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 } finally {
                     setCerrarLoading(false);
                 }
@@ -260,8 +300,10 @@ export default function FinanzasPage() {
                     invalidateDashboardBootstrapCache();
                     await fetchData({ forceRefresh: true });
                     toast.success("Campaña eliminada correctamente.");
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 } catch (err) {
                     toast.error(err.response?.data?.message || "No se pudo eliminar la campaña.");
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 } finally {
                     setEliminarLoading(false);
                 }
@@ -518,6 +560,8 @@ export default function FinanzasPage() {
                                     <option value="Impuestos">Impuestos</option>
                                     <option value="Seguro">Seguro</option>
                                     <option value="Servicios">Servicios</option>
+                                    <option value="Flete">Flete</option>
+                                    <option value="Secada">Secada</option>
                                 </select>
                             </FormField>
                         </div>
@@ -532,37 +576,126 @@ export default function FinanzasPage() {
                                 </select>
                             </FormField>
                         )}
-                        <FormField label="Importe Total ($)">
-                            <input type="number" step="0.01" max="999999999" required value={formGasto.montoTotal} onChange={e => setFormGasto(p => ({ ...p, montoTotal: e.target.value }))} className={INPUT_CLASS} />
-                        </FormField>
+                        {formGasto.categoria === "Impuestos" ? (
+                            <>
+                                <FormField label="Imputar a campaña (requerido para calcular %)">
+                                    <select
+                                        required
+                                        value={formGasto.idCampania}
+                                        onChange={(e) => setFormGasto((p) => ({ ...p, idCampania: e.target.value }))}
+                                        className={INPUT_CLASS}
+                                        disabled={!formGasto.idCampo}
+                                    >
+                                        <option value="" disabled>Elegir Campaña</option>
+                                        {campaniasParaGasto.map((c) => (
+                                            <option key={c.idCampania} value={c.idCampania}>
+                                                {c.cultivo} — {c.nombreLote}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[9px] text-gray-400 mt-1">El porcentaje se calcula sobre los ingresos de esta campaña.</p>
+                                </FormField>
+                                <FormField label="Porcentaje impositivo (%)">
+                                    <input type="number" step="0.01" min="0" max="100" required value={formGasto.porcentajeImpuesto} onChange={e => setFormGasto(p => ({ ...p, porcentajeImpuesto: e.target.value }))} className={INPUT_CLASS} placeholder="ej. 35" />
+                                </FormField>
+                                {formGasto.porcentajeImpuesto && formGasto.idCampania && resumenGastoCampania && (() => {
+                                    const pct = parseFloat(formGasto.porcentajeImpuesto);
+                                    const ingresos = resumenGastoCampania.ingresosTotales || 0;
+                                    const calculado = (pct / 100) * ingresos;
+                                    return (
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 text-[12px]">
+                                            <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {formatCurrency(calculado)}</p>
+                                            <p className="text-blue-500 dark:text-blue-400 text-[10px] mt-0.5">{pct}% de ingresos totales ({formatCurrency(ingresos)})</p>
+                                        </div>
+                                    );
+                                })()}
+                            </>
+                        ) : formGasto.categoria === "Secada" ? (
+                            <>
+                                <FormField label="Imputar a campaña (opcional)">
+                                    <select
+                                        value={formGasto.idCampania}
+                                        onChange={(e) => setFormGasto((p) => ({ ...p, idCampania: e.target.value }))}
+                                        className={INPUT_CLASS}
+                                        disabled={!formGasto.idCampo}
+                                    >
+                                        <option value="">Solo al campo (sin campaña)</option>
+                                        {campaniasParaGasto.map((c) => (
+                                            <option key={c.idCampania} value={c.idCampania}>
+                                                {c.cultivo} — {c.nombreLote}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[9px] text-gray-400 mt-1">Solo campañas de lotes de este campo.</p>
+                                </FormField>
+                                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
+                                    <FormField label="Grado de humedad">
+                                        <input
+                                            type="text"
+                                            value={formGasto.gradoHumedad}
+                                            onChange={e => setFormGasto(p => ({ ...p, gradoHumedad: e.target.value }))}
+                                            className={INPUT_CLASS}
+                                            placeholder="ej. 16.5%"
+                                        />
+                                    </FormField>
+                                    <FormField label="Precio del punto">
+                                        <input
+                                            type="text"
+                                            value={formGasto.precioPuntoText}
+                                            onChange={e => setFormGasto(p => ({ ...p, precioPuntoText: e.target.value }))}
+                                            className={INPUT_CLASS}
+                                            placeholder="ej. $150 / ton"
+                                        />
+                                    </FormField>
+                                </div>
+                                <FormField label={`Importe Total (${currSymbol})`}>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        max="999999999"
+                                        required
+                                        value={formGasto.montoTotal}
+                                        onChange={e => setFormGasto(p => ({ ...p, montoTotal: e.target.value }))}
+                                        className={INPUT_CLASS}
+                                        placeholder="ej. 25000"
+                                    />
+                                </FormField>
+                            </>
+                        ) : (
+                            <>
+                                <FormField label={`Importe Total (${currSymbol})`}>
+                                    <input type="number" step="0.01" max="999999999" required value={formGasto.montoTotal} onChange={e => setFormGasto(p => ({ ...p, montoTotal: e.target.value }))} className={INPUT_CLASS} />
+                                </FormField>
+                                <FormField label="Imputar a campaña (opcional)">
+                                    <select
+                                        value={formGasto.idCampania}
+                                        onChange={(e) => setFormGasto((p) => ({ ...p, idCampania: e.target.value }))}
+                                        className={INPUT_CLASS}
+                                        disabled={!formGasto.idCampo}
+                                    >
+                                        <option value="">Solo al campo (sin campaña)</option>
+                                        {campaniasParaGasto.map((c) => (
+                                            <option key={c.idCampania} value={c.idCampania}>
+                                                {c.cultivo} — {c.nombreLote}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[9px] text-gray-400 mt-1">Solo campañas de lotes de este campo.</p>
+                                </FormField>
+                            </>
+                        )}
                         <FormField label="Descripción">
                             <input type="text" value={formGasto.descripcion} onChange={e => setFormGasto(p => ({ ...p, descripcion: e.target.value }))} className={INPUT_CLASS} />
-                        </FormField>
-                        <FormField label="Imputar a campaña (opcional)">
-                            <select
-                                value={formGasto.idCampania}
-                                onChange={(e) => setFormGasto((p) => ({ ...p, idCampania: e.target.value }))}
-                                className={INPUT_CLASS}
-                                disabled={!formGasto.idCampo}
-                            >
-                                <option value="">Solo al campo (sin campaña)</option>
-                                {campaniasParaGasto.map((c) => (
-                                    <option key={c.idCampania} value={c.idCampania}>
-                                        {c.cultivo} — {c.nombreLote}
-                                    </option>
-                                ))}
-                            </select>
-                            <p className="text-[9px] text-gray-400 mt-1">Solo campañas de lotes de este campo.</p>
                         </FormField>
                         {gastoSuccess && <div className="text-green-600 text-[12px] font-bold">{gastoSuccess}</div>}
                         <button type="submit" disabled={gastoLoading || campos.length === 0} className="w-full bg-[#1B4332] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#2D6A4F] transition-all flex items-center justify-center gap-2">
                             {gastoLoading ? <Loader2 size={16} className="animate-spin" /> : <Tractor size={16} />}
-                            Guardar Gasto Fijo
+                            Guardar
                         </button>
                     </form>
                 </div>
 
-                {/* Formulario Cosecha (Ingresos) */}
+                {/* Formulario Cosecha (Ingresos) - sin flete, se mueve a costos */}
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
                     <h3 className="text-[15px] font-black text-gray-900 dark:text-gray-100 mb-4">Ingresar Ganancias (Cosecha)</h3>
                     <form onSubmit={handleRegistrarCosecha} className="space-y-4">
@@ -580,31 +713,6 @@ export default function FinanzasPage() {
                                 <input type="number" step="0.01" max="999999999" required value={formCosecha.precioVentaUnitarioUsd} onChange={e => setFormCosecha(p => ({ ...p, precioVentaUnitarioUsd: e.target.value }))} className={INPUT_CLASS} />
                             </FormField>
                         </div>
-
-                        <FormField label="Tipo de logística">
-                            <select value={formCosecha.tipoLogistica} onChange={e => setFormCosecha(p => ({ ...p, tipoLogistica: e.target.value }))} className={INPUT_CLASS}>
-                                <option value="NINGUNO">Sin costo logístico</option>
-                                <option value="TERCERIZADO">Tercerizado</option>
-                                <option value="PROPIO">Propio</option>
-                            </select>
-                        </FormField>
-
-                        {formCosecha.tipoLogistica === "TERCERIZADO" && (
-                            <FormField label="Costo total flete tercerizado ($)">
-                                <input type="number" step="0.01" max="999999999" required value={formCosecha.fleteTercerizadoCostoTotal} onChange={e => setFormCosecha(p => ({ ...p, fleteTercerizadoCostoTotal: e.target.value }))} className={INPUT_CLASS} />
-                            </FormField>
-                        )}
-
-                        {formCosecha.tipoLogistica === "PROPIO" && (
-                            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
-                                <FormField label="Litros combustible">
-                                    <input type="number" step="0.01" max="999999999" required value={formCosecha.fletePropioLitrosCombustible} onChange={e => setFormCosecha(p => ({ ...p, fletePropioLitrosCombustible: e.target.value }))} className={INPUT_CLASS} />
-                                </FormField>
-                                <FormField label="Precio por litro ($)">
-                                    <input type="number" step="0.01" max="999999999" required value={formCosecha.fletePropioPrecioLitro} onChange={e => setFormCosecha(p => ({ ...p, fletePropioPrecioLitro: e.target.value }))} className={INPUT_CLASS} />
-                                </FormField>
-                            </div>
-                        )}
 
                         {cosechaSuccess && <div className="text-green-600 text-[12px] font-bold">{cosechaSuccess}</div>}
                         <button type="submit" disabled={cosechaLoading || campanias.length === 0} className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#1B4332] transition-all flex items-center justify-center gap-2 mt-4">
@@ -652,7 +760,7 @@ export default function FinanzasPage() {
                                 <th className="pb-3 pr-4">Categoría</th>
                                 <th className="pb-3 pr-4">Descripción</th>
                                 <th className="pb-3 pr-4">Campo / Campaña</th>
-                                <th className="pb-3 text-right pr-4">Importe ($)</th>
+                                <th className="pb-3 text-right pr-4">Importe ({currSymbol})</th>
                                 <th className="pb-3 text-right"></th>
                             </tr>
                         </thead>
@@ -692,10 +800,11 @@ export default function FinanzasPage() {
 
             <ConfirmModal
                 isOpen={confirmModal.isOpen}
-                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
                 onConfirm={confirmModal.onConfirm}
                 title={confirmModal.title}
                 message={confirmModal.message}
+                confirmText="Confirmar"
             />
         </div>
     );

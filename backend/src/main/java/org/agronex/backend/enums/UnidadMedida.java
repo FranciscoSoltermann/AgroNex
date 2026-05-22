@@ -1,6 +1,6 @@
 package org.agronex.backend.enums;
 
 public enum UnidadMedida {
-    UNIDADES, LITROS, KILOGRAMOS, TONELADAS, BOLSAS
+    LITROS, KILOGRAMOS, TONELADAS, BOLSAS, CENTIMETROS_CUBICOS, GRAMOS
 }
 

@@ -20,12 +20,15 @@ import {
     KeyRound,
     Link2,
     Unlink,
+    Coins,
 } from "lucide-react";
+import { useCurrency, CURRENCY_CONFIG } from "@/lib/currency-context";
 
 const CARD_CLASS = "bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm";
 const INPUT_CLASS = "w-full bg-gray-50 dark:bg-[#0f1419] dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white dark:focus:bg-[#1a1f25] transition-colors";
 
 export default function SettingsPage() {
+    const { currency, setCurrency } = useCurrency();
     const [settings, setSettings] = useState(null);
     const [draft, setDraft] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -410,6 +413,42 @@ export default function SettingsPage() {
                     <ToggleRow title="Stock de insumos" subtitle="Avisar cuando cruza umbral crítico" enabled={!!draft.stockInsumosHabilitado} onChange={() => onToggle("stockInsumosHabilitado")} />
                     <ToggleRow title="Pronóstico del tiempo" subtitle="Resumen diario de condiciones" enabled={!!draft.pronosticoTiempoHabilitado} onChange={() => onToggle("pronosticoTiempoHabilitado")} />
                     <ToggleRow title="Alertas de riego" subtitle="Recordatorios preventivos de humedad" enabled={!!draft.alertaRiegoHabilitada} onChange={() => onToggle("alertaRiegoHabilitada")} />
+                </div>
+            </section>
+
+            {/* ── Preferencias ── */}
+            <section className={`${CARD_CLASS} p-6`}>
+                <h3 className="text-[18px] font-black text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-4">
+                    <Coins size={18} className="text-[#2D6A4F]" />
+                    Preferencias
+                </h3>
+
+                <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <p className="text-[14px] font-black text-gray-900 dark:text-gray-100">Moneda</p>
+                            <p className="text-[12px] text-gray-500 font-medium">Moneda utilizada en todo el sistema para mostrar importes</p>
+                        </div>
+                        <div className="flex bg-gray-200 dark:bg-gray-700 rounded-xl p-1 gap-0.5">
+                            {Object.entries(CURRENCY_CONFIG).map(([code, cfg]) => (
+                                <button
+                                    key={code}
+                                    type="button"
+                                    onClick={() => setCurrency(code)}
+                                    className={`px-4 py-2 rounded-lg text-[12px] font-black uppercase tracking-wide transition-all ${
+                                        currency === code
+                                            ? "bg-[#2D6A4F] text-white shadow-md"
+                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                    }`}
+                                >
+                                    {code}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-2">
+                        {currency === "ARS" ? "Peso Argentino ($)" : "Dólar Estadounidense (US$)"} — se aplica a finanzas, inventario, campañas y todo apartado monetario.
+                    </p>
                 </div>
             </section>
 

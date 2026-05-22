@@ -226,4 +226,303 @@ public class JohnDeereMachineService {
             return List.of();
         }
     }
+
+    /**
+     * Simula la creación de un equipo ficticio e inyecta telemetría (ubicación) en el Sandbox de John Deere.
+     *
+     * @param userId ID del usuario autenticado
+     * @param orgId ID de la organización de Sandbox (ej: 7711480)
+     * @return Mapa con detalles del equipo creado y estado de la simulación
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> simulateSandboxTelemetry(UUID userId, String orgId) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String token = authService.getUserAccessToken(idDatos);
+        
+        String baseSimUrl = config.getApiBaseUrl().replace("/platform", "/isg");
+        String isgAccept = "application/vnd.deere.isg.v1+json";
+        String uniqueName = "Tractor Simulador " + (System.currentTimeMillis() % 10000);
+        
+        java.io.File debugFile = new java.io.File("p:/AgroNex/backend/sim_debug.txt");
+        try (java.io.FileWriter fw = new java.io.FileWriter(debugFile, true);
+             java.io.PrintWriter pw = new java.io.PrintWriter(fw)) {
+            
+            pw.println("\n=======================================================");
+            pw.println("INTENTO DE SIMULACIÓN EN SANDBOX: " + java.time.Instant.now());
+            pw.println("Organización: " + orgId);
+            pw.println("Token (truncado): " + (token != null && token.length() > 15 ? token.substring(0, 15) + "..." : "null"));
+            pw.println("Base Sim URL: " + baseSimUrl);
+            pw.println("Nombre generado: " + uniqueName);
+            pw.flush();
+
+            log.info("Simulando creación de equipo en JD Sandbox para org {} con nombre {}...", orgId, uniqueName);
+
+            // 1. Obtener Make ID de referencia
+            String makeId = null;
+            try {
+                pw.println("1. Consultando Makes en: " + baseSimUrl + "/equipmentMakes");
+                var response = restClient.get()
+                        .uri(baseSimUrl + "/equipmentMakes")
+                        .header("Authorization", "Bearer " + token)
+                        .header("Accept", isgAccept)
+                        .retrieve()
+                        .toEntity(String.class);
+                
+                pw.println("   Response Makes Status: " + response.getStatusCode());
+                pw.println("   Response Makes Body: " + response.getBody());
+                pw.flush();
+
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    Map<String, Object> body = objectMapper.readValue(response.getBody(), Map.class);
+                    List<Map<String, Object>> values = (List<Map<String, Object>>) body.get("values");
+                    if (values != null && !values.isEmpty()) {
+                        makeId = values.stream()
+                                .filter(m -> "John Deere".equalsIgnoreCase(String.valueOf(m.get("name"))))
+                                .map(m -> String.valueOf(m.get("id")))
+                                .findFirst()
+                                .orElse(String.valueOf(values.get(0).get("id")));
+                        log.info("Identificado Make ID para Sandbox: {}", makeId);
+                        pw.println("   Make ID seleccionado: " + makeId);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("No se pudo obtener el Make de John Deere, se continuará sin él. Error: {}", e.getMessage());
+                pw.println("   Error obteniendo Makes: " + e.getMessage());
+                e.printStackTrace(pw);
+                pw.flush();
+            }
+
+            // 2. Obtener Type ID de referencia
+            String typeId = null;
+            if (makeId != null) {
+                try {
+                    pw.println("2. Consultando Types en: " + baseSimUrl + "/equipmentMakes/" + makeId + "/equipmentISGTypes");
+                    var response = restClient.get()
+                            .uri(baseSimUrl + "/equipmentMakes/" + makeId + "/equipmentISGTypes")
+                            .header("Authorization", "Bearer " + token)
+                            .header("Accept", isgAccept)
+                            .retrieve()
+                            .toEntity(String.class);
+                    
+                    pw.println("   Response Types Status: " + response.getStatusCode());
+                    pw.println("   Response Types Body: " + response.getBody());
+                    pw.flush();
+
+                    if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                        Map<String, Object> body = objectMapper.readValue(response.getBody(), Map.class);
+                        List<Map<String, Object>> values = (List<Map<String, Object>>) body.get("values");
+                        if (values != null && !values.isEmpty()) {
+                            typeId = values.stream()
+                                    .filter(t -> "Tractor".equalsIgnoreCase(String.valueOf(t.get("name"))))
+                                    .map(t -> String.valueOf(t.get("id")))
+                                    .findFirst()
+                                    .orElse(String.valueOf(values.get(0).get("id")));
+                            log.info("Identificado Type ID para Sandbox: {}", typeId);
+                            pw.println("   Type ID seleccionado: " + typeId);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("No se pudo obtener el Type de John Deere. Error: {}", e.getMessage());
+                    pw.println("   Error obteniendo Types: " + e.getMessage());
+                    e.printStackTrace(pw);
+                    pw.flush();
+                }
+            }
+
+            // 3. Obtener Model ID de referencia
+            String modelId = null;
+            if (makeId != null && typeId != null) {
+                try {
+                    pw.println("3. Consultando Models en: " + baseSimUrl + "/equipmentMakes/" + makeId + "/equipmentISGTypes/" + typeId + "/equipmentModels");
+                    var response = restClient.get()
+                            .uri(baseSimUrl + "/equipmentMakes/" + makeId + "/equipmentISGTypes/" + typeId + "/equipmentModels")
+                            .header("Authorization", "Bearer " + token)
+                            .header("Accept", isgAccept)
+                            .retrieve()
+                            .toEntity(String.class);
+                    
+                    pw.println("   Response Models Status: " + response.getStatusCode());
+                    pw.println("   Response Models Body: " + response.getBody());
+                    pw.flush();
+
+                    if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                        Map<String, Object> body = objectMapper.readValue(response.getBody(), Map.class);
+                        List<Map<String, Object>> values = (List<Map<String, Object>>) body.get("values");
+                        if (values != null && !values.isEmpty()) {
+                            modelId = String.valueOf(values.get(0).get("id"));
+                            log.info("Identificado Model ID para Sandbox: {}", modelId);
+                            pw.println("   Model ID seleccionado: " + modelId);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("No se pudo obtener el Model de John Deere. Error: {}", e.getMessage());
+                    pw.println("   Error obteniendo Models: " + e.getMessage());
+                    e.printStackTrace(pw);
+                    pw.flush();
+                }
+            }
+
+            // 4. Construir payload compatible (sin propiedades desconocidas de Jackson)
+            Map<String, Object> equipmentPayload = new java.util.HashMap<>();
+            equipmentPayload.put("name", uniqueName);
+            equipmentPayload.put("type", "Machine"); // 'Machine' o 'Implement'
+            equipmentPayload.put("serialNumber", "AGRNX" + (System.currentTimeMillis() % 100000));
+            if (makeId != null) {
+                equipmentPayload.put("make", makeId);
+            }
+            if (modelId != null) {
+                equipmentPayload.put("model", modelId);
+            }
+
+            // SERIALIZACIÓN EXPLICITA DEL JSON BODY
+            String equipmentJson = objectMapper.writeValueAsString(equipmentPayload);
+            pw.println("4. Payload JSON de Equipo a enviar:\n" + equipmentJson);
+            pw.flush();
+
+            String createUrl = baseSimUrl + "/organizations/" + orgId + "/equipment";
+            String machineId = null;
+            try {
+                pw.println("   POST a: " + createUrl);
+                var responseEntity = restClient.post()
+                        .uri(createUrl)
+                        .header("Authorization", "Bearer " + token)
+                        .header("Accept", isgAccept)
+                        .header("Content-Type", isgAccept)
+                        .body(equipmentJson) // Enviando String serializado directamente
+                        .retrieve()
+                        .toEntity(String.class);
+
+                pw.println("   Response Create Status: " + responseEntity.getStatusCode());
+                pw.println("   Response Create Headers: " + responseEntity.getHeaders());
+                pw.println("   Response Create Body: " + responseEntity.getBody());
+                pw.flush();
+
+                if (responseEntity.getStatusCode().isError()) {
+                    throw new RuntimeException("Error creando equipo en Sandbox: " + responseEntity.getStatusCode());
+                }
+
+                // Capturar ID desde el header Location
+                List<String> locationHeaders = responseEntity.getHeaders().get("Location");
+                if (locationHeaders != null && !locationHeaders.isEmpty()) {
+                    String location = locationHeaders.get(0);
+                    String[] parts = location.split("/");
+                    machineId = parts[parts.length - 1];
+                }
+
+                // Si no viene en el header Location, intentar parsear el body
+                if (machineId == null && responseEntity.getBody() != null) {
+                    Map<String, Object> bodyMap = objectMapper.readValue(responseEntity.getBody(), Map.class);
+                    if (bodyMap.containsKey("id")) {
+                        machineId = bodyMap.get("id").toString();
+                    }
+                }
+
+                if (machineId == null) {
+                    throw new RuntimeException("No se pudo obtener el ID del equipo creado a partir de la respuesta de John Deere.");
+                }
+
+                log.info("Equipo de prueba creado exitosamente en Sandbox con ID: {}", machineId);
+                pw.println("   Equipo creado con ID: " + machineId);
+                pw.flush();
+
+            } catch (org.springframework.web.client.RestClientResponseException e) {
+                String errorBody = e.getResponseBodyAsString();
+                pw.println("   Error HTTP Creando Equipo: " + e.getMessage() + " - Cuerpo: " + errorBody);
+                e.printStackTrace(pw);
+                pw.flush();
+                log.error("Fallo de API John Deere al crear equipo: {} - Respuesta: {}", e.getMessage(), errorBody, e);
+                throw new RuntimeException("Error en API de John Deere (" + e.getStatusCode() + "): " + errorBody);
+            } catch (Exception e) {
+                pw.println("   Error General Creando Equipo: " + e.getMessage());
+                e.printStackTrace(pw);
+                pw.flush();
+                log.error("Fallo al crear equipo ficticio en Sandbox: {}", e.getMessage(), e);
+                throw new RuntimeException("Error al simular creación de equipo: " + e.getMessage());
+            }
+
+            // 5. Inyectar Location History
+            String locationUrl = baseSimUrl + "/organizations/" + orgId + "/equipment/" + machineId + "/locationHistory";
+            log.info("Inyectando historial de ubicación ficticio para máquina {}...", machineId);
+            pw.println("5. Inyectando ubicación para máquina " + machineId + " en: " + locationUrl);
+
+            // Generar coordenadas en la pampa argentina y datos de telemetría ficticios
+            String eventTime = java.time.Instant.now().toString();
+            Map<String, Object> locationPayload = Map.of(
+                "type", "FeatureCollection",
+                "features", List.of(
+                    Map.of(
+                        "type", "Feature",
+                        "geometry", Map.of(
+                            "type", "Point",
+                            "coordinates", List.of(-60.7000, -31.6300)
+                        ),
+                        "properties", Map.of(
+                            "eventTime", eventTime,
+                            "speed", "12.5 km/h",
+                            "engineState", "1",
+                            "heading", 180,
+                            "gpsQuality", "3D_FIX",
+                            "source", "SIMULATED_AGRONEX"
+                        )
+                    )
+                )
+            );
+
+            String locationJson = objectMapper.writeValueAsString(locationPayload);
+            pw.println("   Payload JSON de ubicación: " + locationJson);
+            pw.flush();
+
+            try {
+                var responseEntity = restClient.post()
+                        .uri(locationUrl)
+                        .header("Authorization", "Bearer " + token)
+                        .header("Accept", isgAccept)
+                        .header("Content-Type", isgAccept)
+                        .body(locationJson) // Enviando String serializado directamente
+                        .retrieve()
+                        .toEntity(Void.class);
+
+                pw.println("   Response Location Status: " + responseEntity.getStatusCode());
+                pw.flush();
+
+                if (responseEntity.getStatusCode().isError()) {
+                    throw new RuntimeException("Error inyectando ubicación en Sandbox: " + responseEntity.getStatusCode());
+                }
+
+                log.info("Telemetría ficticia inyectada con éxito.");
+                pw.println("   Telemetría inyectada con éxito.");
+                pw.println("=======================================================");
+                pw.flush();
+
+                return Map.of(
+                    "success", true,
+                    "machineId", machineId,
+                    "organizationId", orgId,
+                    "name", uniqueName,
+                    "coordinates", List.of(-60.7000, -31.6300),
+                    "speed", "12.5 km/h",
+                    "engineState", "1",
+                    "eventTime", eventTime
+                );
+
+            } catch (org.springframework.web.client.RestClientResponseException e) {
+                String errorBody = e.getResponseBodyAsString();
+                pw.println("   Error HTTP Inyectando Ubicación: " + e.getMessage() + " - Cuerpo: " + errorBody);
+                e.printStackTrace(pw);
+                pw.flush();
+                log.error("Fallo de API John Deere al inyectar ubicación: {} - Respuesta: {}", e.getMessage(), errorBody, e);
+                throw new RuntimeException("Error en API de John Deere (" + e.getStatusCode() + "): " + errorBody);
+            } catch (Exception e) {
+                pw.println("   Error General Inyectando Ubicación: " + e.getMessage());
+                e.printStackTrace(pw);
+                pw.flush();
+                log.error("Fallo al inyectar ubicación ficticia en Sandbox: {}", e.getMessage(), e);
+                throw new RuntimeException("Error al simular ubicación de equipo: " + e.getMessage());
+            }
+
+        } catch (Exception outerEx) {
+            log.error("Error al escribir el archivo de debug o simulando: {}", outerEx.getMessage());
+            throw new RuntimeException(outerEx.getMessage());
+        }
+    }
 }

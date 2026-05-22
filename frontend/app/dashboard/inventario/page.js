@@ -4,24 +4,29 @@ import { useState, useEffect, useCallback } from "react";
 import apiClient from "@/lib/api-client";
 import {
     Plus, Search, AlertTriangle, TrendingUp, Package,
-    Droplets, Loader2, X, Wheat, BugOff, Tractor, Fuel, Wrench, Box, Pencil, Trash2
+    Droplets, Loader2, X, Wheat, BugOff, Tractor, Fuel, Wrench, Box, Pencil, Trash2, Bug, FlaskConical
 } from "lucide-react";
 import ConfirmModal from "@/components/shared/ConfirmModal";
+import { useCurrency } from "@/lib/currency-context";
 
 // Mapa de subtipos por tipo de artículo
 const SUBTIPOS_POR_TIPO = {
     SEMILLA: ["Maíz", "Trigo", "Soja", "Girasol", "Sorgo", "Cebada", "Arroz", "Avena", "Algodón", "Otro"],
-    HERBICIDA: ["Glifosato", "Atrazina", "2,4-D", "Dicamba", "Metsulfurón", "Paraquat", "Otro"],
+    HERBICIDA: ["Glifosato", "Atrazina", "2,4-D", "Dicamba", "Metsulfurón", "Paraquat", "Cletodim", "Pivot", "Flumizin", "Otro"],
     FERTILIZANTE: ["Urea", "Fosfato Diamónico (DAP)", "MAP", "Sulfato de Amonio", "Nitrato de Amonio", "KCl", "NPK", "Otro"],
+    INSECTICIDA: ["Cipermetrina", "Clorpirifós", "Lambda-cihalotrina", "Fipronil", "Imidacloprid", "Engeo", "Piretroide", "Otro"],
+    INOCULANTE_CURASEMILLA: ["Inoculante Biológico", "Curasemilla Fungicida", "Curasemilla Insecticida", "Pack Inoculante + Curasemilla", "Otro"],
     COMBUSTIBLE: ["Gasoil", "Nafta", "GNC", "Otro"],
     REPUESTO: ["Filtro", "Correa", "Cuchilla", "Rodamiento", "Otro"],
-    OTRO: ["Otro"]
+    OTRO: []
 };
 
 const TIPO_LABELS = {
     SEMILLA: "Semilla",
     HERBICIDA: "Herbicida",
     FERTILIZANTE: "Fertilizante",
+    INSECTICIDA: "Insecticida",
+    INOCULANTE_CURASEMILLA: "Inoculante/Curasemilla",
     COMBUSTIBLE: "Combustible",
     REPUESTO: "Repuesto",
     OTRO: "Otro"
@@ -31,12 +36,15 @@ const TIPO_ICONS = {
     SEMILLA: Wheat,
     HERBICIDA: BugOff,
     FERTILIZANTE: Droplets,
+    INSECTICIDA: Bug,
+    INOCULANTE_CURASEMILLA: FlaskConical,
     COMBUSTIBLE: Fuel,
     REPUESTO: Wrench,
     OTRO: Box
 };
 
 export default function InventarioPage() {
+    const { symbol: currSymbol } = useCurrency();
     const [insumos, setInsumos] = useState([]);
     const [campos, setCampos] = useState([]);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
@@ -51,7 +59,7 @@ export default function InventarioPage() {
     const [showModal, setShowModal] = useState(false);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const emptyForm = { nombre: "", tipoArticulo: "", subtipo: "", precioUnitario: "", unidad: "", pesoBolsaKg: "", cantidad: "", idCampo: "", idCampania: "" };
+    const emptyForm = { nombre: "", tipoArticulo: "", subtipo: "", precioUnitario: "", unidad: "", pesoBolsaKg: "", cantidad: "", idCampo: "", idCampania: "", semillaMode: "" };
     const [formInsumo, setFormInsumo] = useState(emptyForm);
 
     const fetchData = useCallback(async () => {
@@ -116,6 +124,7 @@ export default function InventarioPage() {
 
     const handleEditar = (item) => {
         setEditingId(item.idInsumo);
+        const isSemilla = item.tipoArticulo === "SEMILLA";
         setFormInsumo({
             nombre: item.nombre || "",
             tipoArticulo: item.tipoArticulo || "",
@@ -125,7 +134,8 @@ export default function InventarioPage() {
             pesoBolsaKg: item.pesoBolsaKg ?? "",
             cantidad: item.cantidad ?? "",
             idCampo: item.idCampo || "",
-            idCampania: item.idCampania || ""
+            idCampania: item.idCampania || "",
+            semillaMode: isSemilla ? (item.unidad === "BOLSAS" ? "BOLSAS" : "PESO") : ""
         });
         setShowModal(true);
     };
@@ -153,7 +163,7 @@ export default function InventarioPage() {
         : campanias;
 
     // Mapeo de tabs a tipoArticulo enum
-    const FILTRO_TAB_TO_TIPO = { "Fertilizante": "FERTILIZANTE", "Semilla": "SEMILLA", "Herbicida": "HERBICIDA" };
+    const FILTRO_TAB_TO_TIPO = { "Fertilizante": "FERTILIZANTE", "Semilla": "SEMILLA", "Herbicida": "HERBICIDA", "Insecticida": "INSECTICIDA", "Inoc./Curasem.": "INOCULANTE_CURASEMILLA" };
 
     const displayInsumos = insumos.filter(i => {
         if (filtroCampoId !== "Todos" && i.idCampo !== filtroCampoId) return false;
@@ -191,7 +201,7 @@ export default function InventarioPage() {
                 dosisHa: ins.dosisHa,
                 hectareas: hectareas,
                 cantidadTotalUsada: cantidadTotal,
-                unidad: insumoRelacionado?.unidad || "UNIDADES"
+                unidad: insumoRelacionado?.unidad || "KILOGRAMOS"
             };
         })
     ).sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
@@ -258,7 +268,7 @@ export default function InventarioPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
                             <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Valor Total del Inventario</p>
-                            <p className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">${valorTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                            <p className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{currSymbol}{valorTotal.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                             <p className="text-[13px] font-bold text-green-600 mt-2 flex items-center gap-1"><TrendingUp size={16} /> Precio unitario × stock actual</p>
                         </div>
                         <div className="bg-orange-50/50 rounded-2xl p-6 border border-orange-100 shadow-sm relative overflow-hidden">
@@ -286,7 +296,7 @@ export default function InventarioPage() {
                     <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 gap-4">
                             <div className="dashboard-scroll-x flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto w-full sm:w-auto">
-                                {["Todos", "Fertilizante", "Semilla", "Herbicida"].map((tab) => (
+                                {["Todos", "Fertilizante", "Semilla", "Herbicida", "Insecticida", "Inoc./Curasem."].map((tab) => (
                                     <button key={tab} type="button" onClick={() => setFiltroActivo(tab)}
                                         className={`shrink-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all min-h-10 ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                                         {tab}
@@ -343,11 +353,15 @@ export default function InventarioPage() {
                                             </td>
                                             <td className="p-4">
                                                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                                    {item.unidad === 'BOLSAS' && item.pesoBolsaKg ? `Bolsas de ${item.pesoBolsaKg} Kg` : item.unidad?.toLowerCase().replace('_', ' ') || '—'}
+                                                    {(() => {
+                                                        if (item.unidad === 'BOLSAS' && item.pesoBolsaKg) return `Bolsas de ${item.pesoBolsaKg} Kg`;
+                                                        const UNIDAD_LABELS = { KILOGRAMOS: 'Kilogramos', GRAMOS: 'Gramos', LITROS: 'Litros', TONELADAS: 'Toneladas', CENTIMETROS_CUBICOS: 'cm³', BOLSAS: 'Bolsas' };
+                                                        return UNIDAD_LABELS[item.unidad] || item.unidad?.toLowerCase().replace('_', ' ') || '—';
+                                                    })()}
                                                 </p>
                                             </td>
                                             <td className="p-4 text-sm text-gray-500 dark:text-gray-400 font-semibold text-right">
-                                                ${Number(item.precioUnitario).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                                                {currSymbol}{Number(item.precioUnitario).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                                             </td>
                                             <td className="p-4">
                                                 <div className="flex flex-col items-center gap-1">
@@ -378,7 +392,7 @@ export default function InventarioPage() {
                                             </td>
                                             {/* Valor Total */}
                                             <td className="p-4 text-sm font-black text-gray-900 dark:text-gray-100 text-right">
-                                                ${(Number(item.precioUnitario) * Number(item.cantidad || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                                                {currSymbol}{(Number(item.precioUnitario) * Number(item.cantidad || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                                             </td>
                                             {/* Campaña */}
                                             <td className="p-4">
@@ -492,9 +506,10 @@ export default function InventarioPage() {
                                         setFormInsumo(p => ({
                                             ...p,
                                             tipoArticulo: tipo,
-                                            subtipo: "",
-                                            unidad: isSemilla ? "BOLSAS" : "",
-                                            pesoBolsaKg: isSemilla ? p.pesoBolsaKg : ""
+                                            subtipo: tipo === "OTRO" ? "" : "",
+                                            unidad: isSemilla ? "" : "",
+                                            pesoBolsaKg: isSemilla ? p.pesoBolsaKg : "",
+                                            semillaMode: isSemilla ? "" : ""
                                         }));
                                     }}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
@@ -507,15 +522,18 @@ export default function InventarioPage() {
                                 <div>
                                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Variedad / Subtipo</label>
                                     <select value={formInsumo.subtipo} onChange={e => setFormInsumo(p => ({ ...p, subtipo: e.target.value }))}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none"
-                                        disabled={!formInsumo.tipoArticulo}>
-                                        <option value="" disabled>-- Seleccionar --</option>
+                                        className={`w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none ${formInsumo.tipoArticulo === "OTRO" ? "text-gray-300 cursor-not-allowed" : "text-gray-500"}`}
+                                        disabled={!formInsumo.tipoArticulo || formInsumo.tipoArticulo === "OTRO"}>
+                                        <option value="" disabled>{formInsumo.tipoArticulo === "OTRO" ? "No aplica" : "-- Seleccionar --"}</option>
                                         {(SUBTIPOS_POR_TIPO[formInsumo.tipoArticulo] || []).map(sub => (
                                             <option key={sub} value={sub}>{sub}</option>
                                         ))}
                                     </select>
                                     {!formInsumo.tipoArticulo && (
                                         <p className="text-[10px] text-gray-400 mt-1">Seleccioná un tipo primero.</p>
+                                    )}
+                                    {formInsumo.tipoArticulo === "OTRO" && (
+                                        <p className="text-[10px] text-gray-400 mt-1">No disponible para tipo &quot;Otro&quot;.</p>
                                     )}
                                 </div>
                             </div>
@@ -541,7 +559,7 @@ export default function InventarioPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Precio Unit. ($)</label>
+                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Precio Unit. ({currSymbol})</label>
                                     <input required type="number" step="0.01" min="0" value={formInsumo.precioUnitario} onChange={e => setFormInsumo(p => ({ ...p, precioUnitario: e.target.value }))}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none" placeholder="0.00" />
                                 </div>
@@ -554,29 +572,64 @@ export default function InventarioPage() {
                             <div>
                                 <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Unidad de Medida</label>
                                 {formInsumo.tipoArticulo === "SEMILLA" ? (
-                                    <div className="space-y-2">
-                                        <div className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-3 py-2.5 text-sm font-medium flex items-center gap-2">
-                                            <Wheat size={14} className="text-[#2D6A4F]" />
-                                            Bolsas de
-                                            <input
-                                                required type="number" step="0.5" min="0.5"
-                                                value={formInsumo.pesoBolsaKg}
-                                                onChange={e => setFormInsumo(p => ({ ...p, pesoBolsaKg: e.target.value }))}
-                                                className="w-16 bg-white border border-gray-300 rounded-lg px-2 py-1 text-sm font-bold text-center focus:border-[#2D6A4F] outline-none"
-                                                placeholder="40"
-                                            />
-                                            <span className="font-bold">Kg</span>
+                                    <div className="space-y-3">
+                                        {/* Selector: Bolsas vs Peso */}
+                                        <div className="flex gap-2">
+                                            <button type="button" onClick={() => setFormInsumo(p => ({ ...p, semillaMode: "BOLSAS", unidad: "BOLSAS", pesoBolsaKg: p.pesoBolsaKg || "" }))}
+                                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                                                    formInsumo.semillaMode === "BOLSAS"
+                                                        ? "border-[#2D6A4F] bg-[#2D6A4F]/10 text-[#2D6A4F]"
+                                                        : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
+                                                }`}>
+                                                Bolsas
+                                            </button>
+                                            <button type="button" onClick={() => setFormInsumo(p => ({ ...p, semillaMode: "PESO", unidad: "", pesoBolsaKg: "" }))}
+                                                className={`flex-1 py-2.5 rounded-xl text-sm font-bold border-2 transition-all ${
+                                                    formInsumo.semillaMode === "PESO"
+                                                        ? "border-[#2D6A4F] bg-[#2D6A4F]/10 text-[#2D6A4F]"
+                                                        : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300"
+                                                }`}>
+                                                Peso
+                                            </button>
                                         </div>
-                                        <p className="text-[10px] text-gray-400">Configurá el peso de cada bolsa de semillas.</p>
+                                        {!formInsumo.semillaMode && (
+                                            <p className="text-[10px] text-gray-400">Seleccioná cómo manejás esta semilla.</p>
+                                        )}
+                                        {/* Input de peso por bolsa (solo si eligió Bolsas) */}
+                                        {formInsumo.semillaMode === "BOLSAS" && (
+                                            <div className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-3 py-2.5 text-sm font-medium flex items-center gap-2">
+                                                <Wheat size={14} className="text-[#2D6A4F]" />
+                                                Bolsas de
+                                                <input
+                                                    required type="number" step="0.5" min="0.5"
+                                                    value={formInsumo.pesoBolsaKg}
+                                                    onChange={e => setFormInsumo(p => ({ ...p, pesoBolsaKg: e.target.value }))}
+                                                    className="w-16 bg-white border border-gray-300 rounded-lg px-2 py-1 text-sm font-bold text-center focus:border-[#2D6A4F] outline-none"
+                                                    placeholder="40"
+                                                />
+                                                <span className="font-bold">Kg</span>
+                                            </div>
+                                        )}
+                                        {/* Selector de unidad (solo si eligió Peso) */}
+                                        {formInsumo.semillaMode === "PESO" && (
+                                            <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))}
+                                                className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
+                                                <option value="" disabled>-- Seleccionar unidad --</option>
+                                                <option value="KILOGRAMOS">Kilogramos</option>
+                                                <option value="GRAMOS">Gramos</option>
+                                                <option value="TONELADAS">Toneladas</option>
+                                            </select>
+                                        )}
                                     </div>
                                 ) : (
                                     <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
                                         <option value="" disabled>-- Seleccionar --</option>
                                         <option value="KILOGRAMOS">Kilogramos</option>
+                                        <option value="GRAMOS">Gramos</option>
                                         <option value="LITROS">Litros</option>
+                                        <option value="CENTIMETROS_CUBICOS">Centímetros Cúbicos</option>
                                         <option value="TONELADAS">Toneladas</option>
-                                        <option value="UNIDADES">Unidades</option>
                                     </select>
                                 )}
                             </div>

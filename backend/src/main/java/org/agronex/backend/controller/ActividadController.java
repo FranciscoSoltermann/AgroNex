@@ -57,4 +57,14 @@ public class ActividadController {
         actividadService.eliminarActividad(idActividad, idUsuario);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/{idActividad}")
+    public ResponseEntity<ActividadResponse> editarActividad(
+            @PathVariable UUID idActividad,
+            @Valid @RequestBody ActividadRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(actividadService.editarActividad(idActividad, request, idUsuario));
+    }
 }
+

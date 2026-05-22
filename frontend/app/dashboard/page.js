@@ -9,6 +9,7 @@ import {
     FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers, Package
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useCurrency } from "@/lib/currency-context";
 
 const CotizacionesBCR = dynamic(() => import("@/components/features/dashboard/CotizacionesBCR"), {
     ssr: false,
@@ -21,6 +22,8 @@ const CotizacionesBCR = dynamic(() => import("@/components/features/dashboard/Co
         </div>
     )
 });
+
+
 
 const UNIDAD_LABEL = { UNIDADES: "und", LITROS: "L", KILOGRAMOS: "kg", TONELADAS: "tn" };
 const getUnidadLabel = (u) => UNIDAD_LABEL[u] ?? "und";
@@ -63,6 +66,7 @@ const getActividadConfig = (tipo) => {
 
 
 export default function DashboardHome() {
+    const { symbol } = useCurrency();
     const [stats, setStats] = useState({ camposActivos: 0, hectareasTotales: 0, gastosAcumulados: 0, ciclosActivos: 0 });
     const [actividades, setActividades] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -109,7 +113,10 @@ export default function DashboardHome() {
                         setUserRole(settingsData.rol);
                         setUserPermisos(settingsData.permisos || []);
 
-                        const totalCostosActs = actos.reduce((sum, a) => sum + (a.costoServicio || 0), 0);
+                        const totalCostosActs = actos.reduce((sum, a) => {
+                            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+                            return sum + (a.costoServicio || 0) * ha;
+                        }, 0);
                         const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
 
                         setStats({
@@ -137,7 +144,10 @@ export default function DashboardHome() {
                             catMap[cat] = (catMap[cat] || 0) + (g.montoTotal || 0);
                         });
                         // Also add activity costs as "Servicios de campo"
-                        const actCosts = actos.reduce((s, a) => s + (a.costoServicio || 0), 0);
+                        const actCosts = actos.reduce((s, a) => {
+                            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+                            return s + (a.costoServicio || 0) * ha;
+                        }, 0);
                         if (actCosts > 0) catMap["Servicios de campo"] = (catMap["Servicios de campo"] || 0) + actCosts;
                         const catArr = Object.entries(catMap)
                             .map(([name, value]) => ({ name, value }))
@@ -160,7 +170,10 @@ export default function DashboardHome() {
                                 monthData[m][type] += val;
                             };
 
-                            actos.forEach(a => processItem(a.fecha, a.costoServicio || 0, "costos"));
+                            actos.forEach(a => {
+                                const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+                                processItem(a.fecha, (a.costoServicio || 0) * ha, "costos");
+                            });
                             gast.forEach(g => processItem(g.fecha, g.montoTotal || 0, "costos"));
                             coses.forEach(c => processItem(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
 
@@ -190,7 +203,10 @@ export default function DashboardHome() {
                                 weekData[w][type] += val;
                             };
 
-                            actos.forEach(a => processWeekly(a.fecha, a.costoServicio || 0, "costos"));
+                            actos.forEach(a => {
+                                const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+                                processWeekly(a.fecha, (a.costoServicio || 0) * ha, "costos");
+                            });
                             gast.forEach(g => processWeekly(g.fecha, g.montoTotal || 0, "costos"));
                             coses.forEach(c => processWeekly(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
 
@@ -229,7 +245,7 @@ export default function DashboardHome() {
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 
     return (
-        <div className="flex flex-col gap-2 animate-in fade-in duration-500 h-full min-h-0 overflow-hidden">
+        <div className="flex flex-col gap-3 animate-in fade-in duration-500 h-full overflow-y-auto pr-1 pb-8 custom-scrollbar">
             {/* Stats — 3 cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
                 <StatCard
@@ -393,7 +409,7 @@ export default function DashboardHome() {
                         {dynChartData.map((d, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
                                 <div className="w-full flex-1 flex items-end gap-1 min-h-0">
-                                    <div className="w-1/2 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.costos / Math.max(1, dynMaxVal)) * 100)}%` }} title={`$${d.costos.toFixed(2)}`} />
+                                    <div className="w-1/2 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.costos / Math.max(1, dynMaxVal)) * 100)}%` }} title={`${symbol}${d.costos.toFixed(2)}`} />
                                     <div className="w-1/2 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.cosecha / Math.max(1, dynMaxVal)) * 100)}%` }} title={`Rend.: ${d.cosecha}`} />
                                 </div>
                                 <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">{d.mes}</span>
@@ -409,7 +425,7 @@ export default function DashboardHome() {
             )}
 
             {/* Cotizaciones de Granos — BCR */}
-            <div className="flex-[1.5] min-h-0 flex flex-col">
+            <div className="flex-[1.5] min-h-0 flex flex-col shrink-0">
                 <CotizacionesBCR />
             </div>
 

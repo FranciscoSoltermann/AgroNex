@@ -13,6 +13,32 @@ import { useState, useEffect } from "react";
 import { useTheme } from "@/app/components/ThemeProvider";
 import { toast } from "sonner";
 import NotificationBell from "@/components/shared/notifications/NotificationBell";
+import { CurrencyProvider, useCurrency, CURRENCY_CONFIG } from "@/lib/currency-context";
+
+function CurrencySelector() {
+    const { currency, setCurrency } = useCurrency();
+    return (
+        <div className="flex bg-gray-100 dark:bg-gray-800/80 rounded-xl p-0.5 border border-gray-200/50 dark:border-gray-750/30 mr-1 sm:mr-2">
+            {Object.keys(CURRENCY_CONFIG).map((code) => {
+                const isActive = currency === code;
+                return (
+                    <button
+                        key={code}
+                        type="button"
+                        onClick={() => setCurrency(code)}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
+                            isActive
+                                ? "bg-[#2D6A4F] text-white shadow-sm"
+                                : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/55 dark:hover:bg-gray-700/50"
+                        }`}
+                    >
+                        {code}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
 
 
 export default function DashboardLayout({ children }) {
@@ -217,6 +243,7 @@ export default function DashboardLayout({ children }) {
     );
 
     return (
+        <CurrencyProvider>
         <div className="flex h-[100dvh] min-h-0 bg-[#F4F6F5] dark:bg-[#0f1419] font-sans overflow-hidden">
 
             {/* ══ SIDEBAR DESKTOP (≥ lg) ══ */}
@@ -269,6 +296,7 @@ export default function DashboardLayout({ children }) {
 
                     {/* Derecha: Notificaciones + Bienvenido */}
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                        <CurrencySelector />
                         <button
                             type="button"
                             onClick={toggleTheme}
@@ -293,5 +321,6 @@ export default function DashboardLayout({ children }) {
                 </main>
             </div>
         </div>
+        </CurrencyProvider>
     );
 }

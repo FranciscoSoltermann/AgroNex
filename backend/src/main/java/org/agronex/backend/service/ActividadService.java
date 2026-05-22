@@ -78,9 +78,13 @@ public class ActividadService {
 
                 if (insumo.getCantidad() != null && detalle.getDosisHa() != null && superficieBase != null) {
                     BigDecimal stockAnterior = insumo.getCantidad();
-                    BigDecimal cantidadUsada = detalle.getDosisHa().multiply(superficieBase);
-                    BigDecimal nuevoStock = stockAnterior.subtract(cantidadUsada);
+                    BigDecimal cantidadCalculada = detalle.getDosisHa().multiply(superficieBase);
+                    BigDecimal nuevoStock = stockAnterior.subtract(cantidadCalculada);
                     if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) nuevoStock = BigDecimal.ZERO;
+
+                    // Store the ACTUAL consumed amount (clamped)
+                    BigDecimal cantidadRealConsumida = stockAnterior.subtract(nuevoStock);
+                    vinculo.setCantidadConsumida(cantidadRealConsumida);
 
                     BigDecimal stockBase = insumo.getCantidadInicial();
                     if (stockBase == null || stockBase.compareTo(BigDecimal.ZERO) <= 0) {
@@ -144,6 +148,11 @@ public class ActividadService {
             throw new AccessDeniedException("No tenés permiso para eliminar esta actividad");
         }
 
+        // Restore stock for each insumo used
+        restaurarStockInsumos(actividad);
+        // Flush stock updates to DB before cascade delete removes ActividadInsumo rows
+        insumoRepository.flush();
+
         auditService.registrar(
                 idUsuarioToken, actividad.getCampania().getLote().getCampo().getUsuario().getEmail(),
                 EntidadAudit.ACTIVIDAD, idActividad.toString(),
@@ -153,5 +162,103 @@ public class ActividadService {
         );
 
         actividadRepository.delete(actividad);
+    }
+
+    @Transactional
+    public ActividadResponse editarActividad(UUID idActividad, ActividadRequest request, UUID idUsuarioToken) {
+        Actividad actividad = actividadRepository.findById(idActividad)
+                .orElseThrow(() -> new EntityNotFoundException("Actividad no encontrada"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (actividad.getCampania().getLote() == null || !actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tenés permiso para editar esta actividad");
+        }
+
+        Campania campania = campaniaRepository.findById(request.getIdCampania())
+                .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
+
+        // 1. Restore stock from old insumos
+        restaurarStockInsumos(actividad);
+
+        // 2. Remove old ActividadInsumo records
+        actividad.getInsumosUtilizados().clear();
+        actividadRepository.flush();
+
+        // 3. Update fields
+        actividad.setTipoActv(request.getTipoActv());
+        actividad.setFecha(request.getFecha());
+        actividad.setCostoServicio(request.getCostoServicio());
+        actividad.setHectareasTratadas(request.getHectareasTratadas());
+        actividad.setNotas(request.getNotas());
+        actividad.setCampania(campania);
+
+        Actividad guardada = actividadRepository.save(actividad);
+
+        // 4. Create new ActividadInsumo records and deduct stock
+        if (request.getInsumos() != null && !request.getInsumos().isEmpty()) {
+            BigDecimal supTotal = campania.getLotes().stream()
+                    .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal superficieBase = request.getHectareasTratadas() != null ? request.getHectareasTratadas() : supTotal;
+
+            List<ActividadInsumo> vinculos = new ArrayList<>();
+            for (DetalleInsumoRequest detalle : request.getInsumos()) {
+                Insumo insumo = insumoRepository.findById(detalle.getIdInsumo())
+                        .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en catálogo"));
+
+                ActividadInsumo vinculo = new ActividadInsumo();
+                vinculo.setActividad(guardada);
+                vinculo.setInsumo(insumo);
+                vinculo.setDosisHa(detalle.getDosisHa());
+
+                if (insumo.getCantidad() != null && detalle.getDosisHa() != null && superficieBase != null) {
+                    BigDecimal stockAnterior = insumo.getCantidad();
+                    BigDecimal cantidadCalculada = detalle.getDosisHa().multiply(superficieBase);
+                    BigDecimal nuevoStock = stockAnterior.subtract(cantidadCalculada);
+                    if (nuevoStock.compareTo(BigDecimal.ZERO) < 0) nuevoStock = BigDecimal.ZERO;
+
+                    BigDecimal cantidadRealConsumida = stockAnterior.subtract(nuevoStock);
+                    vinculo.setCantidadConsumida(cantidadRealConsumida);
+
+                    insumo.setCantidad(nuevoStock);
+                    insumoRepository.save(insumo);
+                }
+
+                vinculos.add(vinculo);
+            }
+            actividadInsumoRepository.saveAll(vinculos);
+        }
+
+        auditService.registrar(
+                idUsuarioToken, campania.getLote().getCampo().getUsuario().getEmail(),
+                EntidadAudit.ACTIVIDAD, idActividad.toString(),
+                actividad.getTipoActv() + " en campaña " + campania.getCultivo(),
+                AccionAudit.ACTUALIZAR,
+                "Actividad editada. Tipo: " + guardada.getTipoActv() + ". Ha tratadas: " + guardada.getHectareasTratadas()
+        );
+
+        return actividadMapper.toResponse(guardada);
+    }
+
+    private void restaurarStockInsumos(Actividad actividad) {
+        // Use the entity's own mapped collection to ensure Hibernate loads them properly
+        List<ActividadInsumo> vinculos = actividad.getInsumosUtilizados();
+        if (vinculos == null || vinculos.isEmpty()) {
+            // Fallback: try via repository
+            vinculos = actividadInsumoRepository.findByActividad(actividad);
+        }
+        for (ActividadInsumo vinculo : vinculos) {
+            Insumo insumo = vinculo.getInsumo();
+            if (insumo != null && insumo.getCantidad() != null) {
+                // Use the stored cantidadConsumida for accurate restoration
+                BigDecimal cantidadARestaurar = vinculo.getCantidadConsumida();
+                if (cantidadARestaurar != null && cantidadARestaurar.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal nuevoStock = insumo.getCantidad().add(cantidadARestaurar);
+                    insumo.setCantidad(nuevoStock);
+                    insumoRepository.save(insumo);
+                }
+            }
+        }
     }
 }
