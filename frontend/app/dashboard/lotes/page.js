@@ -7,13 +7,12 @@ import {
 import { useState, useEffect, useCallback, useMemo } from "react";
 import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
-import dynamic from 'next/dynamic';
+
 import { toast } from "sonner";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useCurrency } from "@/lib/currency-context";
 
-const MonitoreoSatelitalViewer = dynamic(() => import('@/components/features/dashboard/lotes/MonitoreoSatelitalViewer'), { ssr: false });
-const LibroCampoPanel = dynamic(() => import('@/components/features/dashboard/lotes/LibroCampoPanel'), { ssr: false });
+
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Inoculante/Curasemilla", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
@@ -559,9 +558,6 @@ export default function CiclosPage() {
                 </div>
             </div>
 
-            {/* Monitoreo Satelital */}
-            {loteActual && <MonitoreoSatelitalViewer lote={loteActual} />}
-            {loteActual && <LibroCampoPanel idLote={loteActual.idLote} />}
 
             {/* Registrar Actividad — Horizontal */}
             <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg">
