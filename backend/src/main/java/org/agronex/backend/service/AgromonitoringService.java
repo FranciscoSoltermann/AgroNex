@@ -15,7 +15,6 @@ import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,14 +51,6 @@ public class AgromonitoringService {
             return URLEncoder.encode(apiKey, StandardCharsets.UTF_8);
         } catch (Exception e) {
             return apiKey;
-        }
-    }
-
-    private String encodeId(String id) {
-        try {
-            return URLEncoder.encode(id, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            return id;
         }
     }
 
@@ -115,150 +106,5 @@ public class AgromonitoringService {
             return null;
         }
     }
-
-    // ─── Imágenes satelitales ─────────────────────────────────────────────────
-
-    /**
-     * Busca las imágenes satelitales entre las fechas indicadas para un polyId.
-     */
-    public List<Map<String, Object>> buscarImagenesSatelitales(String polyId, long startUnix, long endUnix) {
-        try {
-            String url = buildUrl(String.format("/image/search?polyid=%s&start=%d&end=%d",
-                    encodeId(polyId), startUnix, endUnix));
-
-            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            }
-            log.error("Error obteniendo imágenes satelitales. Status: {}", response.getStatusCode());
-            return List.of();
-        } catch (Exception e) {
-            log.error("Excepción buscando imágenes satelitales para polyId={}", encodeId(polyId), e);
-            return List.of();
-        }
-    }
-
-    /**
-     * Obtiene las estadísticas NDVI para un polígono en un rango de tiempo.
-     */
-    public List<Map<String, Object>> obtenerEstadisticasNdvi(String polyId, long startUnix, long endUnix) {
-        try {
-            String url = buildUrl(String.format("/ndvi/image/search?polyid=%s&start=%d&end=%d",
-                    encodeId(polyId), startUnix, endUnix));
-
-            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            }
-            return List.of();
-        } catch (Exception e) {
-            log.error("Excepción obteniendo estadísticas NDVI para polyId={}", encodeId(polyId), e);
-            return List.of();
-        }
-    }
-
-    // ─── Clima actual ─────────────────────────────────────────────────────────
-
-    /**
-     * Obtiene el clima actual para un polígono.
-     */
-    public Map<String, Object> obtenerClimaActual(String polyId) {
-        try {
-            String url = buildUrl(String.format("/weather?polyid=%s", encodeId(polyId)));
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            }
-            return Map.of();
-        } catch (Exception e) {
-            log.error("Excepción obteniendo clima actual para polyId={}", encodeId(polyId), e);
-            return Map.of();
-        }
-    }
-
-    // ─── Clima histórico ──────────────────────────────────────────────────────
-
-    /**
-     * Obtiene el historial de clima para un polígono en un rango de fechas.
-     */
-    public List<Map<String, Object>> obtenerClimaHistorico(String polyId, long startUnix, long endUnix) {
-        try {
-            String url = buildUrl(String.format("/weather/history?polyid=%s&start=%d&end=%d",
-                    encodeId(polyId), startUnix, endUnix));
-
-            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            }
-            return List.of();
-        } catch (Exception e) {
-            log.error("Excepción obteniendo clima histórico para polyId={}", encodeId(polyId), e);
-            return List.of();
-        }
-    }
-
-    // ─── Pronóstico 8 días ────────────────────────────────────────────────────
-
-    /**
-     * Obtiene el pronóstico de hasta 8 días para un polígono.
-     */
-    public List<Map<String, Object>> obtenerPronostico8Dias(String polyId) {
-        try {
-            String url = buildUrl(String.format("/forecast?polyid=%s", encodeId(polyId)));
-
-            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<List<Map<String, Object>>>() {}
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            }
-            return List.of();
-        } catch (Exception e) {
-            log.error("Excepción obteniendo pronóstico para polyId={}", encodeId(polyId), e);
-            return List.of();
-        }
-    }
-
-    // ─── Suelo ────────────────────────────────────────────────────────────────
-
-    /**
-     * Obtiene los datos actuales del suelo para un polígono.
-     */
-    public Map<String, Object> obtenerSueloActual(String polyId) {
-        try {
-            String url = buildUrl(String.format("/soil?polyid=%s", encodeId(polyId)));
-
-            ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, null,
-                    new ParameterizedTypeReference<Map<String, Object>>() {}
-            );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
-            }
-            return Map.of();
-        } catch (Exception e) {
-            log.error("Excepción obteniendo datos de suelo para polyId={}", encodeId(polyId), e);
-            return Map.of();
-        }
-    }
 }
+

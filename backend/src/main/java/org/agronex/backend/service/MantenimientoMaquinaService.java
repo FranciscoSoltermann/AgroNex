@@ -90,10 +90,10 @@ public class MantenimientoMaquinaService {
             String mensaje = String.format("A tu máquina %s le faltan solo %.1f horas para el próximo service (Programado a las %.1f hs).",
                     mant.getNombreMaquina(), horasFaltantes, mant.getHorasProximoService());
             
-            alertaUsuarioService.enviarAlertaCaidaNdvi(
+            alertaUsuarioService.enviarAlertaMantenimiento(
                     mant.getUsuario(), 
                     "Alerta de Mantenimiento", 
-                    mensaje); // Reutilizamos el enviador de alertas generico
+                    mensaje);
         }
     }
 }

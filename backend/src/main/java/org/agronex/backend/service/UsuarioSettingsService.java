@@ -58,7 +58,6 @@ public class UsuarioSettingsService {
         if (request.getAlertaRiegoHabilitada() != null) config.setAlertaRiegoHabilitada(request.getAlertaRiegoHabilitada());
         if (request.getPronosticoTiempoHabilitado() != null) config.setPronosticoTiempoHabilitado(request.getPronosticoTiempoHabilitado());
         if (request.getStockInsumosHabilitado() != null) config.setStockInsumosHabilitado(request.getStockInsumosHabilitado());
-        if (request.getCaidaNdviHabilitada() != null) config.setCaidaNdviHabilitada(request.getCaidaNdviHabilitada());
         if (request.getCambioClimaticoHabilitado() != null) config.setCambioClimaticoHabilitado(request.getCambioClimaticoHabilitado());
 
         Usuario guardadoUsuario = usuarioRepository.save(usuario);
@@ -131,7 +130,6 @@ public class UsuarioSettingsService {
                 .alertaRiegoHabilitada(config.getAlertaRiegoHabilitada())
                 .pronosticoTiempoHabilitado(config.getPronosticoTiempoHabilitado())
                 .stockInsumosHabilitado(config.getStockInsumosHabilitado())
-                .caidaNdviHabilitada(config.getCaidaNdviHabilitada())
                 .cambioClimaticoHabilitado(config.getCambioClimaticoHabilitado())
                 .actualizadoEn(config.getActualizadoEn())
                 .build();

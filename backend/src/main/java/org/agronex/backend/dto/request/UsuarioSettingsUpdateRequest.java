@@ -13,6 +13,5 @@ public class UsuarioSettingsUpdateRequest {
     private Boolean alertaRiegoHabilitada;
     private Boolean pronosticoTiempoHabilitado;
     private Boolean stockInsumosHabilitado;
-    private Boolean caidaNdviHabilitada;
     private Boolean cambioClimaticoHabilitado;
 }

@@ -25,7 +25,6 @@ public class UsuarioSettingsResponse {
     private Boolean alertaRiegoHabilitada;
     private Boolean pronosticoTiempoHabilitado;
     private Boolean stockInsumosHabilitado;
-    private Boolean caidaNdviHabilitada;
     private Boolean cambioClimaticoHabilitado;
 
     private OffsetDateTime actualizadoEn;

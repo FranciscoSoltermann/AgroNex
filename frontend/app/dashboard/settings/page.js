@@ -123,7 +123,6 @@ export default function SettingsPage() {
                 alertaRiegoHabilitada: draft.alertaRiegoHabilitada,
                 pronosticoTiempoHabilitado: draft.pronosticoTiempoHabilitado,
                 stockInsumosHabilitado: draft.stockInsumosHabilitado,
-                caidaNdviHabilitada: draft.caidaNdviHabilitada,
                 cambioClimaticoHabilitado: draft.cambioClimaticoHabilitado,
             };
 
@@ -408,7 +407,7 @@ export default function SettingsPage() {
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ToggleRow title="Caída de NDVI" subtitle="Notificar baja brusca del índice vegetativo" enabled={!!draft.caidaNdviHabilitada} onChange={() => onToggle("caidaNdviHabilitada")} />
+
                     <ToggleRow title="Cambio climático inminente" subtitle="Detectar eventos climáticos críticos" enabled={!!draft.cambioClimaticoHabilitado} onChange={() => onToggle("cambioClimaticoHabilitado")} />
                     <ToggleRow title="Stock de insumos" subtitle="Avisar cuando cruza umbral crítico" enabled={!!draft.stockInsumosHabilitado} onChange={() => onToggle("stockInsumosHabilitado")} />
                     <ToggleRow title="Pronóstico del tiempo" subtitle="Resumen diario de condiciones" enabled={!!draft.pronosticoTiempoHabilitado} onChange={() => onToggle("pronosticoTiempoHabilitado")} />

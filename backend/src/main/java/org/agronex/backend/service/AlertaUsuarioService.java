@@ -28,18 +28,6 @@ public class AlertaUsuarioService {
         }
     }
 
-    public void enviarAlertaCaidaNdvi(Usuario usuario, String asunto, String mensaje) {
-        try {
-            UsuarioConfiguracion config = usuarioSettingsService.obtenerOCrearConfiguracion(usuario);
-            if (!Boolean.TRUE.equals(config.getCaidaNdviHabilitada())) {
-                return;
-            }
-            notificacionService.crearNotificacion(usuario, asunto, mensaje);
-            notificacionMailService.enviarAlerta(resolveDestinatario(usuario, config), asunto, mensaje);
-        } catch (Exception e) {
-            log.warn("No se pudo enviar alerta NDVI por preferencias/configuración: {}", e.getMessage());
-        }
-    }
 
     public void enviarAlertaCambioClimatico(Usuario usuario, String asunto, String mensaje) {
         try {
@@ -51,6 +39,16 @@ public class AlertaUsuarioService {
             notificacionMailService.enviarAlerta(resolveDestinatario(usuario, config), asunto, mensaje);
         } catch (Exception e) {
             log.warn("No se pudo enviar alerta climática por preferencias/configuración: {}", e.getMessage());
+        }
+    }
+
+    public void enviarAlertaMantenimiento(Usuario usuario, String asunto, String mensaje) {
+        try {
+            notificacionService.crearNotificacion(usuario, asunto, mensaje);
+            UsuarioConfiguracion config = usuarioSettingsService.obtenerOCrearConfiguracion(usuario);
+            notificacionMailService.enviarAlerta(resolveDestinatario(usuario, config), asunto, mensaje);
+        } catch (Exception e) {
+            log.warn("No se pudo enviar alerta de mantenimiento: {}", e.getMessage());
         }
     }
 

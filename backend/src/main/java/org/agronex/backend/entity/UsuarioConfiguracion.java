@@ -44,10 +44,6 @@ public class UsuarioConfiguracion {
     private Boolean stockInsumosHabilitado = Boolean.TRUE;
 
     @Builder.Default
-    @Column(name = "caida_ndvi_habilitada", nullable = false)
-    private Boolean caidaNdviHabilitada = Boolean.TRUE;
-
-    @Builder.Default
     @Column(name = "cambio_climatico_habilitado", nullable = false)
     private Boolean cambioClimaticoHabilitado = Boolean.TRUE;
 
