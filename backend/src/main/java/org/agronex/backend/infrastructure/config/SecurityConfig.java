@@ -132,17 +132,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/notificaciones/**")
                     .hasAnyAuthority("ROLE_ADMIN", "ROLE_PROPIETARIO", "ROLE_EMPLEADO")
 
-                // Mutaciones sobre datos de negocio → PROPIETARIO o ADMIN (no EMPLEADO)
-                .requestMatchers(HttpMethod.DELETE, "/api/**")
-                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_PROPIETARIO")
-                .requestMatchers(HttpMethod.POST, "/api/**")
-                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_PROPIETARIO")
-                .requestMatchers(HttpMethod.PUT, "/api/**")
-                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_PROPIETARIO")
-                .requestMatchers(HttpMethod.PATCH, "/api/**")
-                    .hasAnyAuthority("ROLE_ADMIN", "ROLE_PROPIETARIO")
-
-                // Lecturas y rutas restantes → JWT válido (incl. EMPLEADO en GET)
+                // Las reglas detalladas para lectura/escritura (POST/PUT/DELETE) 
+                // se manejan a nivel de controlador con @PreAuthorize("hasAuthority(...)")
+                // Base: todas las demás rutas bajo /api requieren autenticación válida
                 .anyRequest().authenticated()
             )
 

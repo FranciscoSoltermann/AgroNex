@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useCurrency } from "@/lib/currency-context";
+import PermissionGuard from "@/components/shared/PermissionGuard";
 
 // Mapa de subtipos por tipo de artículo
 const SUBTIPOS_POR_TIPO = {
@@ -217,6 +218,7 @@ export default function InventarioPage() {
     });
 
     return (
+        <PermissionGuard requiredPermission="GESTION_INVENTARIO">
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
             {/* Barra de Filtros y Búsqueda */}
@@ -652,6 +654,7 @@ export default function InventarioPage() {
                 confirmText="Eliminar"
             />
         </div>
+        </PermissionGuard>
     );
 }
 

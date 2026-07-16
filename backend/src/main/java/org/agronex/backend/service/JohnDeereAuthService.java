@@ -179,6 +179,22 @@ public class JohnDeereAuthService {
     }
 
     /**
+     * Fuerza el refresh de un token de usuario y retorna el nuevo access_token en texto plano.
+     */
+    @Transactional
+    public String forceRefreshUserToken(UUID userId) {
+        JohnDeereToken token = tokenRepository.findByIdUsuario(userId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No hay conexión con John Deere. Conectá tu cuenta primero."));
+
+        if (token.getRefreshToken() == null || token.getRefreshToken().isBlank()) {
+            throw new IllegalStateException("No hay refresh_token. Volvé a conectar tu cuenta.");
+        }
+
+        return refreshUserToken(token);
+    }
+
+    /**
      * Verifica si un usuario tiene una conexión activa con JD.
      */
     public boolean isUserConnected(UUID userId) {

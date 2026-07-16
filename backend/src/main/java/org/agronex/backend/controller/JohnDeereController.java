@@ -39,6 +39,7 @@ import java.util.*;
 @RequestMapping("/api/maquinaria/john-deere")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_MAQUINARIA')")
 public class JohnDeereController {
 
     private final JohnDeereConnectionService connectionService;

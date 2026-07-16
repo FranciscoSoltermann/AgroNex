@@ -18,6 +18,7 @@ const FieldMap = dynamic(() => import('@/components/features/dashboard/maquinari
 const ReporteContratistaButton = dynamic(() => import('@/components/features/dashboard/maquinaria/ReporteContratistaButton'), { ssr: false });
 const MantenimientoPanel = dynamic(() => import('@/components/features/dashboard/maquinaria/MantenimientoPanel'), { ssr: false });
 
+import PermissionGuard from "@/components/shared/PermissionGuard";
 
 const PROVIDERS = [
     {
@@ -144,6 +145,7 @@ export default function EcosistemaPage() {
     };
 
     return (
+        <PermissionGuard requiredPermission="GESTION_MAQUINARIA">
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
             {/* Header */}
             <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
@@ -208,6 +210,7 @@ export default function EcosistemaPage() {
                 confirmText="Desconectar"
             />
         </div>
+        </PermissionGuard>
     );
 }
 

@@ -47,6 +47,13 @@ public class RolJwtAuthenticationConverter implements Converter<Jwt, AbstractAut
                         authorities.add(new SimpleGrantedAuthority("ROLE_" + rol.name()));
                         log.debug("JWT sub={} → ROLE_{}", sub, rol.name());
                     }
+                    
+                    if (u.getPermisos() != null) {
+                        for (org.agronex.backend.enums.PermisoEmpleado permiso : u.getPermisos()) {
+                            authorities.add(new SimpleGrantedAuthority("PERMISO_" + permiso.name()));
+                            log.debug("JWT sub={} → PERMISO_{}", sub, permiso.name());
+                        }
+                    }
                 });
             } catch (IllegalArgumentException ex) {
                 log.warn("JWT sub no es UUID válido: {}", sub);

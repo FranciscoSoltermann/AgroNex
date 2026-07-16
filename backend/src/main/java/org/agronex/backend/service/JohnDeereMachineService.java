@@ -4,8 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.infrastructure.config.JohnDeereConfig;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
@@ -33,23 +36,55 @@ public class JohnDeereMachineService {
     private static final String ACCEPT_HEADER = "application/vnd.deere.axiom.v3+json";
 
     /**
-     * Lista las organizaciones del usuario conectado.
+     * Realiza una consulta GET firmada a la API de John Deere.
+     * Si la API retorna un 401, intenta refrescar el token de forma forzada y reintentar una vez.
+     * Si el reintento o el refresh fallan, desconecta al usuario en BD (autocleanup) y lanza una excepción limpia.
      */
-    @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> listOrganizations(UUID userId) {
+    private String executeGet(UUID userId, String url) {
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
         String token = authService.getUserAccessToken(idDatos);
-        String url = config.getApiBaseUrl() + "/organizations";
-
-        log.debug("Consultando organizaciones JD para usuario {}", idDatos);
 
         try {
-            String rawResponse = restClient.get()
+            return restClient.get()
                     .uri(url)
                     .header("Authorization", "Bearer " + token)
                     .header("Accept", ACCEPT_HEADER)
                     .retrieve()
                     .body(String.class);
+        } catch (HttpClientErrorException.Unauthorized e) {
+            log.info("Token JD inválido o expirado (401) para usuario {}. Intentando forzar refresh...", idDatos);
+            try {
+                token = authService.forceRefreshUserToken(idDatos);
+                return restClient.get()
+                        .uri(url)
+                        .header("Authorization", "Bearer " + token)
+                        .header("Accept", ACCEPT_HEADER)
+                        .retrieve()
+                        .body(String.class);
+            } catch (Exception refreshEx) {
+                log.warn("Fallo el refresh o reintento de token JD para usuario {}. Desconectando cuenta...", idDatos, refreshEx);
+                authService.disconnectUser(idDatos);
+                throw new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "La sesión de John Deere ha expirado. Por favor, vuelve a conectar tu cuenta.",
+                        refreshEx
+                );
+            }
+        }
+    }
+
+    /**
+     * Lista las organizaciones del usuario conectado.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> listOrganizations(UUID userId) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String url = config.getApiBaseUrl() + "/organizations";
+
+        log.debug("Consultando organizaciones JD para usuario {}", idDatos);
+
+        try {
+            String rawResponse = executeGet(userId, url);
 
             // VUL-B02: solo DEBUG en producción, no INFO
             log.debug("Respuesta de organizaciones JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);
@@ -80,8 +115,6 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listMachines(UUID userId, String orgId) {
-        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
-        String token = authService.getUserAccessToken(idDatos);
         List<String> endpointsToTry = List.of(
             config.getApiBaseUrl() + "/organizations/" + orgId + "/machines",
             config.getApiBaseUrl() + "/organizations/" + orgId + "/equipment"
@@ -90,12 +123,7 @@ public class JohnDeereMachineService {
         for (String url : endpointsToTry) {
             log.debug("Consultando equipos JD en org {}", orgId);
             try {
-                String rawResponse = restClient.get()
-                        .uri(url)
-                        .header("Authorization", "Bearer " + token)
-                        .header("Accept", ACCEPT_HEADER)
-                        .retrieve()
-                        .body(String.class);
+                String rawResponse = executeGet(userId, url);
 
                 // VUL-B02: respuesta completa solo a nivel DEBUG
                 log.debug("Respuesta equipos JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);
@@ -130,19 +158,13 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getMachineBreadcrumbs(UUID userId, String machineId) {
-        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
-        String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/machines/" + machineId + "/breadcrumbs";
 
         try {
-            Map<String, Object> response = restClient.get()
-                    .uri(url)
-                    .header("Authorization", "Bearer " + token)
-                    .header("Accept", ACCEPT_HEADER)
-                    .retrieve()
-                    .body(Map.class);
+            String rawResponse = executeGet(userId, url);
+            if (rawResponse == null || rawResponse.isBlank()) return List.of();
 
-            if (response == null) return List.of();
+            Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
 
             if (response.containsKey("values")) {
                 return (List<Map<String, Object>>) response.get("values");
@@ -160,19 +182,13 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getMachineLocationHistory(UUID userId, String machineId) {
-        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
-        String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/machines/" + machineId + "/locationHistory";
 
         try {
-            Map<String, Object> response = restClient.get()
-                    .uri(url)
-                    .header("Authorization", "Bearer " + token)
-                    .header("Accept", ACCEPT_HEADER)
-                    .retrieve()
-                    .body(Map.class);
+            String rawResponse = executeGet(userId, url);
+            if (rawResponse == null || rawResponse.isBlank()) return List.of();
 
-            if (response == null) return List.of();
+            Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
 
             if (response.containsKey("values")) {
                 return (List<Map<String, Object>>) response.get("values");
@@ -190,18 +206,11 @@ public class JohnDeereMachineService {
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listFields(UUID userId, String orgId) {
-        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
-        String token = authService.getUserAccessToken(idDatos);
         String url = config.getApiBaseUrl() + "/organizations/" + orgId + "/fields?embed=boundaries";
 
         log.debug("Consultando campos JD en org {}", orgId);
         try {
-            String rawResponse = restClient.get()
-                    .uri(url)
-                    .header("Authorization", "Bearer " + token)
-                    .header("Accept", ACCEPT_HEADER)
-                    .retrieve()
-                    .body(String.class);
+            String rawResponse = executeGet(userId, url);
 
             // VUL-B02: solo DEBUG
             log.debug("Respuesta campos JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);

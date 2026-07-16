@@ -16,6 +16,8 @@ const PdfDownloadButton = dynamic(() => import('@/components/features/dashboard/
     ssr: false
 });
 
+import PermissionGuard from "@/components/shared/PermissionGuard";
+
 export default function FinanzasPage() {
     const [resumen, setResumen] = useState([]);
     const [campos, setCampos] = useState([]);
@@ -312,6 +314,7 @@ export default function FinanzasPage() {
     };
 
     return (
+        <PermissionGuard requiredPermission="GESTION_FINANZAS">
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] rounded-2xl p-4 sm:p-6 text-white shadow-lg border border-white/10">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -807,6 +810,7 @@ export default function FinanzasPage() {
                 confirmText="Confirmar"
             />
         </div>
+        </PermissionGuard>
     );
 }
 
