@@ -4,19 +4,22 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copiamos solo los archivos de dependencias primero para aprovechar la caché de Docker
+# Instalar dependencias necesarias para algunos módulos nativos
+RUN apk add --no-cache libc6-compat
+
+# Copiamos package.json primero
 COPY package*.json ./
 
-# Usamos 'npm ci' en lugar de 'npm install' (es más rápido y estricto para producción)
+# Instalación estricta
 RUN npm ci
 
-# Copiamos todo el código fuente del frontend
+# Copiar el resto del código
 COPY . .
 
-# Desactivamos telemetría de Next.js por privacidad y velocidad
+# Desactivar telemetría
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Compilamos la aplicación de producción (minifica código y pre-renderiza páginas)
+# Compilación (ahora generará una carpeta standalone gracias a next.config.mjs)
 RUN npm run build
 
 # ==========================================
@@ -25,18 +28,31 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Le avisamos a Node que estamos en producción
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Copiamos los archivos compilados y dependencias necesarias desde la etapa de compilación
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
+# Crear un usuario no-root por seguridad
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copiar carpeta public (imágenes, fuentes, etc.)
 COPY --from=builder /app/public ./public
 
-# Exponer el puerto por defecto de Next.js (3000)
+# Crear directorio para la cache de next
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Copiar SOLO los archivos standalone y estáticos generados por Next.js
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Cambiar al usuario sin privilegios
+USER nextjs
+
 EXPOSE 3000
 
-# Comando para arrancar el servidor Next.js en producción
-CMD ["npm", "run", "start"]
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# Ejecutar el servidor standalone directamente (mucho más rápido que npm run start)
+CMD ["node", "server.js"]

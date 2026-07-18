@@ -6,6 +6,7 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone", // Optimizacion estricta para Docker
   poweredByHeader: false, // VUL-12: Disable X-Powered-By header
   turbopack: {
     root: __dirname,
