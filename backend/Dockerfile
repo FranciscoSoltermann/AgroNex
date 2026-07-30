@@ -1,38 +1,48 @@
 # ==========================================
-# ETAPA 1: BUILDER (Compilación y empaquetado)
+# ETAPA 1: BUILDER
 # ==========================================
 FROM eclipse-temurin:21-jdk-jammy AS builder
 WORKDIR /app
 
-# Copiamos la estructura de Maven Wrapper y pom.xml primero para aprovechar el caché de Docker
 COPY .mvn/ .mvn/
 COPY mvnw mvnw.cmd pom.xml ./
 
-# Dar permisos de ejecución al mvnw y descargar dependencias offline (para acelerar compilaciones)
 RUN chmod +x mvnw
 RUN ./mvnw dependency:go-offline -B
 
-# Copiamos el resto del código fuente del backend
 COPY src ./src
 
-# Compilamos y empaquetamos el JAR saltando los tests para acelerar el despliegue
 RUN ./mvnw clean package -DskipTests
 
 # ==========================================
-# ETAPA 2: RUNNER (Imagen liviana de producción)
+# ETAPA 2: RUNNER ultra-liviano (alpine JRE)
 # ==========================================
-FROM eclipse-temurin:21-jre-jammy
+# eclipse-temurin:21-jre-alpine pesa ~190MB vs 280MB de jammy
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Crear un usuario no-root por seguridad
-RUN useradd -ms /bin/bash appuser
+# Usuario no-root
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-# Copiar el archivo JAR compilado desde la etapa anterior
 COPY --from=builder /app/target/*.jar app.jar
 
-# Exponer el puerto por defecto de Spring Boot (8080)
 EXPOSE 8080
 
-# Comando para ejecutar la aplicación
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# ─── Flags JVM para sobrevivir dentro de 512 MB ───────────────────────────────
+# -XX:MaxRAM=400m          → Máximo de memoria que la JVM puede usar (dejamos ~112m al SO)
+# -XX:MaxRAMPercentage=75  → La JVM tomará max el 75% del RAM disponible
+# -XX:+UseContainerSupport → Detecta correctamente los límites de memoria del contenedor Docker
+# -XX:+UseSerialGC         → Recolector de basura serial: mucho más liviano que G1GC en bajo RAM
+# -Xss256k                 → Stack por thread reducido (default 512k)
+# -XX:TieredStopAtLevel=1  → Compilación JIT básica: ahorra RAM a costo de un poco de velocidad
+# -Djava.security.egd=...  → Acelera la generación de tokens JWT/SSL
+ENTRYPOINT ["java", \
+  "-XX:MaxRAM=400m", \
+  "-XX:MaxRAMPercentage=75", \
+  "-XX:+UseContainerSupport", \
+  "-XX:+UseSerialGC", \
+  "-Xss256k", \
+  "-XX:TieredStopAtLevel=1", \
+  "-Djava.security.egd=file:/dev/./urandom", \
+  "-jar", "app.jar"]
