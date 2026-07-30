@@ -95,15 +95,14 @@ public class JohnDeereTelemetrySyncService {
 
     private void registrarImpactoTelemetria(JohnDeereToken token, String machineName) {
         // Buscamos un campo del usuario
-        List<Campo> campos = campoRepository.findByIdPropietario(token.getIdUsuario());
+        List<Campo> campos = campoRepository.findByUsuarioIdUsuario(token.getIdUsuario());
         if (campos.isEmpty()) return;
         Campo campo = campos.get(0);
 
-        // Buscamos una campaña activa para el campo
-        List<Campania> campanias = campaniaRepository.findByCampoAndEstado(campo, org.agronex.backend.enums.EstadoCampania.PLANIFICADA);
-        if (campanias.isEmpty()) {
-            campanias = campaniaRepository.findByCampoAndEstado(campo, org.agronex.backend.enums.EstadoCampania.EN_CURSO);
-        }
+        // Buscamos campañas abiertas para el usuario
+        List<Campania> campanias = campaniaRepository.findByUsuarioIdUsuario(token.getIdUsuario()).stream()
+                .filter(c -> "ABIERTA".equalsIgnoreCase(c.getEstado()))
+                .toList();
         if (campanias.isEmpty()) return;
         Campania campania = campanias.get(0);
 
