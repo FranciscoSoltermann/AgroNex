@@ -601,7 +601,7 @@ export default function CiclosPage() {
                             <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Insumos{TIPOS_CON_DOSIS.includes(formAct.tipoActv) ? ' / dosis (por Ha)' : ''}</label>
                             <div className="flex flex-wrap gap-2">
                                 {formAct.insumos.map((row, idx) => (
-                                    <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 w-[240px]">
+                                    <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 w-full sm:w-[240px]">
                                         {formAct.insumos.length > 1 && (
                                             <button type="button" onClick={() => removeInsumoRow(idx)} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100" aria-label="Quitar insumo">
                                                 <X size={12} strokeWidth={3} />

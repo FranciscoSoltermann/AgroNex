@@ -369,7 +369,7 @@ export default function EquipoPage() {
                         </div>
                     ) : (
                         <div className="flex-1 flex flex-col justify-between">
-                            <div className="overflow-x-auto">
+                            <div className="dashboard-scroll-x overflow-x-auto">
                                 <table className="w-full min-w-[700px]">
                                     <thead>
                                         <tr className="text-left text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest border-b border-gray-100 dark:border-gray-800">
@@ -493,8 +493,8 @@ export default function EquipoPage() {
 
             {/* ── Modal de confirmación para desvincular ── */}
             {confirmDesvincular && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-200 dark:border-gray-700 p-6 w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl border border-gray-200 dark:border-gray-700 p-6 w-full max-w-sm shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 mb-2">
                             Desvincular Empleado
                         </h3>

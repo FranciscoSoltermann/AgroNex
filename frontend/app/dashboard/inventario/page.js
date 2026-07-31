@@ -487,8 +487,8 @@ export default function InventarioPage() {
 
             {/* Modal Registrar Insumo */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-md p-5 sm:p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[min(92dvh,92vh)] overflow-y-auto">
                         <div className="flex items-center justify-between mb-5">
                             <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">{editingId ? 'Editar Insumo' : 'Registrar Nuevo Insumo'}</h3>
                             <button onClick={() => { setShowModal(false); setEditingId(null); setFormInsumo(emptyForm); }} className="text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 p-1.5 rounded-lg"><X size={18} /></button>

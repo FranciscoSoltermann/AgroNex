@@ -273,7 +273,7 @@ export default function DashboardHome() {
             </div>
 
             {/* Alertas de Inventario + Gastos por Categoría + Actividades Recientes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 flex-[1.5] min-h-0 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 flex-none lg:flex-[1.5] min-h-min overflow-visible">
                 {/* Alertas de Inventario */}
                 {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_INVENTARIO")) && (
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden">
@@ -289,7 +289,7 @@ export default function DashboardHome() {
                         </a>
                     </div>
                     {lowStockItems.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-xs font-medium">
+                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-xs font-medium min-h-[120px]">
                             <Package size={24} className="mb-2 text-gray-300" />
                             No hay insumos registrados.
                         </div>
@@ -337,7 +337,7 @@ export default function DashboardHome() {
                         <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Gastos por Categoría</h3>
                     </div>
                     {gastosPorCategoria.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-xs font-medium">
+                        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-xs font-medium min-h-[120px]">
                             <DollarSign size={24} className="mb-2 text-gray-300" />
                             No hay gastos registrados.
                         </div>
@@ -367,7 +367,7 @@ export default function DashboardHome() {
                     <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-3">Actividades Recientes</h3>
                     <div className="flex-1 flex flex-col space-y-2.5 overflow-hidden">
                         {actividades.length === 0 ? (
-                            <p className="flex-1 flex items-center justify-center text-gray-400 text-xs">No hay actividades recientes.</p>
+                            <p className="flex-1 flex items-center justify-center text-gray-400 text-xs min-h-[120px]">No hay actividades recientes.</p>
                         ) : actividades.slice(0, 5).map((act, i) => {
                             const config = getActividadConfig(act.tipoActv);
                             return (
@@ -392,7 +392,7 @@ export default function DashboardHome() {
 
             {/* Crecimiento: Costos vs Cosechas — Full width */}
             {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex-[1.5] min-h-0 flex flex-col overflow-hidden">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex-none lg:flex-[1.5] min-h-[250px] flex flex-col overflow-hidden">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-1">
                     <div className="min-w-0">
                         <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Crecimiento: Costos vs Cosechas</h3>
@@ -404,8 +404,8 @@ export default function DashboardHome() {
                         ))}
                     </div>
                 </div>
-                <div className="mt-1 flex-1 min-h-0 flex flex-col overflow-x-auto overflow-y-hidden">
-                    <div className="min-w-[280px] flex justify-between gap-3 flex-1 min-h-0 h-full">
+                <div className="mt-1 flex-1 min-h-0 flex flex-col overflow-x-auto overflow-y-hidden custom-scrollbar">
+                    <div className="min-w-[400px] flex justify-between gap-3 flex-1 min-h-0 h-full">
                         {dynChartData.map((d, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
                                 <div className="w-full flex-1 flex items-end gap-1 min-h-0">
@@ -417,7 +417,7 @@ export default function DashboardHome() {
                         ))}
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-3 sm:gap-5 mt-2">
+                <div className="flex flex-wrap gap-3 sm:gap-5 mt-2 shrink-0">
                     <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C1DDD1] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Costos Acumulados</span></div>
                     <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Rendimiento de Cosecha (kg)</span></div>
                 </div>
@@ -425,7 +425,7 @@ export default function DashboardHome() {
             )}
 
             {/* Cotizaciones de Granos — BCR */}
-            <div className="flex-[1.5] min-h-0 flex flex-col shrink-0">
+            <div className="flex-none lg:flex-[1.5] min-h-min flex flex-col shrink-0">
                 <CotizacionesBCR />
             </div>
 
