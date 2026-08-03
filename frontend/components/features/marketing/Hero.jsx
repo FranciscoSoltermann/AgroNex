@@ -323,13 +323,13 @@ export function Hero() {
               </h3>
               
               <div className="relative pb-10">
-                <div className="absolute top-12 left-[10%] right-[10%] h-3 bg-white/10 rounded-full shadow-inner border border-white/5" />
-                <div className="absolute top-12 left-[10%] w-[40%] h-3 bg-gradient-to-r from-[#2D6A4F] via-[#52B788] to-[#74C69D] rounded-full shadow-[0_0_20px_#52B788]" />
+                <div className="absolute top-12 left-[10%] right-[10%] h-3 bg-white/10 rounded-full shadow-inner border border-white/5 hidden sm:block" />
+                <div className="absolute top-12 left-[10%] w-[40%] h-3 bg-gradient-to-r from-[#2D6A4F] via-[#52B788] to-[#74C69D] rounded-full shadow-[0_0_20px_#52B788] hidden sm:block" />
 
-                <div className="grid grid-cols-5 gap-4 md:gap-6 relative z-10">
+                <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-5 gap-4 md:gap-6 relative z-10">
                   {FENO_STAGES.map((phase, idx) => (
                     <div key={idx} className="flex flex-col items-center text-center group cursor-default">
-                      <div className={`w-20 h-20 md:w-24 md:h-24 rounded-3xl flex items-center justify-center text-4xl md:text-5xl mb-6 transition-all duration-500 group-hover:-translate-y-4 group-hover:scale-110 ${
+                      <div className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-3xl flex items-center justify-center text-3xl sm:text-4xl md:text-5xl mb-4 sm:mb-6 transition-all duration-500 group-hover:-translate-y-4 group-hover:scale-110 ${
                         phase.status === 'completed' ? 'bg-[#52B788] border-2 border-[#74C69D] shadow-[0_10px_20px_rgba(82,183,136,0.4)]' :
                         phase.status === 'current' ? 'bg-white ring-8 ring-white/30 shadow-[0_0_40px_rgba(255,255,255,0.6)] animate-pulse text-[#1B4332]' :
                         'bg-white/10 border-2 border-white/20 opacity-80 group-hover:opacity-100 group-hover:border-white/40 group-hover:bg-white/20'

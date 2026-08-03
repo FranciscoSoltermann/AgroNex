@@ -501,19 +501,19 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
             {/* Connections table (app-level) */}
             {configured && connections.length > 0 && (
                 <div className="border-t border-gray-100 dark:border-gray-800">
-                    <div className="px-6 py-3 bg-gray-50/50 dark:bg-gray-800/30">
+                    <div className="px-4 sm:px-6 py-3 bg-gray-50/50 dark:bg-gray-800/30">
                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Conexiones de App ({connections.length})</p>
                     </div>
                     <div className="divide-y divide-gray-50 dark:divide-gray-800">
                         {connections.map((conn) => (
-                            <div key={conn.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors group">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                            <div key={conn.id} className="p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors group">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
                                         <Building2 size={18} className="text-gray-500 dark:text-gray-400" />
                                     </div>
-                                    <div>
-                                        <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{conn.orgName || `Org #${conn.orgId}`}</p>
-                                        <div className="flex items-center gap-3 mt-0.5">
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">{conn.orgName || `Org #${conn.orgId}`}</p>
+                                        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                                             <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
                                                 <Link2 size={10} /> ID: {conn.id}
                                             </span>
@@ -527,7 +527,7 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                 </div>
                                 <button
                                     onClick={() => onDeleteConnection(id, conn.id)}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-transparent hover:border-red-200 dark:hover:border-red-800 transition-all opacity-0 group-hover:opacity-100"
+                                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 w-full sm:w-auto"
                                 >
                                     <Unlink size={12} /> Desconectar
                                 </button>

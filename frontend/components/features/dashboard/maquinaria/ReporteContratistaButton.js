@@ -60,8 +60,8 @@ export default function ReporteContratistaButton() {
             </button>
 
             {isOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-t-[2.5rem] sm:rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 max-h-[90vh] overflow-y-auto">
                         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/30">
                             <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">

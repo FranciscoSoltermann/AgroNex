@@ -78,19 +78,19 @@ export default function MantenimientoPanel() {
 
     return (
         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden mb-6">
-            <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+            <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white shadow-md shadow-[#2D6A4F]/10">
+                    <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white shadow-md shadow-[#2D6A4F]/10 shrink-0">
                         <Wrench size={20} />
                     </div>
                     <div>
-                        <h3 className="font-black text-gray-900 dark:text-gray-100 text-lg">Alertas de Mantenimiento</h3>
+                        <h3 className="font-black text-gray-900 dark:text-gray-100 text-base sm:text-lg">Alertas de Mantenimiento</h3>
                         <p className="text-[11px] text-gray-500 font-medium">Control predictivo basado en horas de motor</p>
                     </div>
                 </div>
                 <button
                     onClick={() => setShowForm(!showForm)}
-                    className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-3 py-2 rounded-lg text-xs font-bold transition-colors hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800"
+                    className="flex items-center justify-center gap-1.5 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 w-full sm:w-auto"
                 >
                     <Plus size={14} /> Nuevo Mantenimiento
                 </button>
