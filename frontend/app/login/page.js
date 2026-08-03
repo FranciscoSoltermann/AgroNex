@@ -19,24 +19,38 @@ export default function AuthPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    // Si ya hay sesión activa, redirigir al dashboard
+    // Si ya hay sesión activa, redirigir al dashboard (con timeout de seguridad para evitar spinner infinito)
     useEffect(() => {
+        let isMounted = true;
         const checkExistingSession = async () => {
             try {
-                // Ping the backend to wake it up in case of cold start on Render
+                // Pre-warm backend health endpoint
                 apiClient.get("/public/auth/health").catch(() => {});
 
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.access_token) {
-                    router.replace("/dashboard");
-                    return;
+                if (supabase) {
+                    const sessionPromise = supabase.auth.getSession();
+                    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1500));
+                    
+                    const result = await Promise.race([sessionPromise, timeoutPromise]);
+                    const session = result?.data?.session;
+
+                    if (session?.access_token && isMounted) {
+                        router.replace("/dashboard");
+                        return;
+                    }
                 }
-            } catch {
-                // Sin sesión, mostrar login normalmente
+            } catch (err) {
+                console.warn("[AgroNex Auth] Error al comprobar sesión previa:", err);
             }
-            setCheckingSession(false);
+            if (isMounted) {
+                setCheckingSession(false);
+            }
         };
         checkExistingSession();
+
+        return () => {
+            isMounted = false;
+        };
     }, [router]);
     const [nombre, setNombre] = useState("");
     const [apellido, setApellido] = useState("");

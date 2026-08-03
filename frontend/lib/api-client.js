@@ -29,10 +29,15 @@ apiClient.interceptors.request.use(async (config) => {
         return config;
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
+    if (supabase) {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.access_token) {
+                config.headers.Authorization = `Bearer ${session.access_token}`;
+            }
+        } catch {
+            // Ignorar errores de sesión en interceptor
+        }
     }
 
     return config;
