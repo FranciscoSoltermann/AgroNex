@@ -6,7 +6,8 @@ import SiteFooter from "@/components/shared/layout/SiteFooter";
 export default function FooterMount() {
     const pathname = usePathname();
 
-    if (pathname?.startsWith("/dashboard")) {
+    // No mostrar el SiteFooter genérico en /login, /dashboard, /auth ni en la landing / (Hero ya incluye su footer)
+    if (!pathname || pathname === "/" || pathname.startsWith("/login") || pathname.startsWith("/dashboard") || pathname.startsWith("/auth")) {
         return null;
     }
 
