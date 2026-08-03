@@ -23,6 +23,9 @@ export default function AuthPage() {
     useEffect(() => {
         const checkExistingSession = async () => {
             try {
+                // Ping the backend to wake it up in case of cold start on Render
+                apiClient.get("/public/auth/health").catch(() => {});
+
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.access_token) {
                     router.replace("/dashboard");

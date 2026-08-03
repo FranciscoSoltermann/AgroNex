@@ -31,6 +31,11 @@ public class AuthController {
 
     private final AuthService authService;
 
+    @GetMapping("/health")
+    public ResponseEntity<Map<String, String>> healthCheck() {
+        return ResponseEntity.ok(Map.of("status", "UP"));
+    }
+
     /** Solo verifica disponibilidad de email/dni/cuit — sin JWT requerido. */
     @PostMapping("/registro/validar-disponibilidad")
     public ResponseEntity<Map<String, String>> validarDisponibilidad(@RequestBody Map<String, String> body) {

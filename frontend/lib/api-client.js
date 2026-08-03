@@ -22,7 +22,8 @@ apiClient.interceptors.request.use(async (config) => {
     const publicSinToken =
         url.includes('/registro/validar-disponibilidad') ||
         url.includes('/mercadopago/checkout') ||
-        url.includes('/mercadopago/webhook');
+        url.includes('/mercadopago/webhook') ||
+        url.includes('/health');
 
     if (url.includes('/public/') && publicSinToken) {
         return config;
