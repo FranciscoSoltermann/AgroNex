@@ -79,24 +79,27 @@ const CLIMATE_CHIPS = [
 
 export function Hero() {
   return (
-    // Contenedor principal oscuro
-    <div className="bg-[#0A1612] overflow-hidden text-white">
+    // Contenedor principal con fondo fijo
+    <div className="bg-[#0A1612] text-white relative min-h-screen">
       
+      {/* ══════════════════════════════════════════════════════════════════
+          FONDO AGRÍCOLA FIJO EN TODO EL HERO (PARALLAX CONTENIDO)
+      ══════════════════════════════════════════════════════════════════ */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <img
+          src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
+          alt="Fondo agrícola"
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0A1612]/75 via-[#0A1612]/80 to-[#0A1612]/90" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(82,183,136,0.25)_0%,transparent_70%)]" />
+      </div>
+
       {/* ══════════════════════════════════════════════════════════════════
           § 1 — HERO PRINCIPAL
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative min-h-screen flex items-center justify-center pt-24 pb-32">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-[#1B4332]/60 via-[#1B4332]/80 to-[#0A1612] z-10" />
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(82,183,136,0.3)_0%,transparent_60%)] z-10" />
-          <img
-            src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
-            alt="Fondo agrícola"
-            className="w-full h-full object-cover"
-          />
-        </div>
-
-        <div className="relative z-10 container mx-auto px-6 text-center pb-12">
+      <section className="relative z-10 min-h-screen flex items-center justify-center pt-24 pb-32">
+        <div className="container mx-auto px-6 text-center pb-12">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -148,7 +151,7 @@ export function Hero() {
       {/* ══════════════════════════════════════════════════════════════════
           § 2 — DASHBOARD
       ══════════════════════════════════════════════════════════════════ */}
-      <section id="dashboard" className="py-32 relative bg-gradient-to-b from-[#0A1612] via-[#0E2A1E] to-[#123626]">
+      <section id="dashboard" className="py-32 relative z-10 bg-transparent">
         <div className="absolute top-1/4 left-0 w-[500px] h-[500px] bg-[#52B788]/10 rounded-full blur-[150px] pointer-events-none" />
 
         <div className="container relative z-10 mx-auto px-6 max-w-[1400px]">
@@ -212,7 +215,7 @@ export function Hero() {
       {/* ══════════════════════════════════════════════════════════════════
           § 3 — CAMPOS Y LOTES
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="py-32 relative bg-gradient-to-b from-[#123626] to-[#1B4332]">
+      <section className="py-32 relative z-10 bg-transparent">
         <div className="container mx-auto px-6 max-w-[1400px] relative z-10">
           <ScrollReveal>
             <div className="flex flex-col items-center text-center gap-5 mb-20">
@@ -299,7 +302,7 @@ export function Hero() {
       {/* ══════════════════════════════════════════════════════════════════
           § 4 — CICLOS DE PRODUCCIÓN
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="py-32 relative overflow-hidden bg-gradient-to-b from-[#1B4332] to-[#0A1612] min-h-[800px] flex items-center">
+      <section className="py-32 relative overflow-hidden bg-transparent min-h-[800px] flex items-center z-10">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#52B788]/10 rounded-full blur-[200px] pointer-events-none" />
 
         <div className="container mx-auto px-6 max-w-[1400px] relative z-10">
