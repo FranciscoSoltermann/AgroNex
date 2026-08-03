@@ -593,7 +593,7 @@ function ModuloLluvias({ campoId, onDataChange }) {
             {showForm && (
                 <form onSubmit={handleGuardar} className="p-5 bg-gray-50 dark:bg-[#151a20] border-b border-gray-100 dark:border-gray-800">
                     <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Agregar nuevo registro</p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
                             <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Fecha</label>
                             <input
@@ -660,7 +660,7 @@ function ModuloLluvias({ campoId, onDataChange }) {
             )}
 
             {/* Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto dashboard-scroll-x">
                 {loading ? (
                     <div className="flex items-center justify-center p-12">
                         <Loader2 className="animate-spin text-blue-400" size={28} />
@@ -671,15 +671,15 @@ function ModuloLluvias({ campoId, onDataChange }) {
                         No hay registros climáticos guardados para este campo todavía.
                     </div>
                 ) : (
-                    <table className="w-full text-left">
+                    <table className="w-full text-left min-w-[620px]">
                         <thead>
                             <tr className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-800/50">
-                                <th className="px-6 py-3 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Fecha</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest">Lluvia (mm)</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-orange-500 dark:text-orange-450 uppercase tracking-widest">T. Mín (°C)</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-widest">T. Máx (°C)</th>
-                                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest">GDD día</th>
-                                <th className="px-6 py-3 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right">Acciones</th>
+                                <th className="px-6 py-3 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest w-40">Fecha</th>
+                                <th className="px-4 py-3 text-[10px] font-bold text-blue-500 dark:text-blue-400 uppercase tracking-widest w-32">Lluvia (mm)</th>
+                                <th className="px-4 py-3 text-[10px] font-bold text-orange-500 dark:text-orange-450 uppercase tracking-widest w-28">T. Mín (°C)</th>
+                                <th className="px-4 py-3 text-[10px] font-bold text-red-500 dark:text-red-400 uppercase tracking-widest w-28">T. Máx (°C)</th>
+                                <th className="px-4 py-3 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest w-24">GDD día</th>
+                                <th className="px-6 py-3 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-right w-24">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -691,10 +691,10 @@ function ModuloLluvias({ campoId, onDataChange }) {
 
                                 return (
                                     <tr key={row.id} className={`group transition-colors ${isEditing ? "bg-amber-50 dark:bg-amber-955/20" : "hover:bg-gray-50/60 dark:hover:bg-gray-800/30"}`}>
-                                        <td className="px-6 py-3.5 text-[13px] font-semibold text-gray-700 dark:text-gray-300">{row.fechaLabel}</td>
+                                        <td className="px-6 py-3.5 text-[13px] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">{row.fechaLabel}</td>
 
                                         {/* mm */}
-                                        <td className="px-4 py-3.5">
+                                        <td className="px-4 py-3.5 whitespace-nowrap">
                                             {isEditing ? (
                                                 <input
                                                     type="number" step="0.1" min="0"
@@ -711,7 +711,7 @@ function ModuloLluvias({ campoId, onDataChange }) {
                                         </td>
 
                                         {/* tempMin */}
-                                        <td className="px-4 py-3.5">
+                                        <td className="px-4 py-3.5 whitespace-nowrap">
                                             {isEditing ? (
                                                 <input
                                                     type="number" step="0.1"
@@ -727,7 +727,7 @@ function ModuloLluvias({ campoId, onDataChange }) {
                                         </td>
 
                                         {/* tempMax */}
-                                        <td className="px-4 py-3.5">
+                                        <td className="px-4 py-3.5 whitespace-nowrap">
                                             {isEditing ? (
                                                 <input
                                                     type="number" step="0.1"
@@ -743,10 +743,10 @@ function ModuloLluvias({ campoId, onDataChange }) {
                                         </td>
 
                                         {/* GDD diario calculado */}
-                                        <td className={`px-4 py-3.5 text-[13px] font-semibold ${gddDia !== "—" ? "text-emerald-700 dark:text-emerald-505" : "text-gray-400 dark:text-gray-550"}`}>{gddDia}</td>
+                                        <td className={`px-4 py-3.5 text-[13px] font-semibold whitespace-nowrap ${gddDia !== "—" ? "text-emerald-700 dark:text-emerald-505" : "text-gray-400 dark:text-gray-550"}`}>{gddDia}</td>
 
                                         {/* Actions */}
-                                        <td className="px-6 py-3.5 text-right">
+                                        <td className="px-6 py-3.5 text-right whitespace-nowrap">
                                             {isEditing ? (
                                                 <div className="flex items-center justify-end gap-1">
                                                     <button
@@ -763,7 +763,7 @@ function ModuloLluvias({ campoId, onDataChange }) {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center justify-end gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                                     <button onClick={() => startEdit(row)} className="p-1.5 text-gray-450 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
                                                         <Pencil size={16} />
                                                     </button>
