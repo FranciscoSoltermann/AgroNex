@@ -39,9 +39,15 @@ export async function proxy(request) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user = null;
+  try {
+    const userPromise = supabase.auth.getUser();
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: { user: null } }), 1000));
+    const result = await Promise.race([userPromise, timeoutPromise]);
+    user = result?.data?.user || null;
+  } catch {
+    user = null;
+  }
 
   const isAuthRoute = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/register");
   const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard");

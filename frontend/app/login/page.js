@@ -13,7 +13,7 @@ export default function AuthPage() {
     const [rolRegistro, setRolRegistro] = useState("PROPIETARIO");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [checkingSession, setCheckingSession] = useState(true);
+    const [checkingSession, setCheckingSession] = useState(false);
     const router = useRouter();
 
     const [email, setEmail] = useState("");
