@@ -11,8 +11,7 @@ import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/
 import { toast } from "sonner";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useCurrency } from "@/lib/currency-context";
-
-
+import PermissionGuard from "@/components/shared/PermissionGuard";
 
 const TIPO_ACTIVIDAD = ["Siembra", "Pulverización", "Fertilización", "Inoculante/Curasemilla", "Riego", "Cosecha", "Labranza", "Control sanitario", "Otra"];
 const FASES = ["Barbecho", "Siembra", "Veg. Temprana", "Reproducción", "Cosecha"];
@@ -426,7 +425,8 @@ export default function CiclosPage() {
     }
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <PermissionGuard requiredPermission="LECTURA_CAMPOS">
+            <div className="space-y-6 animate-in fade-in duration-500">
             {error && (
                 <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
                     <AlertCircle size={16} />
@@ -804,7 +804,8 @@ export default function CiclosPage() {
                 message={confirmModal.message}
                 confirmText="Eliminar"
             />
-        </div>
+            </div>
+        </PermissionGuard>
     );
 }
 

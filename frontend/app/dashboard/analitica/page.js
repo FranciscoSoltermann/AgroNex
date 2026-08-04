@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import apiClient from "@/lib/api-client";
 import { Activity, Loader2, BarChart3, Presentation, AlertCircle } from "lucide-react";
+import PermissionGuard from "@/components/shared/PermissionGuard";
 
 const AnaliticaRindeChart = dynamic(() => import("@/components/features/dashboard/charts/AnaliticaRindeChart"), {
     ssr: false,
@@ -111,7 +112,8 @@ export default function AnaliticaPage() {
     );
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <PermissionGuard requiredPermission="LECTURA_CAMPOS">
+            <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header */}
             {error && (
                 <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm font-semibold">
@@ -189,6 +191,7 @@ export default function AnaliticaPage() {
                     </div>
                 )}
             </div>
-        </div>
+            </div>
+        </PermissionGuard>
     );
 }

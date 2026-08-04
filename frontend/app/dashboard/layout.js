@@ -139,21 +139,21 @@ export default function DashboardLayout({ children }) {
     const baseNavItems = [
         { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
         { name: "Campos/Lotes", path: "/dashboard/campos", icon: <Map size={18} />, permission: "LECTURA_CAMPOS" },
-        { name: "Campañas", path: "/dashboard/lotes", icon: <RefreshCw size={18} /> },
-        { name: "Pronósticos", path: "/dashboard/clima", icon: <Cloud size={18} /> },
+        { name: "Campañas", path: "/dashboard/lotes", icon: <RefreshCw size={18} />, permission: "LECTURA_CAMPOS" },
+        { name: "Pronósticos", path: "/dashboard/clima", icon: <Cloud size={18} />, permission: "LECTURA_CAMPOS" },
         { name: "Finanzas", path: "/dashboard/finanzas", icon: <CircleDollarSign size={18} />, permission: "GESTION_FINANZAS" },
         { name: "Inventario", path: "/dashboard/inventario", icon: <Box size={18} />, permission: "GESTION_INVENTARIO" },
         { name: "Ecosistema", path: "/dashboard/maquinaria", icon: <Globe size={18} />, permission: "GESTION_MAQUINARIA" },
-        { name: "Analítica Comparativa", path: "/dashboard/analitica", icon: <Activity size={18} /> },
-        { name: "Equipo", path: "/dashboard/equipo", icon: <Users size={18} />, adminOnly: true },
+        { name: "Analítica Comparativa", path: "/dashboard/analitica", icon: <Activity size={18} />, permission: "LECTURA_CAMPOS" },
+        { name: "Equipo", path: "/dashboard/equipo", icon: <Users size={18} />, ownerOnly: true },
         { name: "Ajustes", path: "/dashboard/settings", icon: <Settings size={18} /> },
     ];
 
     const navItems = baseNavItems.filter(item => {
-        if (userRole === "EMPLEADO") {
-            if (item.adminOnly) return false;
-            if (item.permission && !userPermisos.includes(item.permission)) return false;
-        }
+        // Secciones solo para PROPIETARIO/ADMIN (ej: Equipo)
+        if (item.ownerOnly && userRole === "EMPLEADO") return false;
+        // Empleados solo ven secciones para las que tienen permiso
+        if (userRole === "EMPLEADO" && item.permission && !userPermisos.includes(item.permission)) return false;
         return true;
     });
 
@@ -234,7 +234,9 @@ export default function DashboardLayout({ children }) {
                     </div>
                     <div className="text-left flex-1 min-w-0">
                         <p className="text-[12px] font-bold text-white truncate">{userName}</p>
-                        <p className="text-[10px] text-white/50 font-medium">Farm Manager</p>
+                        <p className="text-[10px] text-white/50 font-medium">
+                            {userRole === "ADMIN" ? "Administrador" : userRole === "EMPLEADO" ? "Empleado" : "Propietario"}
+                        </p>
                     </div>
                     <LogOut size={14} className="text-white/30 group-hover:text-red-300 transition-colors flex-shrink-0" />
                 </button>

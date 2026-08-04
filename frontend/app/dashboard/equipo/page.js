@@ -58,12 +58,8 @@ export default function EquipoPage() {
             const { data } = await apiClient.get("/usuarios/empleados");
             setEmpleados(data || []);
         } catch (e) {
-            if (e?.response?.status === 403) {
-                // User might not have PROPIETARIO role, just show empty
-                setEmpleados([]);
-            } else {
-                setError("No se pudo cargar la lista de empleados.");
-            }
+            // On any error (403, network, backend down), just show empty list
+            setEmpleados([]);
         } finally {
             setLoading(false);
         }

@@ -9,6 +9,7 @@ import {
     Zap, Snowflake, ThermometerSun, CheckCircle2, AlertTriangle, ShieldAlert,
     Info, X, MapPin, Gauge, Plus, Pencil, Trash2, XCircle
 } from "lucide-react";
+import PermissionGuard from "@/components/shared/PermissionGuard";
 
 // Load chart dynamically to avoid SSR issues
 const ClimaBarsChart = dynamic(() => import("@/components/features/dashboard/charts/ClimaBarsChart"), {
@@ -888,7 +889,8 @@ export default function ClimaPage() {
     );
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <PermissionGuard requiredPermission="LECTURA_CAMPOS">
+            <div className="space-y-6 animate-in fade-in duration-500">
             {/* Header */}
             <div className="flex flex-col gap-1">
                 <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight flex items-center gap-2">
@@ -964,7 +966,8 @@ export default function ClimaPage() {
                     </p>
                 </div>
             )}
-        </div>
+            </div>
+        </PermissionGuard>
     );
 }
 

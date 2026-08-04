@@ -13,6 +13,7 @@ import {
     Pencil, Trash2, Ruler, Map
 } from "lucide-react";
 const CampoLoteMapViewer = dynamic(() => import('@/components/features/dashboard/campos/CampoLoteMapViewer'), { ssr: false });
+import PermissionGuard from "@/components/shared/PermissionGuard";
 
 const IMAGES = [
     // Campos de soja / cultivos en hileras — sin personas
@@ -365,7 +366,8 @@ export default function CamposPage() {
     );
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
+        <PermissionGuard requiredPermission="LECTURA_CAMPOS">
+            <div className="space-y-6 animate-in fade-in duration-500">
             {/* Error global */}
             {error && (
                 <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
@@ -722,7 +724,8 @@ export default function CamposPage() {
                     )}
                 </Modal>
             )}
-        </div>
+            </div>
+        </PermissionGuard>
     );
 }
 
