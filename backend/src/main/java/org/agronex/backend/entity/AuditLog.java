@@ -36,6 +36,10 @@ public class AuditLog {
     @Column(name = "id_usuario", updatable = false)
     private UUID idUsuario;
 
+    /** UUID del propietario de los datos (para filtrar auditoría por granja). */
+    @Column(name = "id_propietario", updatable = false)
+    private UUID idPropietario;
+
     /** Email del usuario en el momento del evento (snapshot, no FK). */
     @Column(name = "email_usuario", length = 255, updatable = false)
     private String emailUsuario;

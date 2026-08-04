@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class LoteController {
     private final UsuarioService usuarioService;
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<LoteResponse> crearLote(
             @Valid @RequestBody LoteRequest request,
             @AuthenticationPrincipal Jwt jwt) {
@@ -39,12 +41,14 @@ public class LoteController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<List<LoteResponse>> listarMisLotes(@AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(loteService.listarMisLotes(idUsuario));
     }
 
     @DeleteMapping("/{idLote}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<Void> eliminarLote(@PathVariable UUID idLote, @AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
         loteService.eliminarLote(idLote, idUsuario);
@@ -52,6 +56,7 @@ public class LoteController {
     }
 
     @PutMapping("/{idLote}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<LoteResponse> actualizarLote(
             @PathVariable UUID idLote,
             @Valid @RequestBody LoteRequest request,
@@ -62,6 +67,7 @@ public class LoteController {
     }
 
     @PutMapping("/{idLote}/poligono")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<LoteResponse> actualizarPoligono(
             @PathVariable UUID idLote,
             @Valid @RequestBody LoteRequest request,

@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -23,6 +24,7 @@ public class GastoFijoController {
     private final GastoFijoService gastoFijoService;
     private final UsuarioService usuarioService;
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_FINANZAS')")
     @PostMapping
     public ResponseEntity<GastoFijoResponse> registrarGasto(
             @Valid @RequestBody GastoFijoRequest request,
@@ -32,12 +34,14 @@ public class GastoFijoController {
         return new ResponseEntity<>(gastoFijoService.registrarGasto(request, idUsuario), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_FINANZAS')")
     @GetMapping
     public ResponseEntity<java.util.List<GastoFijoResponse>> listMisGastos(@AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(gastoFijoService.listarGastosPersonales(idUsuario));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_FINANZAS')")
     @DeleteMapping("/{idGasto}")
     public ResponseEntity<Void> eliminarGasto(@PathVariable UUID idGasto, @AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);

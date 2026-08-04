@@ -10,6 +10,7 @@ import org.agronex.backend.dto.response.MantenimientoMaquinaResponse;
 import org.agronex.backend.service.MantenimientoMaquinaService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -26,6 +27,7 @@ public class MantenimientoController {
 
     private final MantenimientoMaquinaService mantenimientoService;
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_MAQUINARIA')")
     @PostMapping
     @Operation(summary = "Configurar o actualizar alertas de mantenimiento para una máquina")
     public ResponseEntity<MantenimientoMaquinaResponse> configurarMantenimiento(
@@ -35,6 +37,7 @@ public class MantenimientoController {
         return new ResponseEntity<>(mantenimientoService.configurarMantenimiento(request, idUsuario), HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_MAQUINARIA')")
     @GetMapping("/mis-maquinas")
     @Operation(summary = "Listar configuraciones de mantenimiento del usuario")
     public ResponseEntity<List<MantenimientoMaquinaResponse>> listarMisMantenimientos(@AuthenticationPrincipal Jwt jwt) {

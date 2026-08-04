@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +26,7 @@ public class CampaniaController {
     private final UsuarioService usuarioService;
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<CampaniaResponse> crearCampania(
             @Valid @RequestBody CampaniaRequest request,
             @AuthenticationPrincipal Jwt jwt) {
@@ -35,6 +37,7 @@ public class CampaniaController {
     }
 
     @PutMapping("/{idCampania}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<CampaniaResponse> editarCampania(
             @PathVariable UUID idCampania,
             @Valid @RequestBody CampaniaRequest request,
@@ -46,12 +49,14 @@ public class CampaniaController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<List<CampaniaResponse>> listarMisCampanias(@AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(campaniaService.listarMisCampanias(idUsuario));
     }
 
     @PostMapping("/{idCampania}/cerrar")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<CampaniaResponse> cerrarCampania(
             @PathVariable UUID idCampania,
             @AuthenticationPrincipal Jwt jwt) {
@@ -60,6 +65,7 @@ public class CampaniaController {
     }
 
     @DeleteMapping("/{idCampania}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<Void> eliminarCampania(
             @PathVariable UUID idCampania,
             @AuthenticationPrincipal Jwt jwt) {

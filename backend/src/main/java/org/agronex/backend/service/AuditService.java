@@ -32,6 +32,7 @@ import java.util.UUID;
 public class AuditService {
 
     private final AuditLogRepository auditLogRepository;
+    private final org.agronex.backend.repository.UsuarioRepository usuarioRepository;
 
     /**
      * Registra un evento en la bitácora de forma asíncrona y en transacción independiente.
@@ -58,8 +59,16 @@ public class AuditService {
             String ipCliente
     ) {
         try {
-            AuditLog log = AuditLog.builder()
+            UUID resolvedIdPropietario = idUsuario;
+            if (idUsuario != null) {
+                resolvedIdPropietario = usuarioRepository.findById(idUsuario)
+                        .map(u -> u.getIdPropietario() != null ? u.getIdPropietario() : u.getIdUsuario())
+                        .orElse(idUsuario);
+            }
+
+            AuditLog logEntity = AuditLog.builder()
                     .idUsuario(idUsuario)
+                    .idPropietario(resolvedIdPropietario)
                     .emailUsuario(emailUsuario)
                     .entidad(entidad)
                     .idEntidad(idEntidad)
@@ -69,7 +78,7 @@ public class AuditService {
                     .ipCliente(ipCliente)
                     .build();
 
-            auditLogRepository.save(log);
+            auditLogRepository.save(logEntity);
         } catch (Exception e) {
             // La auditoría nunca debe romper el flujo principal
             log.error("[AUDIT ERROR] No se pudo registrar el evento {}/{} para usuario {}: {}",

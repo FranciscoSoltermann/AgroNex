@@ -14,12 +14,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 /**
  * Endpoint de auditoría (bitácora).
  *
  * - GET /api/audit/mis-eventos       →  eventos del propio usuario (paginado)
- * - GET /api/audit/todos              →  todos los eventos (solo admin → validar en SecurityConfig)
- * - GET /api/audit/entidad/{tipo}/{id} →  historial de un recurso específico
+ * - GET /api/audit/mi-granja         →  eventos de toda la granja (solo propietario/admin)
+ * - GET /api/audit/todos             →  todos los eventos (solo admin)
  */
 @RestController
 @RequestMapping("/api/audit")
@@ -43,11 +45,26 @@ public class AuditController {
         );
     }
 
+    /** Retorna los eventos de todos los empleados de un propietario. */
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO')")
+    @GetMapping("/mi-granja")
+    public ResponseEntity<Page<AuditLog>> miGranja(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "0")  int page,
+            @RequestParam(defaultValue = "50") int size) {
+
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        UUID idPropietario = SecurityUtils.requireUserId(jwt);
+        Pageable pageable = PageRequest.of(page, safeSize);
+        return ResponseEntity.ok(
+                auditLogRepository.findByIdPropietarioOrderByOcurridoEnDesc(idPropietario, pageable)
+        );
+    }
+
     /**
      * Retorna TODOS los eventos del sistema.
-     * ⚠️ Proteger con rol ADMIN en SecurityConfig:
-     *   .requestMatchers("/api/audit/todos").hasAuthority("ROLE_ADMIN")
      */
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/todos")
     public ResponseEntity<Page<AuditLog>> todos(
             @RequestParam(defaultValue = "0")  int page,

@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class ActividadController {
     private final UsuarioService usuarioService;
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<ActividadResponse> registrarActividad(
             @Valid @RequestBody ActividadRequest request,
             @AuthenticationPrincipal Jwt jwt) {
@@ -38,6 +40,7 @@ public class ActividadController {
     }
 
     @PostMapping("/insumos")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<ActividadInsumoResponse> agregarInsumoAActividad(
             @Valid @RequestBody ActividadInsumoRequest request,
             @AuthenticationPrincipal Jwt jwt) {
@@ -46,12 +49,14 @@ public class ActividadController {
         return new ResponseEntity<>(actividadInsumoService.agregarInsumo(request, idUsuario), HttpStatus.CREATED);
     }
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<List<ActividadResponse>> listarMisActividades(@AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
         return ResponseEntity.ok(actividadService.listarMisActividades(idUsuario));
     }
 
     @DeleteMapping("/{idActividad}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<Void> eliminarActividad(@PathVariable UUID idActividad, @AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = SecurityUtils.requireUserId(jwt);
         actividadService.eliminarActividad(idActividad, idUsuario);
@@ -59,6 +64,7 @@ public class ActividadController {
     }
 
     @PutMapping("/{idActividad}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<ActividadResponse> editarActividad(
             @PathVariable UUID idActividad,
             @Valid @RequestBody ActividadRequest request,

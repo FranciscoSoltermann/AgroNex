@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.agronex.backend.dto.request.RegistroClimaRequest;
 import org.agronex.backend.dto.response.RegistroClimaResponse;
@@ -27,6 +28,7 @@ public class ClimaController {
     private final ClimaService climaService;
     private final UsuarioService usuarioService;
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
     @PostMapping
     public ResponseEntity<RegistroClimaResponse> registrarClima(
             @Valid @RequestBody RegistroClimaRequest request,
@@ -35,6 +37,7 @@ public class ClimaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(climaService.registrarClima(request, idUsuario));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
     @GetMapping("/campo/{idCampo}")
     public ResponseEntity<List<RegistroClimaResponse>> obtenerClimaCampo(
             @PathVariable UUID idCampo,
@@ -43,6 +46,7 @@ public class ClimaController {
         return ResponseEntity.ok(climaService.obtenerHistorialPorCampo(idCampo, idUsuario));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
     @GetMapping("/campania/{idCampania}/resumen")
     public ResponseEntity<ResumenClimaCampaniaResponse> resumenClimaCampania(
             @PathVariable UUID idCampania,
@@ -51,6 +55,7 @@ public class ClimaController {
         return ResponseEntity.ok(climaService.calcularResumenClimaCampania(idCampania, idUsuario));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
     @PutMapping("/{idRegistro}")
     public ResponseEntity<RegistroClimaResponse> actualizarRegistro(
             @PathVariable UUID idRegistro,
@@ -61,6 +66,7 @@ public class ClimaController {
                 idRegistro, body.getPrecipitacionesMm(), body.getTempMin(), body.getTempMax(), idUsuario));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
     @DeleteMapping("/{idRegistro}")
     public ResponseEntity<Void> eliminarRegistro(
             @PathVariable UUID idRegistro,

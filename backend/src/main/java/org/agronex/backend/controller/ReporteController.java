@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +23,7 @@ public class ReporteController {
 
     private final ReporteContratistaService reporteContratistaService;
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
     @PostMapping(value = "/trabajo/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     @Operation(summary = "Generar reporte de trabajo en formato PDF")
     public ResponseEntity<byte[]> generarReporteTrabajo(@Valid @RequestBody ReporteContratistaRequest request) {

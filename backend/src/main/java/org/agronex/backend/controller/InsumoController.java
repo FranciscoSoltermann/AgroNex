@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class InsumoController {
     private final UsuarioService usuarioService;
 
     // Obtener todo el catálogo de semillas, químicos, etc.
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_INVENTARIO')")
     @GetMapping
     public ResponseEntity<List<InsumoResponse>> listarInsumos(
             @AuthenticationPrincipal Jwt jwt,
@@ -34,6 +36,7 @@ public class InsumoController {
         return ResponseEntity.ok(insumoService.listarTodos(idUsuario, idCampo, idCampania));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_INVENTARIO')")
     @GetMapping("/{id}")
     public ResponseEntity<InsumoResponse> obtenerPorId(
             @PathVariable UUID id,
@@ -42,6 +45,7 @@ public class InsumoController {
         return ResponseEntity.ok(insumoService.buscarPorId(id, idUsuario));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_INVENTARIO')")
     @PostMapping
     public ResponseEntity<InsumoResponse> crearInsumo(
             @Valid @RequestBody InsumoRequest request,
@@ -50,6 +54,7 @@ public class InsumoController {
         return new ResponseEntity<>(insumoService.crearInsumo(request, idUsuario), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_INVENTARIO')")
     @PutMapping("/{id}")
     public ResponseEntity<InsumoResponse> actualizarInsumo(
             @PathVariable UUID id,
@@ -59,6 +64,7 @@ public class InsumoController {
         return ResponseEntity.ok(insumoService.actualizarInsumo(id, request, idUsuario));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_INVENTARIO')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarInsumo(
             @PathVariable UUID id,
