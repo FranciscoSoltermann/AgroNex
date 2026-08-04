@@ -1,0 +1,114 @@
+{
+  "properties": [
+    {
+      "name": "spring.flyway.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable flyway."
+    },
+    {
+      "name": "cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Allowed CORS origins."
+    },
+    {
+      "name": "api.agromonitoring.key",
+      "type": "java.lang.String",
+      "description": "Agromonitoring API key."
+    },
+    {
+      "name": "john-deere.client-id",
+      "type": "java.lang.String",
+      "description": "John Deere Client ID."
+    },
+    {
+      "name": "john-deere.client-secret",
+      "type": "java.lang.String",
+      "description": "John Deere Client Secret."
+    },
+    {
+      "name": "john-deere.api-base-url",
+      "type": "java.lang.String",
+      "description": "John Deere API Base URL."
+    },
+    {
+      "name": "john-deere.redirect-uri",
+      "type": "java.lang.String",
+      "description": "John Deere Redirect URI."
+    },
+    {
+      "name": "john-deere.frontend-redirect",
+      "type": "java.lang.String",
+      "description": "John Deere Frontend Redirect."
+    },
+    {
+      "name": "mercadopago.access-token",
+      "type": "java.lang.String",
+      "description": "MercadoPago Access Token."
+    },
+    {
+      "name": "mercadopago.success-url",
+      "type": "java.lang.String",
+      "description": "MercadoPago Success URL."
+    },
+    {
+      "name": "mercadopago.pending-url",
+      "type": "java.lang.String",
+      "description": "MercadoPago Pending URL."
+    },
+    {
+      "name": "mercadopago.failure-url",
+      "type": "java.lang.String",
+      "description": "MercadoPago Failure URL."
+    },
+    {
+      "name": "mercadopago.webhook-url",
+      "type": "java.lang.String",
+      "description": "MercadoPago Webhook URL."
+    },
+    {
+      "name": "mercadopago.currency-id",
+      "type": "java.lang.String",
+      "description": "MercadoPago Currency ID."
+    },
+    {
+      "name": "mercadopago.test-payer-email",
+      "type": "java.lang.String",
+      "description": "MercadoPago Test Payer Email."
+    },
+    {
+      "name": "mercadopago.webhook-secret",
+      "type": "java.lang.String",
+      "description": "MercadoPago Webhook Secret."
+    },
+    {
+      "name": "mercadopago.webhook-signature-required",
+      "type": "java.lang.Boolean",
+      "description": "Require signature for MercadoPago Webhooks."
+    },
+    {
+      "name": "mercadopago.webhook-replay-window-seconds",
+      "type": "java.lang.Integer",
+      "description": "Replay window in seconds for MercadoPago webhooks."
+    },
+    {
+      "name": "public.mercadopago.checkout.rate-limit-per-minute",
+      "type": "java.lang.Integer",
+      "description": "Rate limit for MP checkout per minute."
+    },
+    {
+      "name": "public.auth.registro.rate-limit-per-minute",
+      "type": "java.lang.Integer",
+      "description": "Rate limit for auth registration per minute."
+    },
+    {
+      "name": "encryption.secret-key",
+      "type": "java.lang.String",
+      "description": "Encryption secret key for sensitive fields."
+    },
+    {
+      "name": "trusted.proxy.ips",
+      "type": "java.lang.String",
+      "description": "Trusted proxy IPs for rate limiting."
+    }
+  ]
+}

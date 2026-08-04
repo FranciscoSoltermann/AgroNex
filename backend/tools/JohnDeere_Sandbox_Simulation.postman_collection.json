@@ -1,0 +1,209 @@
+{
+	"info": {
+		"_postman_id": "77e38ba5-8022-4a00-98df-c0b78e38d9cc",
+		"name": "John Deere Sandbox Simulation (AgroNex)",
+		"description": "Colección de peticiones para simular la creación de maquinaria e inyección de datos de geolocalización en el Sandbox de John Deere Operations Center (Organización 7711480).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Crear Equipment (Tractor)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 201 Created\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"// Extraer el ID de la máquina creada desde el Header 'Location'",
+							"const locationHeader = pm.response.headers.get(\"Location\");",
+							"if (locationHeader) {",
+							"    const parts = locationHeader.split('/');",
+							"    const machineId = parts[parts.length - 1];",
+							"    pm.environment.set(\"jd_machine_id\", machineId);",
+							"    console.log(\"Machine ID guardado en variable de entorno: \" + machineId);",
+							"} else {",
+							"    // Intento alternativo por body si aplica",
+							"    try {",
+							"        const jsonData = pm.response.json();",
+							"        if (jsonData.id) {",
+							"            pm.environment.set(\"jd_machine_id\", jsonData.id);",
+							"            console.log(\"Machine ID guardado desde JSON: \" + jsonData.id);",
+							"        }",
+							"    } catch(e) {}",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/vnd.deere.axiom.v3+json",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/vnd.deere.axiom.v3+json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"Tractor Simulador AgroNex\",\n    \"type\": \"Machine\",\n    \"category\": \"TRACTOR\",\n    \"brand\": \"deere\",\n    \"model\": \"8R_340\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://api.deere.com/id/organizations/7711480/equipment",
+					"protocol": "https",
+					"host": [
+						"api",
+						"deere",
+						"com"
+					],
+					"path": [
+						"id",
+						"organizations",
+						"7711480",
+						"equipment"
+					]
+				},
+				"description": "Crea una maquinaria ficticia de tipo Tractor en la organización de Sandbox y guarda su ID único en la variable de entorno `jd_machine_id`."
+			},
+			"response": []
+		},
+		{
+			"name": "2. Inyectar Location History",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code es 201 o 204\", function () {",
+							"    pm.expect(pm.response.code).to.be.oneOf([201, 204]);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/vnd.deere.axiom.v3+json",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/vnd.deere.axiom.v3+json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"type\": \"FeatureCollection\",\n    \"features\": [\n        {\n            \"type\": \"Feature\",\n            \"geometry\": {\n                \"type\": \"Point\",\n                \"coordinates\": [\n                    -60.7000,\n                    -31.6300\n                ]\n            },\n            \"properties\": {\n                \"eventTime\": \"{{$isoTimestamp}}\",\n                \"speed\": \"12.5 km/h\",\n                \"engineState\": \"1\",\n                \"heading\": 180,\n                \"gpsQuality\": \"3D_FIX\",\n                \"source\": \"POSTMAN_SIMULATION\"\n            }\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://api.deere.com/id/organizations/7711480/equipment/{{jd_machine_id}}/locationHistory",
+					"protocol": "https",
+					"host": [
+						"api",
+						"deere",
+						"com"
+					],
+					"path": [
+						"id",
+						"organizations",
+						"7711480",
+						"equipment",
+						"{{jd_machine_id}}",
+						"locationHistory"
+					]
+				},
+				"description": "Inyecta las coordenadas geográficas de la región pampeana argentina y los metadatos de telemetría (velocidad y motor) para el tractor creado en el Paso 1."
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "oauth2",
+		"oauth2": [
+			{
+				"key": "addTokenTo",
+				"value": "header",
+				"type": "string"
+			},
+			{
+				"key": "grant_type",
+				"value": "authorization_code",
+				"type": "string"
+			},
+			{
+				"key": "client_id",
+				"value": "{{jd_client_id}}",
+				"type": "string"
+			},
+			{
+				"key": "client_secret",
+				"value": "{{jd_client_secret}}",
+				"type": "string"
+			},
+			{
+				"key": "authUrl",
+				"value": "https://signin.deere.com/oauth2/default/v1/authorize",
+				"type": "string"
+			},
+			{
+				"key": "accessTokenUrl",
+				"value": "https://signin.deere.com/oauth2/default/v1/token",
+				"type": "string"
+			},
+			{
+				"key": "scope",
+				"value": "eq1 eq2 openid profile",
+				"type": "string"
+			},
+			{
+				"key": "tokenName",
+				"value": "JD Sandbox Token",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}

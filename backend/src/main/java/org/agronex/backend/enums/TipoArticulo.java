@@ -1,0 +1,5 @@
+package org.agronex.backend.enums;
+
+public enum TipoArticulo {
+    SEMILLA, HERBICIDA, FERTILIZANTE, INSECTICIDA, INOCULANTE_CURASEMILLA, COMBUSTIBLE, REPUESTO, OTRO
+}
