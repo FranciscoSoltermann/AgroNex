@@ -9,14 +9,18 @@ export function useTheme() {
 }
 
 export default function ThemeProvider({ children }) {
-    const [theme, setTheme] = useState("light");
+    const [theme, setTheme] = useState(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem("agronex-theme");
+            if (stored === "dark" || stored === "light") {
+                return stored;
+            }
+        }
+        return "light";
+    });
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        const stored = localStorage.getItem("agronex-theme");
-        if (stored === "dark" || stored === "light") {
-            setTheme(stored);
-        }
         setMounted(true);
     }, []);
 

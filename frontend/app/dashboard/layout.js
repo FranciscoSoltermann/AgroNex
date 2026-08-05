@@ -125,9 +125,11 @@ export default function DashboardLayout({ children }) {
     }, [router]);
 
     // Cierra el sidebar móvil al cambiar de ruta
-    useEffect(() => {
+    const [prevPathname, setPrevPathname] = useState(pathname);
+    if (prevPathname !== pathname) {
+        setPrevPathname(pathname);
         setSidebarOpen(false);
-    }, [pathname]);
+    }
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -176,7 +178,7 @@ export default function DashboardLayout({ children }) {
     const currentPageTitle = pageTitles[pathname] || "";
 
     /* ── Sidebar content (reutilizado en desktop + drawer móvil) ── */
-    const SidebarContent = () => (
+    const renderSidebarContent = () => (
         <div className="flex flex-col h-full">
             {/* Logo */}
             <div className="px-5 pt-5 pb-4 flex items-center justify-between">
@@ -250,7 +252,7 @@ export default function DashboardLayout({ children }) {
 
             {/* ══ SIDEBAR DESKTOP (≥ lg) ══ */}
             <aside className="hidden lg:flex w-[220px] min-w-[220px] xl:w-[236px] xl:min-w-[236px] bg-[#2D6A4F] flex-col shadow-sm">
-                <SidebarContent />
+                {renderSidebarContent()}
             </aside>
 
             {/* ══ SIDEBAR MOBILE OVERLAY (< lg) ══ */}
@@ -266,7 +268,7 @@ export default function DashboardLayout({ children }) {
                     <aside
                         className="relative w-[min(20rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)))] max-w-[85vw] bg-[#2D6A4F] flex flex-col shadow-2xl animate-in slide-in-from-left duration-200 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
                     >
-                        <SidebarContent />
+                        {renderSidebarContent()}
                     </aside>
                 </div>
             )}

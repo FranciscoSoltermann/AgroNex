@@ -434,7 +434,6 @@ export default function DashboardHome() {
 }
 
 function PieChartSVG({ data }) {
-    let cumulativePercent = 0;
     const total = data.reduce((sum, item) => sum + item.value, 0);
 
     const getCoordinatesForPercent = (percent) => {
@@ -443,13 +442,18 @@ function PieChartSVG({ data }) {
         return [x, y];
     };
 
+    const slices = [];
+    let currentAcc = 0;
+    for (const slice of data) {
+        const startPercent = currentAcc;
+        const val = total > 0 ? slice.value / total : 0;
+        currentAcc += val;
+        slices.push({ slice, startPercent, endPercent: currentAcc });
+    }
+
     return (
         <svg viewBox="-1 -1 2 2" className="w-24 h-24 transform -rotate-90">
-            {data.map((slice, i) => {
-                const startPercent = cumulativePercent;
-                cumulativePercent += slice.value / total;
-                const endPercent = cumulativePercent;
-
+            {slices.map(({ slice, startPercent, endPercent }, i) => {
                 const [startX, startY] = getCoordinatesForPercent(startPercent);
                 const [endX, endY] = getCoordinatesForPercent(endPercent);
                 const largeArcFlag = endPercent - startPercent > 0.5 ? 1 : 0;

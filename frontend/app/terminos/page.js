@@ -32,8 +32,8 @@ export default function Terminos() {
                     <section>
                         <h2 className="text-2xl font-bold text-[#060D0B] mb-4">1. Aceptación de los Términos</h2>
                         <p>
-                            Al acceder, registrarse y/o utilizar los servicios ofrecidos por <strong>AgroNex</strong> (el "Servicio"), 
-                            usted (el "Usuario") acepta quedar vinculado legalmente por los presentes Términos de Servicio. 
+                            Al acceder, registrarse y/o utilizar los servicios ofrecidos por <strong>AgroNex</strong> (el &quot;Servicio&quot;), 
+                            usted (el &quot;Usuario&quot;) acepta quedar vinculado legalmente por los presentes Términos de Servicio. 
                             Si no está de acuerdo con estos términos, no debe utilizar la plataforma. 
                             Estos términos se rigen por la legislación vigente en la <strong>República Argentina</strong>, 
                             incluyendo el Código Civil y Comercial de la Nación.
@@ -87,7 +87,7 @@ export default function Terminos() {
                     <section>
                         <h2 className="text-2xl font-bold text-[#060D0B] mb-4">6. Limitación de Responsabilidad</h2>
                         <p>
-                            AgroNex proporciona el Servicio "tal cual" (as is). En la medida máxima permitida por la ley, 
+                            AgroNex proporciona el Servicio &quot;tal cual&quot; (as is). En la medida máxima permitida por la ley, 
                             no garantizamos que el servicio será ininterrumpido o libre de errores. AgroNex no será responsable 
                             por daños indirectos, lucro cesante, pérdida de cosechas, variaciones de rinde o pérdidas financieras 
                             que el Usuario pudiera sufrir como resultado de la utilización de la plataforma y/o las decisiones tomadas con base en su información (por ej., predicciones meteorológicas o precios de mercado).

@@ -32,7 +32,7 @@ export default function Privacidad() {
                     <section>
                         <h2 className="text-2xl font-bold text-[#060D0B] mb-4">1. Introducción y Marco Legal</h2>
                         <p>
-                            En <strong>AgroNex</strong> (en adelante, "la Empresa", "nosotros", "nuestro"), nos tomamos muy en serio la privacidad y seguridad de sus datos. 
+                            En <strong>AgroNex</strong> (en adelante, &quot;la Empresa&quot;, &quot;nosotros&quot;, &quot;nuestro&quot;), nos tomamos muy en serio la privacidad y seguridad de sus datos. 
                             Esta Política de Privacidad describe cómo recopilamos, usamos, almacenamos y protegemos su información personal cuando utiliza nuestra plataforma web. 
                             El tratamiento de datos personales se realiza de estricta conformidad con la <strong>Ley de Protección de los Datos Personales de la República Argentina (Ley N° 25.326)</strong> y sus normas complementarias.
                         </p>

@@ -18,14 +18,15 @@ const CURRENCY_CONFIG = {
 const STORAGE_KEY = "agronex_currency";
 
 export function CurrencyProvider({ children }) {
-    const [currency, setCurrencyState] = useState("ARS");
-
-    useEffect(() => {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored && CURRENCY_CONFIG[stored]) {
-            setCurrencyState(stored);
+    const [currency, setCurrencyState] = useState(() => {
+        if (typeof window !== "undefined") {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            if (stored && CURRENCY_CONFIG[stored]) {
+                return stored;
+            }
         }
-    }, []);
+        return "ARS";
+    });
 
     const setCurrency = useCallback((code) => {
         if (CURRENCY_CONFIG[code]) {
