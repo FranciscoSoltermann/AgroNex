@@ -11,6 +11,18 @@ services:
     volumes:
       - ./backend:/app
       - ~/.m2:/root/.m2
+    environment:
+      - REDIS_HOST=redis
+    networks:
+      - agronex-net
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    container_name: agronex-redis
+    ports:
+      - "6379:6379"
     networks:
       - agronex-net
 

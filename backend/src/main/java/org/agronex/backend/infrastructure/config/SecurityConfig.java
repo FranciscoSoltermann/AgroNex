@@ -116,6 +116,12 @@ public class SecurityConfig {
                 // Resto de rutas públicas (checkout, webhook MP, etc.)
                 .requestMatchers("/api/public/**", "/public/**").permitAll()
 
+                // Health Checks de Actuator permitidos para sondas Liveness/Readiness
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+
+                // Resto de Actuator (Prometheus, etc.) requiere ROLE_ADMIN
+                .requestMatchers("/actuator/**").hasAuthority("ROLE_ADMIN")
+
                 // VUL-M01: Swagger/OpenAPI requiere ROLE_ADMIN (no exponer la API a usuarios anónimos)
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
                     .hasAuthority("ROLE_ADMIN")

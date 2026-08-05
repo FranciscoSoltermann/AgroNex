@@ -32,6 +32,7 @@ public class ClimaService {
     private final CampaniaRepository campaniaRepository;
     private final AlertaUsuarioService alertaUsuarioService;
     private final UsuarioService usuarioService;
+    private final org.springframework.cache.CacheManager cacheManager;
 
     @Transactional
     public RegistroClimaResponse registrarClima(RegistroClimaRequest request, UUID idUsuarioToken) {
@@ -57,6 +58,11 @@ public class ClimaService {
         evaluarAlertaClimaticaInminente(campo, registro);
 
         RegistroClima guardado = climaRepository.save(registro);
+
+        org.springframework.cache.Cache cache = cacheManager.getCache("climaResumen");
+        if (cache != null) {
+            cache.clear();
+        }
 
         return mapToResponse(guardado);
     }
@@ -131,6 +137,14 @@ public class ClimaService {
 
         if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tenés permiso para ver datos de esta campaña.");
+        }
+
+        org.springframework.cache.Cache cache = cacheManager.getCache("climaResumen");
+        if (cache != null) {
+            ResumenClimaCampaniaResponse cached = cache.get(idCampania.toString(), ResumenClimaCampaniaResponse.class);
+            if (cached != null) {
+                return cached;
+            }
         }
 
         UUID idCampo = campania.getLote().getCampo().getIdCampo();
@@ -218,7 +232,7 @@ public class ClimaService {
             }
         }
 
-        return ResumenClimaCampaniaResponse.builder()
+        ResumenClimaCampaniaResponse response = ResumenClimaCampaniaResponse.builder()
                 .idCampania(campania.getIdCampania())
                 .cultivo(campania.getCultivo())
                 .nombreLote(campania.getLote().getNombre())
@@ -230,6 +244,12 @@ public class ClimaService {
                 .estadioFenologico(estadio)
                 .fechaCosechaEstimada(fechaEstimada)
                 .build();
+
+        if (cache != null) {
+            cache.put(idCampania.toString(), response);
+        }
+
+        return response;
     }
 
     @Transactional
