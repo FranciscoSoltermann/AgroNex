@@ -13,16 +13,27 @@ services:
       - ~/.m2:/root/.m2
     environment:
       - REDIS_HOST=redis
+      - SPRING_RABBITMQ_HOST=rabbitmq
     networks:
       - agronex-net
     depends_on:
       - redis
+      - rabbitmq
 
   redis:
     image: redis:7-alpine
     container_name: agronex-redis
     ports:
       - "6379:6379"
+    networks:
+      - agronex-net
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: agronex-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     networks:
       - agronex-net
 

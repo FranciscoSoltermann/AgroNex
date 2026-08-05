@@ -56,6 +56,15 @@ public class MercadoPagoWebhookService {
     @Value("${mercadopago.webhook-replay-window-seconds:300}")
     private long webhookReplayWindowSeconds;
 
+    public void verificarFirma(String rawBody, String xSignature, String xRequestId, String dataId, String id) {
+        Map<String, Object> body = parseBody(rawBody);
+        String preapprovalId = extractPreapprovalId(body, dataId, id);
+        if (preapprovalId == null || preapprovalId.isBlank()) {
+            return; // Cannot validate without preapprovalId, will be ignored later anyway
+        }
+        validarFirmaWebhook(preapprovalId, xSignature, xRequestId);
+    }
+
     @Transactional
     public void procesarEvento(
             String rawBody,
@@ -74,7 +83,6 @@ public class MercadoPagoWebhookService {
             return;
         }
 
-        validarFirmaWebhook(preapprovalId, xSignature, xRequestId);
         if (!registrarEventoSiNoExiste(preapprovalId, xRequestId, xSignature)) {
             log.info("Webhook duplicado ignorado. preapprovalId={}, requestId={}", preapprovalId, xRequestId);
             return;

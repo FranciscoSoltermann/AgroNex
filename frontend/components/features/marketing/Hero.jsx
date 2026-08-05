@@ -86,6 +86,7 @@ export function Hero() {
           FONDO AGRÍCOLA FIJO EN TODO EL HERO (PARALLAX CONTENIDO)
       ══════════════════════════════════════════════════════════════════ */}
       <div className="fixed inset-0 z-0 pointer-events-none">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
           alt="Fondo agrícola"
@@ -459,6 +460,7 @@ export function Hero() {
               <Link href="/arrepentimiento" className="font-bold text-[#E9F5EE] bg-[#52B788]/20 px-3 py-1.5 rounded-lg hover:bg-[#52B788]/40 transition-colors">Botón de Arrepentimiento</Link>
               {/* AFIP Data Fiscal Placeholder */}
               <a href="http://www.afip.gob.ar/datafiscal/" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="https://www.afip.gob.ar/images/f960/DATAWEB.jpg" alt="Data Fiscal" className="h-10 object-contain" />
               </a>
             </div>

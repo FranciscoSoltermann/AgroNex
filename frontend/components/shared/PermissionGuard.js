@@ -41,7 +41,7 @@ export default function PermissionGuard({ requiredPermission, requiredRole, chil
             }
         };
         checkPerms();
-    }, [requiredPermission, router]);
+    }, [requiredPermission, requiredRole, router]);
 
     if (loading) {
         return (

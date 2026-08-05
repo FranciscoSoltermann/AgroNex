@@ -90,6 +90,7 @@ export default function LoteDrawer({ initialCenter, initialGeoJson, onDrawComple
                 resizeObserver.disconnect();
                 clearTimeout(timeoutId);
             };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [map, targetCenter?.[0], targetCenter?.[1]]);
 
         return null;

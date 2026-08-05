@@ -61,6 +61,7 @@ export default function SiteFooter({ compact = false }) {
                         <Link href="/arrepentimiento" className="font-bold bg-gray-100 px-3 py-1.5 rounded-lg text-gray-800 hover:bg-gray-200 transition-colors">Botón de Arrepentimiento</Link>
                         {/* AFIP Data Fiscal Placeholder */}
                         <a href="http://www.afip.gob.ar/datafiscal/" target="_blank" rel="noopener noreferrer" className="ml-2 hover:opacity-80 transition-opacity">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src="https://www.afip.gob.ar/images/f960/DATAWEB.jpg" alt="Data Fiscal" className="h-10 object-contain" />
                         </a>
                     </div>
