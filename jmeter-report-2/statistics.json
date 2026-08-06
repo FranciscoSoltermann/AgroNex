@@ -1,0 +1,34 @@
+{
+  "Total" : {
+    "transaction" : "Total",
+    "sampleCount" : 5000,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 0.7571999999999987,
+    "medianResTime" : 1.0,
+    "minResTime" : 0.0,
+    "maxResTime" : 23.0,
+    "pct1ResTime" : 1.0,
+    "pct2ResTime" : 1.0,
+    "pct3ResTime" : 2.0,
+    "throughput" : 510.7774032076821,
+    "receivedKBytesPerSec" : 354.5064533532537,
+    "sentKBytesPerSec" : 297.28841046072125
+  },
+  "POST Webhook" : {
+    "transaction" : "POST Webhook",
+    "sampleCount" : 5000,
+    "errorCount" : 0,
+    "errorPct" : 0.0,
+    "meanResTime" : 0.7571999999999987,
+    "medianResTime" : 1.0,
+    "minResTime" : 0.0,
+    "maxResTime" : 23.0,
+    "pct1ResTime" : 1.0,
+    "pct2ResTime" : 1.0,
+    "pct3ResTime" : 2.0,
+    "throughput" : 510.7774032076821,
+    "receivedKBytesPerSec" : 354.5064533532537,
+    "sentKBytesPerSec" : 297.28841046072125
+  }
+}

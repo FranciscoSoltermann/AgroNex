@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.net.URI;
 import java.util.*;
@@ -40,6 +41,7 @@ import java.util.*;
 @RequiredArgsConstructor
 @Slf4j
 @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_MAQUINARIA')")
+@Tag(name = "John Deere", description = "Operaciones de John Deere")
 public class JohnDeereController {
 
     private final JohnDeereConnectionService connectionService;

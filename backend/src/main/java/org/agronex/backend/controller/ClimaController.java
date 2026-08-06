@@ -15,6 +15,7 @@ import org.agronex.backend.dto.response.ResumenClimaCampaniaResponse;
 import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.ClimaService;
 import org.agronex.backend.service.UsuarioService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/clima")
 @RequiredArgsConstructor
+@Tag(name = "Clima", description = "Operaciones de Clima")
 public class ClimaController {
 
     private final ClimaService climaService;

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.service.CotizacionesService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 import java.util.Map;
@@ -22,6 +23,7 @@ import java.util.Map;
 @RequestMapping("/api/public/cotizaciones")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "Cotizaciones", description = "Operaciones de Cotizaciones")
 public class CotizacionesController {
 
     private final CotizacionesService cotizacionesService;
