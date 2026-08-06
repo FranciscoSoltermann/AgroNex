@@ -75,7 +75,7 @@ jobs:
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           SUPABASE_ISSUER_URI: https://mock-supabase.supabase.co/auth/v1
-        run: ./mvnw clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=FranciscoSoltermann_AgroNex -Dsonar.organization=franciscosoltermann -Dsonar.host.url=https://sonarcloud.io -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+        run: ./mvnw clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.token=${SONAR_TOKEN} -Dsonar.projectKey=franciscosoltermann_AgroNex -Dsonar.organization=franciscosoltermann -Dsonar.host.url=https://sonarcloud.io -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
       - name: Upload JaCoCo Coverage Report
         uses: actions/upload-artifact@v4
