@@ -117,7 +117,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/public/**", "/public/**").permitAll()
 
                 // Health Checks de Actuator permitidos para sondas Liveness/Readiness
-                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
 
                 // Resto de Actuator (Prometheus, etc.) requiere ROLE_ADMIN
                 .requestMatchers("/actuator/**").hasAuthority("ROLE_ADMIN")

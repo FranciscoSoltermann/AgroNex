@@ -4,6 +4,8 @@ import FooterMount from "@/components/shared/layout/FooterMount";
 import { Toaster } from "sonner";
 import ThemeProvider from "@/app/components/ThemeProvider";
 
+import QueryProvider from "@/components/shared/QueryProvider";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -39,11 +41,13 @@ export default function RootLayout({ children }) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <ThemeProvider>
-          <Toaster richColors position="top-right" />
-          {children}
-          <FooterMount />
-        </ThemeProvider>
+        <QueryProvider>
+          <ThemeProvider>
+            <Toaster richColors position="top-right" />
+            {children}
+            <FooterMount />
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

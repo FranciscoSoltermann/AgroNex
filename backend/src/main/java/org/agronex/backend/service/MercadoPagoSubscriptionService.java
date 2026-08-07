@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 import java.math.BigDecimal;
 import java.net.URI;
@@ -51,6 +52,7 @@ public class MercadoPagoSubscriptionService {
     @Value("${mercadopago.test-payer-email:}")
     private String testPayerEmail;
 
+    @CircuitBreaker(name = "externalApi", fallbackMethod = "fallbackCrearSuscripcion")
     public SuscripcionMercadoPagoResponse crearSuscripcion(SuscripcionMercadoPagoRequest request) {
         if (accessToken == null || accessToken.isBlank()) {
             throw new IllegalStateException("No hay access token de Mercado Pago configurado.");
@@ -123,6 +125,11 @@ public class MercadoPagoSubscriptionService {
         } catch (Exception e) {
             throw new IllegalStateException("No se pudo interpretar la respuesta de Mercado Pago.", e);
         }
+    }
+
+    public SuscripcionMercadoPagoResponse fallbackCrearSuscripcion(SuscripcionMercadoPagoRequest request, Throwable t) {
+        // Loggear o manejar la excepción cuando MercadoPago falla o el CircuitBreaker está abierto
+        throw new IllegalStateException("Mercado Pago no está disponible temporalmente. Intente más tarde. (" + t.getMessage() + ")", t);
     }
 
     private PlanConfig resolvePlan(String plan, String billingCycle) {

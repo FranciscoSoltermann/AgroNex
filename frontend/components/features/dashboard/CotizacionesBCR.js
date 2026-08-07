@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
     TrendingUp, TrendingDown, Minus, RefreshCw, ExternalLink, 
     BarChart3, AlertCircle, Sprout, Wheat, Bean, Flower2
@@ -124,47 +124,39 @@ function getGranoIcon(slug) {
  * Muestra los precios de pizarra de los principales granos argentinos.
  */
 export default function CotizacionesBCR() {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
     const fetchCotizaciones = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
-            const url = baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
-            const res = await fetch(`${url}/public/cotizaciones/granos`);
-            if (!res.ok) throw new Error("Error al obtener cotizaciones");
-            const json = await res.json();
-            setData(json);
-        } catch (err) {
-            setError("No se pudieron cargar las cotizaciones.");
-            // Fallback data for UI display
-            setData({
-                source: "BCR - Bolsa de Comercio de Rosario",
-                fecha: new Date().toLocaleDateString("es-AR"),
-                mercado: "Mercado de Granos - Pizarra",
-                moneda: "ARS",
-                cotizaciones: [
-                    { nombre: "Soja", slug: "soja", compra: 305000, venta: 307000, variacion: -0.8, unidad: "USD/Tn" },
-                    { nombre: "Trigo", slug: "trigo", compra: 195000, venta: 197000, variacion: 1.2, unidad: "USD/Tn" },
-                    { nombre: "Maíz", slug: "maiz", compra: 175000, venta: 177000, variacion: 0.5, unidad: "USD/Tn" },
-                    { nombre: "Girasol", slug: "girasol", compra: 350000, venta: 355000, variacion: -0.3, unidad: "USD/Tn" },
-                    { nombre: "Sorgo", slug: "sorgo", compra: 155000, venta: 157000, variacion: 0.2, unidad: "USD/Tn" },
-                    { nombre: "Cebada", slug: "cebada", compra: 180000, venta: 182000, variacion: -0.5, unidad: "USD/Tn" },
-                ],
-                disclaimer: "Valores de referencia.",
-                apiConfigured: false,
-            });
-        } finally {
-            setLoading(false);
-        }
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+        const url = baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
+        const res = await fetch(`${url}/public/cotizaciones/granos`);
+        if (!res.ok) throw new Error("Error al obtener cotizaciones");
+        return await res.json();
     };
 
-    useEffect(() => {
-        fetchCotizaciones();
-    }, []);
+    const fallbackData = {
+        source: "BCR - Bolsa de Comercio de Rosario",
+        fecha: new Date().toLocaleDateString("es-AR"),
+        mercado: "Mercado de Granos - Pizarra",
+        moneda: "ARS",
+        cotizaciones: [
+            { nombre: "Soja", slug: "soja", compra: 305000, venta: 307000, variacion: -0.8, unidad: "USD/Tn" },
+            { nombre: "Trigo", slug: "trigo", compra: 195000, venta: 197000, variacion: 1.2, unidad: "USD/Tn" },
+            { nombre: "Maíz", slug: "maiz", compra: 175000, venta: 177000, variacion: 0.5, unidad: "USD/Tn" },
+            { nombre: "Girasol", slug: "girasol", compra: 350000, venta: 355000, variacion: -0.3, unidad: "USD/Tn" },
+            { nombre: "Sorgo", slug: "sorgo", compra: 155000, venta: 157000, variacion: 0.2, unidad: "USD/Tn" },
+            { nombre: "Cebada", slug: "cebada", compra: 180000, venta: 182000, variacion: -0.5, unidad: "USD/Tn" },
+        ],
+        disclaimer: "Valores de referencia.",
+        apiConfigured: false,
+    };
+
+    const { data: queryData, isLoading: loading, isError, refetch } = useQuery({
+        queryKey: ['cotizacionesBCR'],
+        queryFn: fetchCotizaciones,
+        retry: 2,
+        refetchOnWindowFocus: false,
+    });
+
+    const data = isError ? fallbackData : queryData;
 
     if (loading) {
         return (
@@ -205,7 +197,7 @@ export default function CotizacionesBCR() {
                         </span>
                     )}
                     <button
-                        onClick={fetchCotizaciones}
+                        onClick={() => refetch()}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-all cursor-pointer"
                     >
                         <RefreshCw size={11} /> Actualizar

@@ -54,6 +54,28 @@ services:
     depends_on:
       - backend
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: agronex-prometheus
+    volumes:
+      - ./prometheus:/etc/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - agronex-net
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: agronex-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - agronex-net
+    depends_on:
+      - prometheus
+
 networks:
   agronex-net:
     driver: bridge
