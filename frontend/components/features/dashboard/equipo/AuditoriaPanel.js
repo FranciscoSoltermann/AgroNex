@@ -1,36 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { Loader2, ShieldAlert, Activity, Filter, ChevronLeft, ChevronRight, User, Terminal, CalendarDays, Server } from "lucide-react";
 
 export default function AuditoriaPanel() {
-    const [logs, setLogs] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalElements, setTotalElements] = useState(0);
     const size = 15;
 
-    const fetchLogs = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
+    const { data, isLoading: loading, error: queryError } = useQuery({
+        queryKey: ['auditLogs', page],
+        queryFn: async () => {
             const { data } = await apiClient.get(`/audit/mi-granja?page=${page}&size=${size}`);
-            setLogs(data.content || []);
-            setTotalPages(data.totalPages || 1);
-            setTotalElements(data.totalElements || 0);
-        } catch (e) {
-            setError("No se pudo cargar el registro de auditoría. Asegúrate de tener permisos suficientes.");
-        } finally {
-            setLoading(false);
-        }
-    }, [page, size]);
+            return data;
+        },
+        retry: false
+    });
 
-    useEffect(() => {
-        fetchLogs();
-    }, [fetchLogs]);
+    const logs = data?.content || [];
+    const totalPages = data?.totalPages || 1;
+    const totalElements = data?.totalElements || 0;
+    const error = queryError ? "No se pudo cargar el registro de auditoría. Asegúrate de tener permisos suficientes." : null;
 
     const formatDate = (dateStr) => {
         if (!dateStr) return "—";

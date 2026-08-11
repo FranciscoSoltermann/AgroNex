@@ -1,0 +1,215 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "title": "Solicitudes HTTP por segundo",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count[1m])",
+          "legendFormat": "{{method}} {{uri}} ({{status}})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" }
+      }
+    },
+    {
+      "title": "Latencia HTTP (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(http_server_requests_seconds_bucket[5m]))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "title": "JVM Heap Memory",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{area=\"heap\"}",
+          "legendFormat": "{{id}} used"
+        },
+        {
+          "expr": "jvm_memory_max_bytes{area=\"heap\"}",
+          "legendFormat": "{{id}} max"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      }
+    },
+    {
+      "title": "CPU Usage",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 4, "x": 8, "y": 8 },
+      "targets": [
+        {
+          "expr": "process_cpu_usage",
+          "legendFormat": "CPU"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 0.6 },
+              { "color": "red", "value": 0.85 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Threads Activos",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "jvm_threads_live_threads",
+          "legendFormat": "Live"
+        }
+      ]
+    },
+    {
+      "title": "Threads Daemon",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 8 },
+      "targets": [
+        {
+          "expr": "jvm_threads_daemon_threads",
+          "legendFormat": "Daemon"
+        }
+      ]
+    },
+    {
+      "title": "Hikari Connection Pool",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "hikaricp_connections_active",
+          "legendFormat": "Active"
+        },
+        {
+          "expr": "hikaricp_connections_idle",
+          "legendFormat": "Idle"
+        },
+        {
+          "expr": "hikaricp_connections_pending",
+          "legendFormat": "Pending"
+        }
+      ]
+    },
+    {
+      "title": "Circuit Breaker - Estado",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "resilience4j_circuitbreaker_state{name=\"externalApi\"}",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "CERRADO ✅" }, "1": { "text": "ABIERTO ⛔" }, "2": { "text": "SEMI-ABIERTO ⚠️" } } }
+          ]
+        }
+      }
+    },
+    {
+      "title": "Circuit Breaker - Llamadas",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 6, "y": 16 },
+      "targets": [
+        {
+          "expr": "rate(resilience4j_circuitbreaker_calls_seconds_count{name=\"externalApi\",kind=\"successful\"}[5m])",
+          "legendFormat": "Exitosas"
+        },
+        {
+          "expr": "rate(resilience4j_circuitbreaker_calls_seconds_count{name=\"externalApi\",kind=\"failed\"}[5m])",
+          "legendFormat": "Fallidas"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "cps" }
+      }
+    },
+    {
+      "title": "Retry - Intentos",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 16 },
+      "targets": [
+        {
+          "expr": "resilience4j_retry_calls_total{name=\"externalApi\",kind=\"successful_without_retry\"}",
+          "legendFormat": "Sin reintento"
+        },
+        {
+          "expr": "resilience4j_retry_calls_total{name=\"externalApi\",kind=\"successful_with_retry\"}",
+          "legendFormat": "Con reintento"
+        },
+        {
+          "expr": "resilience4j_retry_calls_total{name=\"externalApi\",kind=\"failed_with_retry\"}",
+          "legendFormat": "Fallidas"
+        }
+      ]
+    },
+    {
+      "title": "Errores HTTP 5xx",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])",
+          "legendFormat": "{{status}} {{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "mode": "fixed", "fixedColor": "red" } }
+      }
+    },
+    {
+      "title": "GC Pausas",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "rate(jvm_gc_pause_seconds_sum[5m])",
+          "legendFormat": "{{action}} {{cause}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["agronex", "spring-boot", "resilience4j"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "AgroNex - Backend Monitoring",
+  "uid": "agronex-backend",
+  "version": 1
+}

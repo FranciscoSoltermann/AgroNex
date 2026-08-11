@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 
 import java.math.BigDecimal;
 import java.net.URI;
@@ -52,6 +53,7 @@ public class MercadoPagoSubscriptionService {
     @Value("${mercadopago.test-payer-email:}")
     private String testPayerEmail;
 
+    @Retry(name = "externalApi")
     @CircuitBreaker(name = "externalApi", fallbackMethod = "fallbackCrearSuscripcion")
     public SuscripcionMercadoPagoResponse crearSuscripcion(SuscripcionMercadoPagoRequest request) {
         if (accessToken == null || accessToken.isBlank()) {

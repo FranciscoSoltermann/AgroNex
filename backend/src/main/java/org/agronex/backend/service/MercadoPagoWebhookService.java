@@ -21,6 +21,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -266,7 +268,9 @@ public class MercadoPagoWebhookService {
         }
     }
 
-    private JsonNode consultarSuscripcionMercadoPago(String preapprovalId) {
+    @CircuitBreaker(name = "externalApi", fallbackMethod = "fallbackConsultarSuscripcion")
+    @Retry(name = "externalApi")
+    JsonNode consultarSuscripcionMercadoPago(String preapprovalId) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
@@ -287,6 +291,11 @@ public class MercadoPagoWebhookService {
         } catch (Exception e) {
             throw new IllegalStateException("Respuesta inválida al consultar Mercado Pago.", e);
         }
+    }
+
+    JsonNode fallbackConsultarSuscripcion(String preapprovalId, Throwable t) {
+        log.warn("CircuitBreaker: MercadoPago no disponible para consultar suscripción {}. Razón: {}", preapprovalId, t.getMessage());
+        throw new IllegalStateException("Mercado Pago no está disponible temporalmente. Intente más tarde.", t);
     }
 
     private String extractPreapprovalId(Map<String, Object> body, String dataId, String id) {

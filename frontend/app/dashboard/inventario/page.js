@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import {
     Plus, Search, AlertTriangle, TrendingUp, Package,
@@ -46,26 +47,23 @@ const TIPO_ICONS = {
 
 export default function InventarioPage() {
     const { symbol: currSymbol } = useCurrency();
-    const [insumos, setInsumos] = useState([]);
-    const [campos, setCampos] = useState([]);
+    const queryClient = useQueryClient();
+    
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
-    const [campanias, setCampanias] = useState([]);
-    const [actividades, setActividades] = useState([]);
-    const [loading, setLoading] = useState(true);
+    
     const [filtroActivo, setFiltroActivo] = useState("Todos");
     const [filtroCampoId, setFiltroCampoId] = useState("Todos");
     const [filtroCampaniaId, setFiltroCampaniaId] = useState("Todos");
     const [searchTerm, setSearchTerm] = useState("");
 
     const [showModal, setShowModal] = useState(false);
-    const [submitLoading, setSubmitLoading] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const emptyForm = { nombre: "", tipoArticulo: "", subtipo: "", precioUnitario: "", unidad: "", pesoBolsaKg: "", cantidad: "", idCampo: "", idCampania: "", semillaMode: "" };
     const [formInsumo, setFormInsumo] = useState(emptyForm);
 
-    const fetchData = useCallback(async () => {
-        try {
-            setLoading(true);
+    const { data: queryData, isLoading: loading } = useQuery({
+        queryKey: ['inventario'],
+        queryFn: async () => {
             const t = new Date().getTime();
             const [insRes, camRes, campRes, actRes] = await Promise.all([
                 apiClient.get(`/insumos?t=${t}`),
@@ -73,54 +71,72 @@ export default function InventarioPage() {
                 apiClient.get(`/campanias?t=${t}`).catch(() => ({ data: [] })),
                 apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] }))
             ]);
-            setInsumos(insRes.data || []);
-            setCampos(camRes.data || []);
-            setCampanias(campRes.data || []);
-            setActividades(actRes.data || []);
-        } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
-                console.error("Error al cargar inventario", error);
-            }
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    useEffect(() => { fetchData(); }, [fetchData]);
-
-    const handleRegistrarInsumo = async (e) => {
-        e.preventDefault();
-        setSubmitLoading(true);
-        try {
-            const body = {
-                nombre: formInsumo.nombre,
-                precioUnitario: parseFloat(formInsumo.precioUnitario),
-                unidad: formInsumo.unidad,
-                cantidad: parseFloat(formInsumo.cantidad),
-                idCampo: formInsumo.idCampo
+            return {
+                insumos: insRes.data || [],
+                campos: camRes.data || [],
+                campanias: campRes.data || [],
+                actividades: actRes.data || []
             };
-            if (formInsumo.tipoArticulo) body.tipoArticulo = formInsumo.tipoArticulo;
-            if (formInsumo.subtipo) body.subtipo = formInsumo.subtipo;
-            if (formInsumo.unidad === "BOLSAS" && formInsumo.pesoBolsaKg) {
-                body.pesoBolsaKg = parseFloat(formInsumo.pesoBolsaKg);
-            }
-            if (formInsumo.idCampania) body.idCampania = formInsumo.idCampania;
-            let res;
+        }
+    });
+
+    const insumos = queryData?.insumos || [];
+    const campos = queryData?.campos || [];
+    const campanias = queryData?.campanias || [];
+    const actividades = queryData?.actividades || [];
+
+    const mutationSave = useMutation({
+        mutationFn: async (body) => {
             if (editingId) {
-                res = await apiClient.put(`/insumos/${editingId}`, body);
-                setInsumos(prev => prev.map(i => i.idInsumo === editingId ? res.data : i));
+                return await apiClient.put(`/insumos/${editingId}`, body);
             } else {
-                res = await apiClient.post("/insumos", body);
-                setInsumos(prev => [res.data, ...prev]);
+                return await apiClient.post("/insumos", body);
             }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['inventario'] });
             setShowModal(false);
             setEditingId(null);
             setFormInsumo(emptyForm);
-        } catch (error) {
+        },
+        onError: () => {
             alert("Error al registrar insumo. Verificá que todos los datos sean correctos.");
-        } finally {
-            setSubmitLoading(false);
         }
+    });
+
+    const mutationDelete = useMutation({
+        mutationFn: async (id) => {
+            return await apiClient.delete(`/insumos/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['inventario'] });
+            setConfirmModal({ isOpen: false, id: null });
+        },
+        onError: () => {
+            alert("Error al eliminar insumo.");
+            setConfirmModal({ isOpen: false, id: null });
+        }
+    });
+
+    const submitLoading = mutationSave.isPending;
+
+    const handleRegistrarInsumo = async (e) => {
+        e.preventDefault();
+        const body = {
+            nombre: formInsumo.nombre,
+            precioUnitario: parseFloat(formInsumo.precioUnitario),
+            unidad: formInsumo.unidad,
+            cantidad: parseFloat(formInsumo.cantidad),
+            idCampo: formInsumo.idCampo
+        };
+        if (formInsumo.tipoArticulo) body.tipoArticulo = formInsumo.tipoArticulo;
+        if (formInsumo.subtipo) body.subtipo = formInsumo.subtipo;
+        if (formInsumo.unidad === "BOLSAS" && formInsumo.pesoBolsaKg) {
+            body.pesoBolsaKg = parseFloat(formInsumo.pesoBolsaKg);
+        }
+        if (formInsumo.idCampania) body.idCampania = formInsumo.idCampania;
+        
+        mutationSave.mutate(body);
     };
 
     const handleEditar = (item) => {
@@ -146,11 +162,7 @@ export default function InventarioPage() {
     };
 
     const confirmEliminar = async () => {
-        try {
-            await apiClient.delete(`/insumos/${confirmModal.id}`);
-            setInsumos(prev => prev.filter(i => i.idInsumo !== confirmModal.id));
-        } catch { alert("Error al eliminar insumo."); }
-        setConfirmModal({ isOpen: false, id: null });
+        mutationDelete.mutate(confirmModal.id);
     };
 
     // Campañas filtradas por campo seleccionado en el modal

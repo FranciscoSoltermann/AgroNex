@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -68,6 +69,7 @@ public class AgromonitoringService {
      * VUL-A02: JSON construido con ObjectMapper para evitar JSON Injection.
      * VUL-B04: tamaño del GeoJSON validado antes de enviarlo.
      */
+    @Retry(name = "externalApi")
     @CircuitBreaker(name = "externalApi", fallbackMethod = "fallbackRegistrarPoligono")
     public String registrarPoligono(String name, String geoJson) {
         // VUL-B04: validar tamaño del GeoJSON

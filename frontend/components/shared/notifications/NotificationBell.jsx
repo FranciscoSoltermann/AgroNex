@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { Bell, CheckCheck, Loader2, X, AlertCircle, Info, Thermometer, Leaf, ChevronRight } from "lucide-react";
 
@@ -24,14 +25,52 @@ function getNotifIcon(titulo = "") {
 }
 
 export default function NotificationBell() {
+    const queryClient = useQueryClient();
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [items, setItems] = useState([]);
-    const [count, setCount] = useState(0);
     const [authAvailable, setAuthAvailable] = useState(true);
     const [selected, setSelected] = useState(null); // notif seleccionada para leer completa
     const [removing, setRemoving] = useState(new Set()); // IDs en animación de salida
     const boxRef = useRef(null);
+
+    // En lugar de guardar `items` en state, lo obtenemos de React Query.
+    // Usamos state intermedio para las animaciones y leer optimista si es necesario, 
+    // pero para mantener el patrón original adaptado:
+    const [localItems, setLocalItems] = useState([]);
+
+    const { data: count = 0 } = useQuery({
+        queryKey: ['notificacionesCount'],
+        queryFn: async () => {
+            try {
+                const res = await apiClient.get("/notificaciones/no-leidas/count");
+                setAuthAvailable(true);
+                return res.data?.count ?? 0;
+            } catch {
+                setAuthAvailable(false);
+                return 0;
+            }
+        },
+        refetchInterval: 60000
+    });
+
+    const { isLoading: loading, refetch: fetchNotifications } = useQuery({
+        queryKey: ['notificaciones'],
+        queryFn: async () => {
+            try {
+                const res = await apiClient.get("/notificaciones?limit=20");
+                const fetched = (res.data || []).filter(n => !n.leida);
+                setLocalItems(fetched);
+                setAuthAvailable(true);
+                return fetched;
+            } catch {
+                setAuthAvailable(false);
+                setLocalItems([]);
+                return [];
+            }
+        },
+        enabled: open
+    });
+
+    const items = localItems;
 
     const unreadItems = useMemo(
         () => items.filter((n) => !n.leida).map((n) => n.idNotificacion),
@@ -44,68 +83,48 @@ export default function NotificationBell() {
         [items, removing]
     );
 
-    const fetchUnreadCount = async () => {
-        try {
-            const res = await apiClient.get("/notificaciones/no-leidas/count");
-            setCount(res.data?.count ?? 0);
-            setAuthAvailable(true);
-        } catch {
-            setAuthAvailable(false);
-            setCount(0);
-        }
-    };
-
-    const fetchNotifications = async () => {
-        setLoading(true);
-        try {
-            const res = await apiClient.get("/notificaciones?limit=20");
-            // Solo cargamos las no leídas
-            setItems((res.data || []).filter(n => !n.leida));
-            setAuthAvailable(true);
-        } catch {
-            setAuthAvailable(false);
-            setItems([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const dismissWithAnimation = (id) => {
         setRemoving(prev => new Set(prev).add(id));
         setTimeout(() => {
-            setItems(prev => prev.filter(n => n.idNotificacion !== id));
+            setLocalItems(prev => prev.filter(n => n.idNotificacion !== id));
             setRemoving(prev => { const s = new Set(prev); s.delete(id); return s; });
         }, 300);
     };
 
-    const markOneAsRead = async (idNotificacion) => {
-        try {
-            await apiClient.put(`/notificaciones/${idNotificacion}/leer`);
-            setCount(prev => Math.max(0, prev - 1));
-            // Si está en detalle, cerrar el detalle
+    const markOneAsReadMutation = useMutation({
+        mutationFn: async (idNotificacion) => {
+            return await apiClient.put(`/notificaciones/${idNotificacion}/leer`);
+        },
+        onSuccess: (_, idNotificacion) => {
+            queryClient.invalidateQueries({ queryKey: ['notificacionesCount'] });
             if (selected?.idNotificacion === idNotificacion) setSelected(null);
             dismissWithAnimation(idNotificacion);
-        } catch {
-            // no bloquea la UI
         }
+    });
+
+    const markOneAsRead = async (idNotificacion) => {
+        markOneAsReadMutation.mutate(idNotificacion);
     };
 
-    const markAllAsRead = async () => {
-        if (!unreadItems.length) return;
-        try {
-            await apiClient.put("/notificaciones/leer-todas");
-            setCount(0);
-            // Animar salida de todas
+    const markAllAsReadMutation = useMutation({
+        mutationFn: async () => {
+            return await apiClient.put("/notificaciones/leer-todas");
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['notificacionesCount'] });
             const allIds = items.map(n => n.idNotificacion);
             setRemoving(new Set(allIds));
             setSelected(null);
             setTimeout(() => {
-                setItems([]);
+                setLocalItems([]);
                 setRemoving(new Set());
             }, 350);
-        } catch {
-            // no bloquea la UI
         }
+    });
+
+    const markAllAsRead = async () => {
+        if (!unreadItems.length) return;
+        markAllAsReadMutation.mutate();
     };
 
     const openDetail = async (n) => {
@@ -114,9 +133,9 @@ export default function NotificationBell() {
         if (!n.leida) {
             try {
                 await apiClient.put(`/notificaciones/${n.idNotificacion}/leer`);
-                setCount(prev => Math.max(0, prev - 1));
+                queryClient.invalidateQueries({ queryKey: ['notificacionesCount'] });
                 // Actualizar estado en la lista local
-                setItems(prev => prev.map(item =>
+                setLocalItems(prev => prev.map(item =>
                     item.idNotificacion === n.idNotificacion ? { ...item, leida: true } : item
                 ));
             } catch {
@@ -126,17 +145,11 @@ export default function NotificationBell() {
     };
 
     useEffect(() => {
-        fetchUnreadCount();
-        const id = setInterval(fetchUnreadCount, 60000);
-        return () => clearInterval(id);
-    }, []);
-
-    useEffect(() => {
         if (open) {
             fetchNotifications();
             setSelected(null);
         }
-    }, [open]);
+    }, [open, fetchNotifications]);
 
     useEffect(() => {
         const onClickOutside = (event) => {

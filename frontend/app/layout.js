@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import ThemeProvider from "@/app/components/ThemeProvider";
 
 import QueryProvider from "@/components/shared/QueryProvider";
+import ErrorBoundary from "@/components/shared/ErrorBoundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,7 +45,9 @@ export default function RootLayout({ children }) {
         <QueryProvider>
           <ThemeProvider>
             <Toaster richColors position="top-right" />
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
             <FooterMount />
           </ThemeProvider>
         </QueryProvider>

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import apiClient from "@/lib/api-client";
 import { Activity, Loader2, BarChart3, Presentation, AlertCircle } from "lucide-react";
@@ -11,37 +12,31 @@ const AnaliticaRindeChart = dynamic(() => import("@/components/features/dashboar
 });
 
 export default function AnaliticaPage() {
-    const [lotes, setLotes] = useState([]);
-    const [campanias, setCampanias] = useState([]);
-    const [cosechas, setCosechas] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    // Filtros
-    const [seleccionCampo, setSeleccionCampo] = useState("");
-    const [seleccionLote, setSeleccionLote] = useState("");
-    const [seleccionCultivo, setSeleccionCultivo] = useState("");
-
-    const fetchData = useCallback(async () => {
-        try {
+    const { data, isLoading: loading, error: queryError } = useQuery({
+        queryKey: ['analiticaData'],
+        queryFn: async () => {
             const [lotesRes, campRes, cosechasRes] = await Promise.all([
                 apiClient.get("/lotes"),
                 apiClient.get("/campanias"),
                 apiClient.get("/cosechas")
             ]);
-            setLotes(lotesRes.data || []);
-            setCampanias(campRes.data || []);
-            setCosechas(cosechasRes.data || []);
-        } catch (err) {
-            setError("Error al cargar datos para la analítica.");
-        } finally {
-            setLoading(false);
+            return {
+                lotes: lotesRes.data || [],
+                campanias: campRes.data || [],
+                cosechas: cosechasRes.data || []
+            };
         }
-    }, []);
+    });
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    const lotes = data?.lotes || [];
+    const campanias = data?.campanias || [];
+    const cosechas = data?.cosechas || [];
+    const error = queryError ? "Error al cargar datos para la analítica." : null;
+
+    // Filtros
+    const [seleccionCampo, setSeleccionCampo] = useState("");
+    const [seleccionLote, setSeleccionLote] = useState("");
+    const [seleccionCultivo, setSeleccionCultivo] = useState("");
 
     // Data derivada para filtros
     const campos = Array.from(new Set(lotes.map(l => l.idCampo))).map(id => {

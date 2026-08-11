@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { supabase } from "@/lib/supabase";
 import {
@@ -29,10 +30,8 @@ const INPUT_CLASS = "w-full bg-gray-50 dark:bg-[#0f1419] dark:text-gray-100 bord
 
 export default function SettingsPage() {
     const { currency, setCurrency } = useCurrency();
-    const [settings, setSettings] = useState(null);
+    const queryClient = useQueryClient();
     const [draft, setDraft] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
 
@@ -47,19 +46,36 @@ export default function SettingsPage() {
     const [identitiesLoading, setIdentitiesLoading] = useState(true);
     const [linkingGoogle, setLinkingGoogle] = useState(false);
 
-    const fetchSettings = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
+    const { data: settings, isLoading: loading } = useQuery({
+        queryKey: ['settings'],
+        queryFn: async () => {
             const { data } = await apiClient.get("/usuarios/settings");
-            setSettings(data);
-            setDraft(data);
-        } catch (e) {
-            setError("No se pudo cargar la configuración del usuario.");
-        } finally {
-            setLoading(false);
+            return data;
         }
-    }, []);
+    });
+
+    // Sync draft with settings when settings change
+    useEffect(() => {
+        if (settings) {
+            setDraft(settings);
+        }
+    }, [settings]);
+
+    const mutationSave = useMutation({
+        mutationFn: async (payload) => {
+            const { data } = await apiClient.put("/usuarios/settings", payload);
+            return data;
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['settings'] });
+            setSuccess("Configuración guardada correctamente.");
+            setTimeout(() => setSuccess(null), 3000);
+        },
+        onError: () => {
+            setError("No se pudo guardar la configuración.");
+        }
+    });
+    const saving = mutationSave.isPending;
 
     const fetchMfaFactors = useCallback(async () => {
         setMfaLoading(true);
@@ -91,10 +107,9 @@ export default function SettingsPage() {
     }, []);
 
     useEffect(() => {
-        fetchSettings();
         fetchMfaFactors();
         fetchIdentities();
-    }, [fetchSettings, fetchMfaFactors, fetchIdentities]);
+    }, [fetchMfaFactors, fetchIdentities]);
 
     const dirty = useMemo(() => {
         if (!settings || !draft) return false;
@@ -111,31 +126,19 @@ export default function SettingsPage() {
 
     const handleGuardar = async () => {
         if (!draft) return;
-        setSaving(true);
         setError(null);
-        try {
-            const payload = {
-                nombre: draft.nombre,
-                apellido: draft.apellido,
-                razonSocial: draft.razonSocial,
-                emailNotificaciones: draft.emailNotificaciones,
-                dosFactoresHabilitado: mfaFactors.length > 0,
-                alertaRiegoHabilitada: draft.alertaRiegoHabilitada,
-                pronosticoTiempoHabilitado: draft.pronosticoTiempoHabilitado,
-                stockInsumosHabilitado: draft.stockInsumosHabilitado,
-                cambioClimaticoHabilitado: draft.cambioClimaticoHabilitado,
-            };
-
-            const { data } = await apiClient.put("/usuarios/settings", payload);
-            setSettings(data);
-            setDraft(data);
-            setSuccess("Configuración guardada correctamente.");
-            setTimeout(() => setSuccess(null), 3000);
-        } catch (e) {
-            setError("No se pudo guardar la configuración.");
-        } finally {
-            setSaving(false);
-        }
+        const payload = {
+            nombre: draft.nombre,
+            apellido: draft.apellido,
+            razonSocial: draft.razonSocial,
+            emailNotificaciones: draft.emailNotificaciones,
+            dosFactoresHabilitado: mfaFactors.length > 0,
+            alertaRiegoHabilitada: draft.alertaRiegoHabilitada,
+            pronosticoTiempoHabilitado: draft.pronosticoTiempoHabilitado,
+            stockInsumosHabilitado: draft.stockInsumosHabilitado,
+            cambioClimaticoHabilitado: draft.cambioClimaticoHabilitado,
+        };
+        mutationSave.mutate(payload);
     };
 
     const handleDescartar = () => {

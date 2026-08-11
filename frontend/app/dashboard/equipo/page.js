@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import {
     UserPlus, ShieldCheck, Lock, CircleHelp, ChevronLeft, ChevronRight,
@@ -33,17 +34,41 @@ export default function EquipoPage() {
     const [activeTab, setActiveTab] = useState("equipo");
 
     // ─── Estado principal ───
-    const [empleados, setEmpleados] = useState([]);
-    const [campos, setCampos] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+
+    const { data: empleados = [], isLoading: loading, refetch: refetchEmpleados } = useQuery({
+        queryKey: ['equipo'],
+        queryFn: async () => {
+            try {
+                const { data } = await apiClient.get("/usuarios/empleados");
+                return data || [];
+            } catch (e) {
+                if (e?.response?.status === 403) {
+                    return [];
+                }
+                throw new Error("No se pudo cargar la lista de empleados.");
+            }
+        }
+    });
+
+    const { data: campos = [] } = useQuery({
+        queryKey: ['campos'],
+        queryFn: async () => {
+            try {
+                const { data } = await apiClient.get("/campos");
+                return data || [];
+            } catch {
+                return [];
+            }
+        }
+    });
 
     // ─── Formulario de asignar ───
     const [emailAsignar, setEmailAsignar] = useState("");
     const [rolOperativo, setRolOperativo] = useState("OPERADOR");
     const [permisosAsignados, setPermisosAsignados] = useState(["LECTURA_CAMPOS"]);
-    const [asignando, setAsignando] = useState(false);
 
     // ─── Paginación y búsqueda ───
     const [page, setPage] = useState(0);
@@ -51,41 +76,7 @@ export default function EquipoPage() {
 
     // ─── Modal de confirmación ───
     const [confirmDesvincular, setConfirmDesvincular] = useState(null);
-    const [desvinculando, setDesvinculando] = useState(false);
 
-    // ─── Fetch empleados ───
-    const fetchEmpleados = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        try {
-            const { data } = await apiClient.get("/usuarios/empleados");
-            setEmpleados(data || []);
-        } catch (e) {
-            if (e?.response?.status === 403) {
-                // User might not have PROPIETARIO role, just show empty
-                setEmpleados([]);
-            } else {
-                setError("No se pudo cargar la lista de empleados.");
-            }
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // ─── Fetch campos ───
-    const fetchCampos = useCallback(async () => {
-        try {
-            const { data } = await apiClient.get("/campos");
-            setCampos(data || []);
-        } catch {
-            setCampos([]);
-        }
-    }, []);
-
-    useEffect(() => {
-        fetchEmpleados();
-        fetchCampos();
-    }, [fetchEmpleados, fetchCampos]);
 
     // ─── Filtrado y paginación ───
     const filteredEmpleados = useMemo(() => {
@@ -105,6 +96,26 @@ export default function EquipoPage() {
     // Reset page when search changes
     useEffect(() => { setPage(0); }, [searchTerm]);
 
+    const asignarMutation = useMutation({
+        mutationFn: async (payload) => {
+            return await apiClient.post("/usuarios/empleados/asignar", payload);
+        },
+        onSuccess: () => {
+            setSuccess("Empleado asignado correctamente.");
+            setEmailAsignar("");
+            setRolOperativo("OPERADOR");
+            setPermisosAsignados(["LECTURA_CAMPOS"]);
+            setTimeout(() => setSuccess(null), 4000);
+            queryClient.invalidateQueries({ queryKey: ['equipo'] });
+        },
+        onError: (err) => {
+            const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Error al asignar empleado.";
+            setError(msg);
+        }
+    });
+
+    const asignando = asignarMutation.isPending;
+
     // ─── Asignar empleado ───
     const handleAsignar = async (e) => {
         e.preventDefault();
@@ -114,26 +125,12 @@ export default function EquipoPage() {
             return;
         }
 
-        setAsignando(true);
         setError(null);
-        try {
-            await apiClient.post("/usuarios/empleados/asignar", { 
-                email: emailAsignar.trim(),
-                rolOperativo,
-                permisos: permisosAsignados
-            });
-            setSuccess("Empleado asignado correctamente.");
-            setEmailAsignar("");
-            setRolOperativo("OPERADOR");
-            setPermisosAsignados(["LECTURA_CAMPOS"]);
-            setTimeout(() => setSuccess(null), 4000);
-            await fetchEmpleados();
-        } catch (err) {
-            const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Error al asignar empleado.";
-            setError(msg);
-        } finally {
-            setAsignando(false);
-        }
+        asignarMutation.mutate({ 
+            email: emailAsignar.trim(),
+            rolOperativo,
+            permisos: permisosAsignados
+        });
     };
 
     const togglePermiso = (permiso) => {
@@ -144,22 +141,28 @@ export default function EquipoPage() {
         );
     };
 
-    // ─── Desvincular empleado ───
-    const handleDesvincular = async (idEmpleado) => {
-        setDesvinculando(true);
-        setError(null);
-        try {
-            await apiClient.delete(`/usuarios/empleados/${idEmpleado}`);
+    const desvincularMutation = useMutation({
+        mutationFn: async (idEmpleado) => {
+            return await apiClient.delete(`/usuarios/empleados/${idEmpleado}`);
+        },
+        onSuccess: () => {
             setSuccess("Empleado desvinculado correctamente.");
             setConfirmDesvincular(null);
             setTimeout(() => setSuccess(null), 4000);
-            await fetchEmpleados();
-        } catch (err) {
+            queryClient.invalidateQueries({ queryKey: ['equipo'] });
+        },
+        onError: (err) => {
             const msg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Error al desvincular empleado.";
             setError(msg);
-        } finally {
-            setDesvinculando(false);
         }
+    });
+
+    const desvinculando = desvincularMutation.isPending;
+
+    // ─── Desvincular empleado ───
+    const handleDesvincular = async (idEmpleado) => {
+        setError(null);
+        desvincularMutation.mutate(idEmpleado);
     };
 
     // ─── Helpers ───
@@ -379,7 +382,7 @@ export default function EquipoPage() {
                                         />
                                     </div>
                                     <button
-                                        onClick={fetchEmpleados}
+                                        onClick={() => refetchEmpleados()}
                                         className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
                                         title="Recargar"
                                     >

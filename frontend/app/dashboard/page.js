@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
@@ -67,179 +68,157 @@ const getActividadConfig = (tipo) => {
 
 export default function DashboardHome() {
     const { symbol } = useCurrency();
-    const [stats, setStats] = useState({ camposActivos: 0, hectareasTotales: 0, gastosAcumulados: 0, ciclosActivos: 0 });
-    const [actividades, setActividades] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [chartMode, setChartMode] = useState("Mensual");
-    const [userName, setUserName] = useState("Productor");
-    const [userRole, setUserRole] = useState(null);
-    const [userPermisos, setUserPermisos] = useState([]);
 
-    const [dynChartData, setDynChartData] = useState([{ mes: "MAR", costos: 0, cosecha: 0 }]);
-    const [dynMaxVal, setDynMaxVal] = useState(100);
+    const { data: queryData, isLoading: loading } = useQuery({
+        queryKey: ['dashboardStats'],
+        queryFn: async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const nombre = session?.user?.user_metadata?.nombre || "Productor";
+            const t = new Date().getTime();
+            
+            const [bootstrap, resStats, resActs, resGastos, resCosechas, resInsumos, resSettings] = await Promise.all([
+                getDashboardBootstrapData(),
+                apiClient.get(`/campos/stats?t=${t}`).catch(() => ({ data: {} })),
+                apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] })),
+                apiClient.get(`/gastos?t=${t}`).catch(() => ({ data: [] })),
+                apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] })),
+                apiClient.get(`/insumos?t=${t}`).catch(() => ({ data: [] })),
+                apiClient.get(`/usuarios/settings?t=${t}`).catch(() => ({ data: {} })),
+            ]);
 
-    const [campos, setCampos] = useState([]);
-    const [lowStockItems, setLowStockItems] = useState([]);
-    const [gastosPorCategoria, setGastosPorCategoria] = useState([]);
+            return {
+                nombre,
+                bootstrap,
+                stats: resStats.data || {},
+                actividades: resActs.data || [],
+                gastos: resGastos.data || [],
+                cosechas: resCosechas.data || [],
+                insumos: resInsumos.data || [],
+                settings: resSettings?.data || {}
+            };
+        }
+    });
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    const nombre = session.user.user_metadata?.nombre || "Productor";
-                    setUserName(nombre);
-                    try {
-                        const t = new Date().getTime();
-                        // 1. Añadimos resCampos a la carga masiva
-                        const [bootstrap, resStats, resActs, resGastos, resCosechas, resInsumos, resSettings] = await Promise.all([
-                            getDashboardBootstrapData(),
-                            apiClient.get(`/campos/stats?t=${t}`).catch(() => ({ data: {} })),
-                            apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/gastos?t=${t}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/insumos?t=${t}`).catch(() => ({ data: [] })),
-                            apiClient.get(`/usuarios/settings?t=${t}`).catch(() => ({ data: {} })),
-                        ]);
+    const userName = queryData?.nombre || "Productor";
+    const actos = queryData?.actividades || [];
+    const gast = queryData?.gastos || [];
+    const camps = queryData?.bootstrap?.campanias || [];
+    const coses = queryData?.cosechas || [];
+    const d = queryData?.stats || {};
+    const campos = queryData?.bootstrap?.campos || [];
+    const settingsData = queryData?.settings || {};
 
-                        const actos = resActs.data || [];
-                        const gast = resGastos.data || [];
-                        const camps = bootstrap.campanias || [];
-                        const coses = resCosechas.data || [];
-                        const d = resStats.data || {};
-                        const listaCampos = bootstrap.campos || [];
-                        const settingsData = resSettings?.data || {};
+    const userRole = settingsData.rol;
+    const userPermisos = settingsData.permisos || [];
 
-                        setUserRole(settingsData.rol);
-                        setUserPermisos(settingsData.permisos || []);
+    const totalCostosActs = actos.reduce((sum, a) => {
+        const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+        return sum + (a.costoServicio || 0) * ha;
+    }, 0);
+    const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
 
-                        const totalCostosActs = actos.reduce((sum, a) => {
-                            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-                            return sum + (a.costoServicio || 0) * ha;
-                        }, 0);
-                        const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
+    const stats = {
+        camposActivos: d.camposActivos ?? 0,
+        hectareasTotales: d.hectareasTotales ?? 0,
+        gastosAcumulados: totalCostosActs + totalGastosFijos,
+        ciclosActivos: camps.length,
+    };
 
-                        setStats({
-                            camposActivos: d.camposActivos ?? 0,
-                            hectareasTotales: d.hectareasTotales ?? 0,
-                            gastosAcumulados: totalCostosActs + totalGastosFijos,
-                            ciclosActivos: camps.length,
-                        });
+    const actividades = actos;
+    
+    // Inventario: 3 items con menor stock
+    const allInsumos = queryData?.insumos || [];
+    const lowStockItems = [...allInsumos]
+        .filter(i => i.cantidad != null)
+        .sort((a, b) => Number(a.cantidad) - Number(b.cantidad))
+        .slice(0, 3);
 
-                        setActividades(actos);
-                        setCampos(listaCampos);
+    // Gastos por categoría para pie chart
+    const catMap = {};
+    gast.forEach(g => {
+        const cat = g.categoria || "Otros";
+        catMap[cat] = (catMap[cat] || 0) + (g.montoTotal || 0);
+    });
+    // Also add activity costs as "Servicios de campo"
+    const actCosts = actos.reduce((s, a) => {
+        const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+        return s + (a.costoServicio || 0) * ha;
+    }, 0);
+    if (actCosts > 0) catMap["Servicios de campo"] = (catMap["Servicios de campo"] || 0) + actCosts;
+    const gastosPorCategoria = Object.entries(catMap)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
 
-                        // Inventario: 3 items con menor stock
-                        const allInsumos = resInsumos.data || [];
-                        const sorted = [...allInsumos]
-                            .filter(i => i.cantidad != null)
-                            .sort((a, b) => Number(a.cantidad) - Number(b.cantidad))
-                            .slice(0, 3);
-                        setLowStockItems(sorted);
+    // Lógica de Gráfico (Se mantiene igual)
+    const finalChartData = [];
+    let maxChartVal = 100;
 
-                        // Gastos por categoría para pie chart
-                        const catMap = {};
-                        gast.forEach(g => {
-                            const cat = g.categoria || "Otros";
-                            catMap[cat] = (catMap[cat] || 0) + (g.montoTotal || 0);
-                        });
-                        // Also add activity costs as "Servicios de campo"
-                        const actCosts = actos.reduce((s, a) => {
-                            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-                            return s + (a.costoServicio || 0) * ha;
-                        }, 0);
-                        if (actCosts > 0) catMap["Servicios de campo"] = (catMap["Servicios de campo"] || 0) + actCosts;
-                        const catArr = Object.entries(catMap)
-                            .map(([name, value]) => ({ name, value }))
-                            .sort((a, b) => b.value - a.value);
-                        setGastosPorCategoria(catArr);
+    if (chartMode === "Mensual") {
+        const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+        const monthData = {};
 
-                        // Lógica de Gráfico (Se mantiene igual)
-                        const finalChartData = [];
-                        let maxChartVal = 100;
-
-                        if (chartMode === "Mensual") {
-                            const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
-                            const monthData = {};
-
-                            const processItem = (dateStr, val, type) => {
-                                if (!dateStr) return;
-                                const dt = new Date(dateStr + "T00:00:00");
-                                const m = dt.getMonth();
-                                monthData[m] = monthData[m] || { costos: 0, cosecha: 0 };
-                                monthData[m][type] += val;
-                            };
-
-                            actos.forEach(a => {
-                                const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-                                processItem(a.fecha, (a.costoServicio || 0) * ha, "costos");
-                            });
-                            gast.forEach(g => processItem(g.fecha, g.montoTotal || 0, "costos"));
-                            coses.forEach(c => processItem(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
-
-                            const today = new Date();
-                            for (let i = 4; i >= 0; i--) {
-                                const dt = new Date(today.getFullYear(), today.getMonth() - i, 1);
-                                const mIdx = dt.getMonth();
-                                const data = monthData[mIdx] || { costos: 0, cosecha: 0 };
-                                finalChartData.push({ mes: monthNames[mIdx], costos: data.costos, cosecha: data.cosecha });
-                                if (data.costos > maxChartVal) maxChartVal = data.costos;
-                                if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
-                            }
-                        } else {
-                            const getWeekNumber = (d) => {
-                                d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-                                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-                                return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-                            };
-
-                            const weekData = {};
-                            const processWeekly = (dateStr, val, type) => {
-                                if (!dateStr) return;
-                                const dt = new Date(dateStr + "T00:00:00");
-                                const w = getWeekNumber(dt);
-                                weekData[w] = weekData[w] || { costos: 0, cosecha: 0 };
-                                weekData[w][type] += val;
-                            };
-
-                            actos.forEach(a => {
-                                const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-                                processWeekly(a.fecha, (a.costoServicio || 0) * ha, "costos");
-                            });
-                            gast.forEach(g => processWeekly(g.fecha, g.montoTotal || 0, "costos"));
-                            coses.forEach(c => processWeekly(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
-
-                            const now = new Date();
-                            const currentWeek = getWeekNumber(now);
-                            for (let i = 4; i >= 0; i--) {
-                                const wIdx = currentWeek - i;
-                                const data = weekData[wIdx] || { costos: 0, cosecha: 0 };
-                                finalChartData.push({ mes: `S${wIdx}`, costos: data.costos, cosecha: data.cosecha });
-                                if (data.costos > maxChartVal) maxChartVal = data.costos;
-                                if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
-                            }
-                        }
-
-                        setDynChartData(finalChartData);
-                        setDynMaxVal(maxChartVal * 1.1);
-
-                    } catch (err) { 
-                        if (process.env.NODE_ENV === 'development') {
-                            console.error("Error fetching dashboard data", err); 
-                        }
-                    }
-                }
-            } catch (e) {
-                if (process.env.NODE_ENV === 'development') {
-                    console.error("Error auth dashboard:", e);
-                }
-            } finally {
-                setLoading(false);
-            }
+        const processItem = (dateStr, val, type) => {
+            if (!dateStr) return;
+            const dt = new Date(dateStr + "T00:00:00");
+            const m = dt.getMonth();
+            monthData[m] = monthData[m] || { costos: 0, cosecha: 0 };
+            monthData[m][type] += val;
         };
-        fetchData();
-    }, [chartMode]);
+
+        actos.forEach(a => {
+            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+            processItem(a.fecha, (a.costoServicio || 0) * ha, "costos");
+        });
+        gast.forEach(g => processItem(g.fecha, g.montoTotal || 0, "costos"));
+        coses.forEach(c => processItem(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
+
+        const today = new Date();
+        for (let i = 4; i >= 0; i--) {
+            const dt = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const mIdx = dt.getMonth();
+            const data = monthData[mIdx] || { costos: 0, cosecha: 0 };
+            finalChartData.push({ mes: monthNames[mIdx], costos: data.costos, cosecha: data.cosecha });
+            if (data.costos > maxChartVal) maxChartVal = data.costos;
+            if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
+        }
+    } else {
+        const getWeekNumber = (d) => {
+            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        };
+
+        const weekData = {};
+        const processWeekly = (dateStr, val, type) => {
+            if (!dateStr) return;
+            const dt = new Date(dateStr + "T00:00:00");
+            const w = getWeekNumber(dt);
+            weekData[w] = weekData[w] || { costos: 0, cosecha: 0 };
+            weekData[w][type] += val;
+        };
+
+        actos.forEach(a => {
+            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+            processWeekly(a.fecha, (a.costoServicio || 0) * ha, "costos");
+        });
+        gast.forEach(g => processWeekly(g.fecha, g.montoTotal || 0, "costos"));
+        coses.forEach(c => processWeekly(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
+
+        const now = new Date();
+        const currentWeek = getWeekNumber(now);
+        for (let i = 4; i >= 0; i--) {
+            const wIdx = currentWeek - i;
+            const data = weekData[wIdx] || { costos: 0, cosecha: 0 };
+            finalChartData.push({ mes: `S${wIdx}`, costos: data.costos, cosecha: data.cosecha });
+            if (data.costos > maxChartVal) maxChartVal = data.costos;
+            if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
+        }
+    }
+
+    const dynChartData = finalChartData;
+    const dynMaxVal = maxChartVal * 1.1;
 
 
     if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;

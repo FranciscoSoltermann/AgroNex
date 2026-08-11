@@ -1,14 +1,13 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { Wrench, Plus, Loader2, AlertTriangle, CheckCircle2, Trash2 } from "lucide-react";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 
 export default function MantenimientoPanel() {
-    const [mantenimientos, setMantenimientos] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
 
     const [form, setForm] = useState({
@@ -17,41 +16,58 @@ export default function MantenimientoPanel() {
         proximoServiceHoras: ""
     });
 
-    const fetchMantenimientos = useCallback(async () => {
-        setLoading(true);
-        try {
-            const res = await apiClient.get("/mantenimiento/mis-maquinas");
-            setMantenimientos(res.data || []);
-        } catch (error) {
-            if (process.env.NODE_ENV === 'development') {
-                console.error("Error al obtener mantenimientos", error);
+    const { data: mantenimientos = [], isLoading: loading } = useQuery({
+        queryKey: ['mantenimiento'],
+        queryFn: async () => {
+            try {
+                const res = await apiClient.get("/mantenimiento/mis-maquinas");
+                return res.data || [];
+            } catch (error) {
+                if (process.env.NODE_ENV === 'development') {
+                    console.error("Error al obtener mantenimientos", error);
+                }
+                return [];
             }
-        } finally {
-            setLoading(false);
         }
-    }, []);
+    });
 
-    useEffect(() => {
-        fetchMantenimientos();
-    }, [fetchMantenimientos]);
+    const createMutation = useMutation({
+        mutationFn: async (payload) => {
+            return await apiClient.post("/mantenimiento", payload);
+        },
+        onSuccess: () => {
+            setShowForm(false);
+            setForm({ maquina: "", modelo: "", proximoServiceHoras: "" });
+            queryClient.invalidateQueries({ queryKey: ['mantenimiento'] });
+        },
+        onError: () => {
+            alert("Error al configurar mantenimiento.");
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: async (id) => {
+            return await apiClient.delete(`/mantenimiento/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['mantenimiento'] });
+            setConfirmModal({ isOpen: false, id: null });
+        },
+        onError: () => {
+            alert("Error al eliminar.");
+            setConfirmModal({ isOpen: false, id: null });
+        }
+    });
+
+    const submitting = createMutation.isPending;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setSubmitting(true);
-        try {
-            await apiClient.post("/mantenimiento", {
-                maquina: form.maquina,
-                modelo: form.modelo,
-                proximoServiceHoras: parseFloat(form.proximoServiceHoras)
-            });
-            setShowForm(false);
-            setForm({ maquina: "", modelo: "", proximoServiceHoras: "" });
-            fetchMantenimientos();
-        } catch (error) {
-            alert("Error al configurar mantenimiento.");
-        } finally {
-            setSubmitting(false);
-        }
+        createMutation.mutate({
+            maquina: form.maquina,
+            modelo: form.modelo,
+            proximoServiceHoras: parseFloat(form.proximoServiceHoras)
+        });
     };
 
     const handleDelete = (id) => {
@@ -59,13 +75,7 @@ export default function MantenimientoPanel() {
     };
 
     const confirmDelete = async () => {
-        try {
-            await apiClient.delete(`/mantenimiento/${confirmModal.id}`);
-            fetchMantenimientos();
-        } catch (error) {
-            alert("Error al eliminar.");
-        }
-        setConfirmModal({ isOpen: false, id: null });
+        deleteMutation.mutate(confirmModal.id);
     };
 
     if (loading) {
