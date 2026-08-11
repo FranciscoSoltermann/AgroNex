@@ -53,7 +53,7 @@ public class Lote extends Auditable {
     public List<Campania> getCampanias() {
         if (campaniaLotes == null) return new ArrayList<>();
         return campaniaLotes.stream()
-                .map(CampaniaLote::getCampania)
+                .map(cl -> cl.getCampania())
                 .toList();
     }
 }

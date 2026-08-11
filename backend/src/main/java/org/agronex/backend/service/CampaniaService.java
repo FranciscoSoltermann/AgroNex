@@ -78,7 +78,7 @@ public class CampaniaService {
         guardada.setCampaniaLotes(asignaciones);
 
         // Auditoría
-        String nombresLotes = lotesValidados.stream().map(Lote::getNombre).collect(Collectors.joining(", "));
+        String nombresLotes = lotesValidados.stream().map(l -> l.getNombre()).collect(Collectors.joining(", "));
         auditService.registrar(
                 idUsuarioToken, lotesValidados.get(0).getCampo().getUsuario().getEmail(),
                 EntidadAudit.CAMPANIA, guardada.getIdCampania().toString(),

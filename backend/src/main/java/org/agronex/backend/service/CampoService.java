@@ -78,9 +78,9 @@ public class CampoService {
         long camposActivos = campos.size();
 
         BigDecimal hectareasTotales = campos.stream()
-                .map(Campo::getSuperficieTotal)
+                .map(c -> c.getSuperficieTotal())
                 .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("camposActivos", camposActivos);

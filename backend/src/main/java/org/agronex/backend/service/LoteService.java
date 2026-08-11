@@ -44,8 +44,8 @@ public class LoteService {
 
         // 2.5 VALIDACIÓN: La suma de hectáreas no puede superar el tamaño del campo
         java.math.BigDecimal superficieActual = campo.getLotes().stream()
-                .map(Lote::getSuperficie)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                .map(l -> l.getSuperficie())
+                .reduce(java.math.BigDecimal.ZERO, (a, b) -> a.add(b));
         
         if (superficieActual.add(request.getSuperficie()).compareTo(campo.getSuperficieTotal()) > 0) {
             java.math.BigDecimal disponible = campo.getSuperficieTotal().subtract(superficieActual);
@@ -149,8 +149,8 @@ public class LoteService {
         Campo campo = lote.getCampo();
         java.math.BigDecimal superficieOtros = campo.getLotes().stream()
                 .filter(l -> !l.getIdLote().equals(idLote))
-                .map(Lote::getSuperficie)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                .map(l -> l.getSuperficie())
+                .reduce(java.math.BigDecimal.ZERO, (a, b) -> a.add(b));
 
         if (superficieOtros.add(request.getSuperficie()).compareTo(campo.getSuperficieTotal()) > 0) {
             // Permitir si al menos estamos reduciendo o manteniendo la superficie original del lote

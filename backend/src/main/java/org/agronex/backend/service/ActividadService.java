@@ -48,7 +48,7 @@ public class ActividadService {
         if (request.getHectareasTratadas() != null) {
             BigDecimal sup = campania.getLotes().stream()
                     .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
             if (request.getHectareasTratadas().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("Las hectáreas tratadas deben ser mayores a cero");
             }
@@ -63,7 +63,7 @@ public class ActividadService {
         if (request.getInsumos() != null && !request.getInsumos().isEmpty()) {
             BigDecimal supTotal = campania.getLotes().stream()
                     .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
             List<ActividadInsumo> vinculos = new ArrayList<>();
             BigDecimal superficieBase = request.getHectareasTratadas() != null ? request.getHectareasTratadas() : supTotal;
 
@@ -199,7 +199,7 @@ public class ActividadService {
         if (request.getInsumos() != null && !request.getInsumos().isEmpty()) {
             BigDecimal supTotal = campania.getLotes().stream()
                     .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
             BigDecimal superficieBase = request.getHectareasTratadas() != null ? request.getHectareasTratadas() : supTotal;
 
             List<ActividadInsumo> vinculos = new ArrayList<>();

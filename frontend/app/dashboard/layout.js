@@ -73,6 +73,7 @@ export default function DashboardLayout({ children }) {
                             : "Acceso denegado: tu usuario no está dado de alta en AgroNex. Registrate primero.";
                         toast.error(msg, { duration: 8000 });
                         await supabase.auth.signOut();
+                        console.log("Redirecting to login from layout.js (not registered)");
                         router.push("/login");
                         return;
                     }
@@ -85,6 +86,7 @@ export default function DashboardLayout({ children }) {
                             { duration: 8000 }
                         );
                         await supabase.auth.signOut();
+                        console.log("Redirecting to login from layout.js (Google only)");
                         router.push("/login");
                         return;
                     }

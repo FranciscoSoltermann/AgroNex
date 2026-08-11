@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.dto.response.JohnDeereConnectionResponse;
 import org.agronex.backend.infrastructure.config.JohnDeereConfig;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -39,7 +38,7 @@ public class JohnDeereConnectionService {
                     .header("Authorization", "Bearer " + token)
                     .header("Accept", "application/json")
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
+                    .onStatus(status -> status.is4xxClientError(), (req, res) -> {
                         if (res.getStatusCode().value() == 401) {
                             authService.invalidateAppToken();
                         }
@@ -86,7 +85,7 @@ public class JohnDeereConnectionService {
                     .header("Authorization", "Bearer " + token)
                     .header("Accept", "application/json")
                     .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, (req, res) -> {
+                    .onStatus(status -> status.is4xxClientError(), (req, res) -> {
                         if (res.getStatusCode().value() == 401) {
                             authService.invalidateAppToken();
                         }

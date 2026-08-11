@@ -52,9 +52,9 @@ public class FinanzasService {
         if (a.getCampania() != null) {
             List<Lote> lotes = a.getCampania().getLotes();
             if (lotes != null && !lotes.isEmpty()) {
-                return lotes.stream()
+                    return lotes.stream()
                         .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                        .reduce(BigDecimal.ZERO, (v1, v2) -> v1.add(v2));
             }
         }
         Lote l = a.getCampania() != null ? a.getCampania().getLote() : null;
@@ -147,7 +147,7 @@ public class FinanzasService {
         Lote primerLote = campania.getLote();
         BigDecimal supHa = campania.getLotes().stream()
                 .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, (v1, v2) -> v1.add(v2));
 
         List<Actividad> actividades = actividadRepository.findByCampaniaIdCampania(idCampania);
         BigDecimal costoServicios = BigDecimal.ZERO;

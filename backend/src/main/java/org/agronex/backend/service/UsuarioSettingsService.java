@@ -124,7 +124,7 @@ public class UsuarioSettingsService {
                 .nombreMostrar(nombreMostrar)
                 .rol(usuario.getRol() != null ? usuario.getRol().name() : rol)
                 .rolOperativo(usuario.getRolOperativo() != null ? usuario.getRolOperativo().name() : null)
-                .permisos(usuario.getPermisos() != null ? usuario.getPermisos().stream().map(Enum::name).collect(java.util.stream.Collectors.toList()) : new java.util.ArrayList<>())
+                .permisos(usuario.getPermisos() != null ? usuario.getPermisos().stream().map(e -> e.name()).collect(java.util.stream.Collectors.toList()) : new java.util.ArrayList<>())
                 .emailNotificaciones(config.getEmailNotificaciones())
                 .dosFactoresHabilitado(config.getDosFactoresHabilitado())
                 .alertaRiegoHabilitada(config.getAlertaRiegoHabilitada())

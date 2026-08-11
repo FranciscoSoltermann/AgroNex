@@ -62,7 +62,7 @@ class CampoServiceTest {
     void crearCampo_exito() {
         // Arrange
         Jwt jwt = mock(Jwt.class);
-        Usuario usuario = new Usuario();
+        Usuario usuario = new Usuario() {};
         usuario.setIdUsuario(UUID.randomUUID());
         usuario.setEmail("test@test.com");
 
@@ -83,8 +83,7 @@ class CampoServiceTest {
                 .usuario(usuario)
                 .build();
 
-        CampoResponse expectedResponse = new CampoResponse();
-        expectedResponse.setIdCampo(campo.getIdCampo());
+        CampoResponse expectedResponse = CampoResponse.builder().idCampo(campo.getIdCampo()).build();
 
         when(usuarioService.obtenerOCrearUsuario(jwt)).thenReturn(usuario);
         when(campoRepository.save(any(Campo.class))).thenReturn(campo);
@@ -104,13 +103,12 @@ class CampoServiceTest {
     @DisplayName("listarMisCampos - Devuelve lista mapeada")
     void listarMisCampos_exito() {
         // Arrange
-        Jwt jwt = mock(Jwt.class);
         UUID idUsuario = UUID.randomUUID();
-        when(usuarioService.idUsuarioParaAccesoDatos(jwt)).thenReturn(idUsuario);
+        when(usuarioService.idUsuarioParaAccesoDatos(any())).thenReturn(idUsuario);
 
         Campo campo = Campo.builder().idCampo(UUID.randomUUID()).build();
         when(campoRepository.findByUsuarioIdUsuario(idUsuario)).thenReturn(List.of(campo));
-        when(campoMapper.toResponse(campo)).thenReturn(new CampoResponse());
+        when(campoMapper.toResponse(campo)).thenReturn(CampoResponse.builder().build());
 
         // Act
         List<CampoResponse> responses = campoService.listarMisCampos(idUsuario);
@@ -149,7 +147,7 @@ class CampoServiceTest {
         UUID idCampo = UUID.randomUUID();
         UUID idUsuario = UUID.randomUUID();
         
-        Usuario usuario = new Usuario();
+        Usuario usuario = new Usuario() {};
         usuario.setIdUsuario(idUsuario);
         usuario.setEmail("test@test.com");
 
@@ -175,7 +173,7 @@ class CampoServiceTest {
         // Arrange
         UUID idCampo = UUID.randomUUID();
         
-        Usuario owner = new Usuario();
+        Usuario owner = new Usuario() {};
         owner.setIdUsuario(UUID.randomUUID());
 
         UUID requesterId = UUID.randomUUID();

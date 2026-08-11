@@ -70,7 +70,7 @@ public class Campania {
     public List<Lote> getLotes() {
         if (campaniaLotes == null) return new ArrayList<>();
         return campaniaLotes.stream()
-                .map(CampaniaLote::getLote)
+                .map(cl -> cl.getLote())
                 .toList();
     }
 

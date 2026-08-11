@@ -138,7 +138,7 @@ public class UsuarioService {
         // Also fetch owner's campos for cross-referencing
         List<Campo> camposPropietario = campoRepository.findByUsuarioIdUsuario(idPropietario);
         List<String> nombresCampos = camposPropietario.stream()
-                .map(Campo::getNombre)
+                .map(c -> c.getNombre())
                 .collect(Collectors.toList());
 
         return empleados.stream().map(emp -> {
@@ -169,7 +169,7 @@ public class UsuarioService {
                     .rolOperativo(emp.getRolOperativo() != null ? emp.getRolOperativo().name() : null)
                     .fechaRegistro(emp.getFechaRegistro())
                     .camposAsignados(nombresCampos)
-                    .permisos(emp.getPermisos() != null ? emp.getPermisos().stream().map(Enum::name).collect(Collectors.toList()) : new ArrayList<>())
+                    .permisos(emp.getPermisos() != null ? emp.getPermisos().stream().map(e -> e.name()).collect(Collectors.toList()) : new ArrayList<>())
                     .build();
         }).collect(Collectors.toList());
     }

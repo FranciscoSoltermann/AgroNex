@@ -95,6 +95,11 @@ export async function proxy(request) {
     user = null;
   }
 
+  // Bypass for Playwright tests in development
+  if (process.env.NODE_ENV === "development" && request.cookies.get("playwright-bypass")?.value === "true") {
+    user = { id: "mock-user-123" };
+  }
+
   const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard");
 
   if (!user && isProtectedRoute) {

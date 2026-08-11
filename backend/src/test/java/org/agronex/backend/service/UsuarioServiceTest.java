@@ -39,7 +39,7 @@ class UsuarioServiceTest {
         UUID idUsuario = UUID.randomUUID();
         UUID idPropietario = UUID.randomUUID();
 
-        Usuario usuario = new Usuario();
+        Usuario usuario = new org.agronex.backend.entity.PersonaFisica();
         usuario.setIdUsuario(idUsuario);
         usuario.setRol(RolUsuario.EMPLEADO);
         usuario.setIdPropietario(idPropietario);
@@ -59,7 +59,7 @@ class UsuarioServiceTest {
         // Arrange
         UUID idUsuario = UUID.randomUUID();
 
-        Usuario usuario = new Usuario();
+        Usuario usuario = new org.agronex.backend.entity.PersonaFisica();
         usuario.setIdUsuario(idUsuario);
         usuario.setRol(RolUsuario.PROPIETARIO);
 
@@ -88,11 +88,11 @@ class UsuarioServiceTest {
     void asignarEmpleado_exito() {
         // Arrange
         UUID idPropietario = UUID.randomUUID();
-        Usuario propietario = new Usuario();
+        Usuario propietario = new org.agronex.backend.entity.PersonaFisica();
         propietario.setIdUsuario(idPropietario);
         propietario.setRol(RolUsuario.PROPIETARIO);
 
-        Usuario empleado = new Usuario();
+        Usuario empleado = new org.agronex.backend.entity.PersonaFisica();
         empleado.setIdUsuario(UUID.randomUUID());
         empleado.setEmail("empleado@test.com");
         empleado.setRol(RolUsuario.PROPIETARIO);
@@ -117,7 +117,7 @@ class UsuarioServiceTest {
     void asignarEmpleado_lanzaExcepcionMismoUsuario() {
         // Arrange
         UUID idPropietario = UUID.randomUUID();
-        Usuario propietario = new Usuario();
+        Usuario propietario = new org.agronex.backend.entity.PersonaFisica();
         propietario.setIdUsuario(idPropietario);
         propietario.setRol(RolUsuario.PROPIETARIO);
 
@@ -139,7 +139,7 @@ class UsuarioServiceTest {
         UUID idPropietario = UUID.randomUUID();
         UUID idEmpleado = UUID.randomUUID();
 
-        Usuario empleado = new Usuario();
+        Usuario empleado = new org.agronex.backend.entity.PersonaFisica();
         empleado.setIdUsuario(idEmpleado);
         empleado.setRol(RolUsuario.EMPLEADO);
         empleado.setIdPropietario(idPropietario);
@@ -162,7 +162,7 @@ class UsuarioServiceTest {
         UUID idPropietario = UUID.randomUUID();
         UUID idEmpleado = UUID.randomUUID();
 
-        Usuario empleado = new Usuario();
+        Usuario empleado = new org.agronex.backend.entity.PersonaFisica();
         empleado.setIdUsuario(idEmpleado);
         empleado.setRol(RolUsuario.PROPIETARIO); // Not an employee
 
