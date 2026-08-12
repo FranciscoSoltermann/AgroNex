@@ -18,7 +18,7 @@ import { CurrencyProvider, useCurrency, CURRENCY_CONFIG } from "@/lib/currency-c
 function CurrencySelector() {
     const { currency, setCurrency } = useCurrency();
     return (
-        <div className="flex bg-gray-100 dark:bg-gray-800/80 rounded-xl p-0.5 border border-gray-200/50 dark:border-gray-750/30 mr-1 sm:mr-2">
+        <div className="flex bg-gray-100 dark:bg-gray-800/80 rounded-xl p-0.5 border border-gray-200/50 dark:border-gray-750/30">
             {Object.keys(CURRENCY_CONFIG).map((code) => {
                 const isActive = currency === code;
                 return (
@@ -300,9 +300,8 @@ export default function DashboardLayout({ children }) {
                         )}
                     </div>
 
-                    {/* Derecha: Notificaciones + Bienvenido */}
+                    {/* Derecha: Tema + Notificaciones + Cambiador de moneda */}
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                        <CurrencySelector />
                         <button
                             type="button"
                             onClick={toggleTheme}
@@ -313,9 +312,7 @@ export default function DashboardLayout({ children }) {
                             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                         </button>
                         <NotificationBell />
-                        <p className="hidden md:block text-sm font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[140px] lg:max-w-[200px]">
-                            Hola, {userName}
-                        </p>
+                        <CurrencySelector />
                     </div>
                 </header>
 

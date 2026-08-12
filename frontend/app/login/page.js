@@ -112,6 +112,12 @@ export default function AuthPage() {
     useEffect(() => {
         if (typeof window === "undefined") return;
         const params = new URLSearchParams(window.location.search);
+        const codeParam = params.get("code");
+        if (codeParam) {
+            router.replace(`/auth/callback?code=${encodeURIComponent(codeParam)}`);
+            return;
+        }
+
         const code = params.get("error");
         if (!code) return;
 

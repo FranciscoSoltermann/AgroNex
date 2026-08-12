@@ -23,11 +23,28 @@ export default function AuthCallbackPage() {
 
             try {
                 let session = null;
-                for (let i = 0; i < 8; i++) {
-                    const { data } = await supabase.auth.getSession();
-                    session = data?.session;
-                    if (session?.access_token) break;
-                    await sleep(150);
+                const searchParams = new URLSearchParams(window.location.search);
+                const code = searchParams.get("code");
+
+                if (code && supabase) {
+                    setMessage("Verificando credenciales de Google…");
+                    try {
+                        const { data: exchangeData, error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
+                        if (!exchangeErr && exchangeData?.session) {
+                            session = exchangeData.session;
+                        }
+                    } catch (exErr) {
+                        console.warn("[AgroNex AuthCallback] Fallback al canjear código PKCE:", exErr);
+                    }
+                }
+
+                if (!session?.access_token && supabase) {
+                    for (let i = 0; i < 8; i++) {
+                        const { data } = await supabase.auth.getSession();
+                        session = data?.session;
+                        if (session?.access_token) break;
+                        await sleep(150);
+                    }
                 }
 
                 if (!session?.access_token) {
