@@ -392,14 +392,41 @@ export default function InventarioPage() {
         : campanias;
 
     // Mapeo de tabs a tipoArticulo enum
-    const FILTRO_TAB_TO_TIPO = { "Fertilizante": "FERTILIZANTE", "Semilla": "SEMILLA", "Herbicida": "HERBICIDA", "Insecticida": "INSECTICIDA", "Inoc./Curasem.": "INOCULANTE_CURASEMILLA" };
+    const FILTRO_TAB_TO_TIPO = {
+        "Fertilizantes": "FERTILIZANTE",
+        "Fertilizante": "FERTILIZANTE",
+        "Semillas": "SEMILLA",
+        "Semilla": "SEMILLA",
+        "Herbicidas": "HERBICIDA",
+        "Herbicida": "HERBICIDA",
+        "Insecticidas": "INSECTICIDA",
+        "Insecticida": "INSECTICIDA",
+        "Inoculantes / Curasemillas": "INOCULANTE_CURASEMILLA",
+        "Inoculantes/Curasemillas": "INOCULANTE_CURASEMILLA",
+        "Inoc./Curasem.": "INOCULANTE_CURASEMILLA"
+    };
 
     const displayInsumos = insumos.filter(i => {
         if (filtroCampoId !== "Todos" && i.idCampo !== filtroCampoId) return false;
         if (filtroCampaniaId !== "Todos" && i.idCampania !== filtroCampaniaId) return false;
         if (filtroActivo !== "Todos") {
             const tipoEsperado = FILTRO_TAB_TO_TIPO[filtroActivo];
-            if (tipoEsperado && i.tipoArticulo !== tipoEsperado) return false;
+            if (tipoEsperado) {
+                const itemTipo = i.tipoArticulo || "";
+                const itemNombre = (i.nombre || "").toLowerCase();
+                const itemSubtipo = (i.subtipo || "").toLowerCase();
+
+                const matchesEnum = itemTipo === tipoEsperado;
+                const matchesKeyword = (
+                    (tipoEsperado === "FERTILIZANTE" && (itemNombre.includes("ferti") || itemSubtipo.includes("ferti"))) ||
+                    (tipoEsperado === "SEMILLA" && (itemNombre.includes("semilla") || itemSubtipo.includes("semilla"))) ||
+                    (tipoEsperado === "HERBICIDA" && (itemNombre.includes("herbicida") || itemNombre.includes("glifosato") || itemSubtipo.includes("herbicida"))) ||
+                    (tipoEsperado === "INSECTICIDA" && (itemNombre.includes("insecticida") || itemSubtipo.includes("insecticida"))) ||
+                    (tipoEsperado === "INOCULANTE_CURASEMILLA" && (itemNombre.includes("inoculante") || itemNombre.includes("curasemilla") || itemSubtipo.includes("curasemilla")))
+                );
+
+                if (!matchesEnum && !matchesKeyword) return false;
+            }
         }
         if (searchTerm) return i.nombre.toLowerCase().includes(searchTerm.toLowerCase());
         return true;
@@ -466,8 +493,8 @@ export default function InventarioPage() {
             <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
                 {/* Barra de Filtros y Búsqueda */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-[#1a1f25] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-                    <div className="relative w-full max-w-sm">
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 lg:gap-4 bg-white dark:bg-[#1a1f25] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+                    <div className="relative w-full lg:max-w-xs xl:max-w-sm">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         <input
                             type="text" placeholder="Buscar artículo..."
@@ -476,20 +503,24 @@ export default function InventarioPage() {
                         />
                     </div>
 
-                    <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:block">Filtrar por Campo:</p>
-                        <select value={filtroCampoId} onChange={(e) => { setFiltroCampoId(e.target.value); setFiltroCampaniaId("Todos"); }}
-                            className="flex-1 md:flex-none min-w-[160px] bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all">
-                            <option value="Todos">Todos los campos</option>
-                            {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
-                        </select>
+                    <div className="flex flex-col sm:flex-row items-center justify-start lg:justify-end gap-3 lg:gap-4 w-full lg:w-auto">
+                        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 hidden sm:inline-block">Filtrar por Campo:</label>
+                            <select value={filtroCampoId} onChange={(e) => { setFiltroCampoId(e.target.value); setFiltroCampaniaId("Todos"); }}
+                                className="w-full sm:w-auto min-w-[150px] lg:min-w-[160px] bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all">
+                                <option value="Todos">Todos los campos</option>
+                                {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
+                            </select>
+                        </div>
 
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:block">Campaña:</p>
-                        <select value={filtroCampaniaId} onChange={(e) => setFiltroCampaniaId(e.target.value)}
-                            className="flex-1 md:flex-none min-w-[160px] bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all">
-                            <option value="Todos">Todas las campañas</option>
-                            {campaniasParaFiltro.map(c => <option key={c.idCampania} value={c.idCampania}>{c.cultivo} ({c.nombreLote})</option>)}
-                        </select>
+                        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 hidden sm:inline-block">Campaña:</label>
+                            <select value={filtroCampaniaId} onChange={(e) => setFiltroCampaniaId(e.target.value)}
+                                className="w-full sm:w-auto min-w-[150px] lg:min-w-[160px] bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all">
+                                <option value="Todos">Todas las campañas</option>
+                                {campaniasParaFiltro.map(c => <option key={c.idCampania} value={c.idCampania}>{c.cultivo} ({c.nombreLote})</option>)}
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -512,24 +543,28 @@ export default function InventarioPage() {
                     <>
                         {/* Stats */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
                                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Valor Total del Inventario</p>
-                                <p className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{currSymbol}{convertCurrency(valorTotal).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                <p className="text-2xl sm:text-3xl md:text-xl lg:text-2xl xl:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight truncate" title={`${currSymbol}${convertCurrency(valorTotal).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                                    {currSymbol}{convertCurrency(valorTotal).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
                                 <p className="text-[13px] font-bold text-green-600 mt-2 flex items-center gap-1"><TrendingUp size={16} /> Precio unitario × stock actual</p>
                             </div>
-                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
                                 <div className="absolute right-[-20px] bottom-[-20px] opacity-[0.06]"><AlertTriangle size={120} className="text-[#2D6A4F]" /></div>
                                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Stock Bajo / Sin Stock</p>
-                                <p className={`text-4xl font-black tracking-tight ${itemsConStockBajo === 0 ? 'text-gray-900 dark:text-gray-100' : 'text-[#2D6A4F]'}`}>{itemsConStockBajo}</p>
+                                <p className={`text-3xl md:text-2xl lg:text-3xl xl:text-4xl font-black tracking-tight ${itemsConStockBajo === 0 ? 'text-gray-900 dark:text-gray-100' : 'text-[#2D6A4F]'}`}>{itemsConStockBajo}</p>
                                 <p className={`text-[13px] font-bold mt-2 flex items-center gap-1.5 ${itemsConStockBajo === 0 ? 'text-green-600' : 'text-[#2D6A4F]'}`}>
                                     <AlertTriangle size={14} /> {itemsConStockBajo === 0 ? 'Sin alertas críticas' : `${itemsConStockBajo} artículo${itemsConStockBajo > 1 ? 's' : ''} requieren atención`}
                                 </p>
                             </div>
-                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
-                                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Artículos Disponibles</p>
-                                <div className="flex items-baseline gap-2">
-                                    <p className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{itemsDisponibles}</p>
-                                    <p className="text-sm font-bold text-gray-400">/ {displayInsumos.length}</p>
+                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Artículos Disponibles</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-3xl md:text-2xl lg:text-3xl xl:text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{itemsDisponibles}</p>
+                                        <p className="text-sm font-bold text-gray-400">/ {displayInsumos.length}</p>
+                                    </div>
                                 </div>
                                 <div className="mt-4 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                     <div className="h-full bg-[#2D6A4F] rounded-full transition-all duration-500"
@@ -540,11 +575,11 @@ export default function InventarioPage() {
 
                         {/* Tabla */}
                         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 gap-4">
-                                <div className="dashboard-scroll-x flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto w-full sm:w-auto">
-                                    {["Todos", "Fertilizantes", "Semillas", "Herbicidas", "Insecticidas", "Inoculantes/Curasemillas."].map((tab) => (
+                            <div className="flex items-center justify-center p-4 border-b border-gray-100 dark:border-gray-800">
+                                <div className="flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl w-full sm:w-auto items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto">
+                                    {["Todos", "Fertilizantes", "Semillas", "Herbicidas", "Insecticidas", "Inoculantes / Curasemillas"].map((tab) => (
                                         <button key={tab} type="button" onClick={() => setFiltroActivo(tab)}
-                                            className={`shrink-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all min-h-10 ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                                            className={`shrink-0 px-2 sm:px-3 md:px-2.5 lg:px-4 py-2 rounded-lg text-[11px] sm:text-xs lg:text-sm font-bold transition-all min-h-9 ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                                             {tab}
                                         </button>
                                     ))}
