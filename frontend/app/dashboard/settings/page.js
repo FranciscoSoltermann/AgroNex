@@ -29,7 +29,7 @@ const CARD_CLASS = "bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-10
 const INPUT_CLASS = "w-full bg-gray-50 dark:bg-[#0f1419] dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white dark:focus:bg-[#1a1f25] transition-colors";
 
 export default function SettingsPage() {
-    const { currency, setCurrency, exchangeRate, rateLoading, rateError, fechaActualizacion } = useCurrency();
+    const { currency, setCurrency, dolarType, setDolarType, dolarTypes, rates, exchangeRate, rateLoading, rateError, fechaActualizacion } = useCurrency();
     const queryClient = useQueryClient();
     const [draft, setDraft] = useState(null);
     const [error, setError] = useState(null);
@@ -61,9 +61,9 @@ export default function SettingsPage() {
     // Sync draft with settings when settings load initially or after explicit save
     useEffect(() => {
         if (settings) {
-            setDraft((prev) => (prev ? prev : settings));
+            setDraft((prev) => (prev ? prev : { ...settings, currency, dolarType }));
         }
-    }, [settings]);
+    }, [settings, currency, dolarType]);
 
     const mutationSave = useMutation({
         mutationFn: async (payload) => {
@@ -71,7 +71,7 @@ export default function SettingsPage() {
             return data;
         },
         onSuccess: (data) => {
-            setDraft(data);
+            setDraft({ ...data, currency: draft?.currency || currency, dolarType: draft?.dolarType || dolarType });
             queryClient.setQueryData(['settings'], data);
             queryClient.invalidateQueries({ queryKey: ['settings'] });
             setSuccess("Configuración guardada correctamente.");
@@ -119,8 +119,9 @@ export default function SettingsPage() {
 
     const dirty = useMemo(() => {
         if (!settings || !draft) return false;
-        return JSON.stringify(settings) !== JSON.stringify(draft);
-    }, [settings, draft]);
+        const currentSaved = { ...settings, currency, dolarType };
+        return JSON.stringify(currentSaved) !== JSON.stringify(draft);
+    }, [settings, draft, currency, dolarType]);
 
     // Intercept navigation when there are unsaved changes
     useEffect(() => {
@@ -165,6 +166,14 @@ export default function SettingsPage() {
     const handleGuardar = async () => {
         if (!draft) return;
         setError(null);
+
+        if (draft.currency && draft.currency !== currency) {
+            setCurrency(draft.currency);
+        }
+        if (draft.dolarType && draft.dolarType !== dolarType) {
+            setDolarType(draft.dolarType);
+        }
+
         const payload = {
             nombre: draft.nombre,
             apellido: draft.apellido,
@@ -181,7 +190,7 @@ export default function SettingsPage() {
 
     const handleDescartar = () => {
         if (!settings) return;
-        setDraft(settings);
+        setDraft({ ...settings, currency, dolarType });
         setSuccess(null);
         setError(null);
     };
@@ -466,49 +475,75 @@ export default function SettingsPage() {
                         <p className="text-[12px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
                             Moneda
                         </p>
-                        <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700/60 p-3.5 flex-1 flex flex-col justify-between gap-2">
-                            <div>
-                                <div className="flex items-center justify-between gap-2 mb-1.5">
-                                    <span className="text-[13px] font-bold text-gray-900 dark:text-gray-100">Visualización</span>
-                                    <div className="flex bg-gray-200 dark:bg-gray-700/80 rounded-lg p-0.5 gap-0.5">
-                                        {Object.entries(CURRENCY_CONFIG).map(([code]) => (
-                                            <button
-                                                key={code}
-                                                type="button"
-                                                onClick={() => setCurrency(code)}
-                                                className={`px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-wider transition-all ${
-                                                    currency === code
-                                                        ? "bg-[#2D6A4F] text-white shadow-sm"
-                                                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                                                }`}
-                                            >
-                                                {code}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                                <p className="text-[11px] text-gray-400 leading-snug">
-                                    {currency === "ARS" ? "Peso Argentino ($)" : "Dólar Estadounidense (US$)"} — para todos los importes.
-                                </p>
-                            </div>
+                        <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700/60 p-3.5 flex-1 flex flex-col justify-between gap-3">
+                            {(() => {
+                                const activeCurrency = draft?.currency ?? currency;
+                                const activeDolarType = draft?.dolarType ?? dolarType;
+                                const activeRate = (rates && rates[activeDolarType]) || (activeDolarType === dolarType ? exchangeRate : null);
 
-                            {/* Dólar blue status */}
-                            <div className="pt-2 border-t border-gray-200/60 dark:border-gray-700/60 flex items-center justify-between gap-2 text-[12px]">
-                                {rateLoading ? (
-                                    <span className="text-[11px] text-gray-400 flex items-center gap-1">
-                                        <Loader2 size={12} className="animate-spin" /> Obteniendo dólar blue…
-                                    </span>
-                                ) : exchangeRate ? (
+                                return (
                                     <>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold border border-blue-100 dark:border-blue-800">
-                                            Dólar Blue
-                                        </span>
-                                        <span className="text-[13px] font-black text-gray-900 dark:text-gray-100">
-                                            ${exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                                        </span>
+                                        <div>
+                                            <div className="flex items-center justify-between gap-2 mb-2">
+                                                <span className="text-[13px] font-bold text-gray-900 dark:text-gray-100">Visualización</span>
+                                                <div className="flex bg-gray-200 dark:bg-gray-700/80 rounded-lg p-0.5 gap-0.5">
+                                                    {Object.entries(CURRENCY_CONFIG).map(([code]) => (
+                                                        <button
+                                                            key={code}
+                                                            type="button"
+                                                            onClick={() => onField("currency", code)}
+                                                            className={`px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-wider transition-all ${
+                                                                activeCurrency === code
+                                                                    ? "bg-[#2D6A4F] text-white shadow-sm"
+                                                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                                            }`}
+                                                        >
+                                                            {code}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs py-1">
+                                                <span className="text-gray-500 dark:text-gray-400 font-semibold">Cotización:</span>
+                                                <span className="font-black text-gray-900 dark:text-gray-100 text-sm">
+                                                    {rateLoading ? (
+                                                        <span className="text-[11px] text-gray-400 flex items-center gap-1 font-normal">
+                                                            <Loader2 size={12} className="animate-spin" /> Obteniendo…
+                                                        </span>
+                                                    ) : activeRate ? (
+                                                        `$${activeRate.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                    ) : (
+                                                        "—"
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Botones de selección de tipo de dólar */}
+                                        <div className="pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                {(dolarTypes || []).map((dt) => {
+                                                    const isSelected = activeDolarType === dt.id;
+                                                    return (
+                                                        <button
+                                                            key={dt.id}
+                                                            type="button"
+                                                            onClick={() => onField("dolarType", dt.id)}
+                                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                                                                isSelected
+                                                                    ? "bg-[#2D6A4F] text-white shadow-sm"
+                                                                    : "bg-gray-200/70 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                                            }`}
+                                                        >
+                                                            {dt.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
                                     </>
-                                ) : null}
-                            </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
