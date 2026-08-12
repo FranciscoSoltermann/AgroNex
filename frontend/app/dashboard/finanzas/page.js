@@ -58,6 +58,8 @@ export default function FinanzasPage() {
         porcentajeImpuesto: "",
         gradoHumedad: "",
         precioPuntoText: "",
+        toneladasRecargoHumedad: "",
+        precioVentaSemilla: "",
     });
     const [gastoLoading, setGastoLoading] = useState(false);
     const [gastoSuccess, setGastoSuccess] = useState(null);
@@ -162,11 +164,13 @@ export default function FinanzasPage() {
                 finalDescripcion = `[${pct}% s/ingresos] ${finalDescripcion}`.trim();
             }
 
-            // For Secada: read manual montoTotal and serialize text inputs to description
+            // For Secada: read manual/calculated montoTotal and serialize text inputs to description
             if (formGasto.categoria === "Secada") {
                 finalMonto = parseFloat(formGasto.montoTotal) || 0;
                 let details = "Secada";
-                if (formGasto.gradoHumedad) details += ` Humedad: ${formGasto.gradoHumedad}`;
+                if (formGasto.toneladasRecargoHumedad) details += `, Recargo Humedad: ${formGasto.toneladasRecargoHumedad} Tn`;
+                if (formGasto.precioVentaSemilla) details += `, Precio Venta: $${formGasto.precioVentaSemilla}/Tn`;
+                if (formGasto.gradoHumedad) details += `, Humedad: ${formGasto.gradoHumedad}`;
                 if (formGasto.precioPuntoText) details += `, Precio Punto: ${formGasto.precioPuntoText}`;
                 finalDescripcion = `[${details}] ${finalDescripcion}`.trim();
             }
@@ -182,7 +186,17 @@ export default function FinanzasPage() {
             if (formGasto.idCampania) body.idCampania = formGasto.idCampania;
             await apiClient.post("/gastos", body);
             setGastoSuccess("¡Gasto registrado con éxito!");
-            setFormGasto(p => ({ ...p, descripcion: "", montoTotal: "", idCampania: "", porcentajeImpuesto: "", gradoHumedad: "", precioPuntoText: "" }));
+            setFormGasto(p => ({
+                ...p,
+                descripcion: "",
+                montoTotal: "",
+                idCampania: "",
+                porcentajeImpuesto: "",
+                gradoHumedad: "",
+                precioPuntoText: "",
+                toneladasRecargoHumedad: "",
+                precioVentaSemilla: ""
+            }));
             invalidateDashboardBootstrapCache();
             await fetchData({ forceRefresh: true });
             if (idCampaniaEconomia) await fetchResumenCampania(idCampaniaEconomia);
@@ -631,6 +645,7 @@ export default function FinanzasPage() {
                                     </select>
                                     <p className="text-[9px] text-gray-400 mt-1">Solo campañas de lotes de este campo.</p>
                                 </FormField>
+
                                 <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
                                     <FormField label="Grado de humedad">
                                         <input
@@ -651,16 +666,71 @@ export default function FinanzasPage() {
                                         />
                                     </FormField>
                                 </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                                        Recargo por Humedad
+                                    </label>
+                                    <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
+                                        <FormField label="Cantidad (Tn)">
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={formGasto.toneladasRecargoHumedad}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    setFormGasto(p => {
+                                                        const tn = parseFloat(val) || 0;
+                                                        const prec = parseFloat(p.precioVentaSemilla) || 0;
+                                                        const total = tn * prec;
+                                                        return {
+                                                            ...p,
+                                                            toneladasRecargoHumedad: val,
+                                                            montoTotal: total > 0 ? total.toFixed(2) : ""
+                                                        };
+                                                    });
+                                                }}
+                                                className={INPUT_CLASS}
+                                                placeholder="ej. 12.5"
+                                            />
+                                        </FormField>
+
+                                        <FormField label={`Precio de Venta (${currSymbol} / Tn)`}>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={formGasto.precioVentaSemilla}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    setFormGasto(p => {
+                                                        const prec = parseFloat(val) || 0;
+                                                        const tn = parseFloat(p.toneladasRecargoHumedad) || 0;
+                                                        const total = tn * prec;
+                                                        return {
+                                                            ...p,
+                                                            precioVentaSemilla: val,
+                                                            montoTotal: total > 0 ? total.toFixed(2) : ""
+                                                        };
+                                                    });
+                                                }}
+                                                className={INPUT_CLASS}
+                                                placeholder="ej. 280000"
+                                            />
+                                        </FormField>
+                                    </div>
+                                </div>
+
                                 <FormField label={`Importe Total (${currSymbol})`}>
                                     <input
                                         type="number"
                                         step="0.01"
-                                        max="999999999"
+                                        readOnly
                                         required
                                         value={formGasto.montoTotal}
-                                        onChange={e => setFormGasto(p => ({ ...p, montoTotal: e.target.value }))}
-                                        className={INPUT_CLASS}
-                                        placeholder="ej. 25000"
+                                        className={`${INPUT_CLASS} bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 cursor-not-allowed font-black`}
+                                        placeholder="0.00"
                                     />
                                 </FormField>
                             </>

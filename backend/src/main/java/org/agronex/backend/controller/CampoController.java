@@ -67,6 +67,12 @@ public class CampoController {
         return ResponseEntity.ok(campoService.obtenerEstadisticas(idUsuario));
     }
 
+    @PutMapping("/{idCampo}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
+    public ResponseEntity<CampoResponse> actualizarCampo(@PathVariable UUID idCampo, @Valid @RequestBody CampoRequest request, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(campoService.actualizarCampo(idCampo, request, jwt));
+    }
+
     @Operation(summary = "Eliminar un campo", description = "Elimina un campo específico por su ID.")
     @ApiResponses({
         @ApiResponse(responseCode = "204", description = "Campo eliminado exitosamente"),

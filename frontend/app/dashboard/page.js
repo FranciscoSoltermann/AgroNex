@@ -67,7 +67,7 @@ const getActividadConfig = (tipo) => {
 
 
 export default function DashboardHome() {
-    const { symbol } = useCurrency();
+    const { symbol, convertCurrency } = useCurrency();
     const [chartMode, setChartMode] = useState("Mensual");
 
     const { data: queryData, isLoading: loading } = useQuery({
@@ -388,7 +388,7 @@ export default function DashboardHome() {
                         {dynChartData.map((d, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
                                 <div className="w-full flex-1 flex items-end gap-1 min-h-0">
-                                    <div className="w-1/2 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.costos / Math.max(1, dynMaxVal)) * 100)}%` }} title={`${symbol}${d.costos.toFixed(2)}`} />
+                                    <div className="w-1/2 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.costos / Math.max(1, dynMaxVal)) * 100)}%` }} title={`${symbol}${convertCurrency(d.costos).toFixed(2)}`} />
                                     <div className="w-1/2 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.cosecha / Math.max(1, dynMaxVal)) * 100)}%` }} title={`Rend.: ${d.cosecha}`} />
                                 </div>
                                 <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">{d.mes}</span>

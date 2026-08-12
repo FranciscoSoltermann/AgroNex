@@ -5,7 +5,7 @@ import { Navbar } from "@/components/shared/layout/Navbar";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, ArrowRight, Globe, ShieldCheck, Loader2 } from "lucide-react";
+import { Mail, Lock, ArrowRight, Globe, ShieldCheck, Loader2, Eye, EyeOff } from "lucide-react";
 
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -57,6 +57,10 @@ export default function AuthPage() {
     const [dni, setDni] = useState("");
     const [razonSocial, setRazonSocial] = useState("");
     const [cuit, setCuit] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [showLoginPassword, setShowLoginPassword] = useState(false);
 
     // ── MFA Challenge State ──
     const [showMfaChallenge, setShowMfaChallenge] = useState(false);
@@ -149,6 +153,10 @@ export default function AuthPage() {
             return "La contraseña debe tener mín. 8 caracteres, 1 mayúscula, 1 minúscula y 1 número.";
         }
 
+        if (!isLogin && password !== confirmPassword) {
+            return "Las contraseñas no coinciden.";
+        }
+
         if (!isLogin) {
             if (tipoUsuario === "FISICA") {
                 const nameRegex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/; 
@@ -190,7 +198,7 @@ export default function AuthPage() {
         try {
             if (isLogin) {
                 const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-                if (loginError) throw loginError;
+                if (loginError) throw new Error("Usuario o contraseña incorrectos.");
 
                 // Check if MFA challenge is needed
                 const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -206,16 +214,21 @@ export default function AuthPage() {
                     ? { email: email.trim(), dni: dni.trim() }
                     : { email: email.trim(), cuit: cuit.trim() };
 
+                console.log("[AgroNex Registro] Paso 1: Validando disponibilidad...");
                 await apiClient.post("/public/auth/registro/validar-disponibilidad", disponibilidadPayload);
+                console.log("[AgroNex Registro] Paso 1: OK");
 
+                console.log("[AgroNex Registro] Paso 2: Registrando en Supabase...");
                 const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim(), password });
                 let session = authData?.session;
+                console.log("[AgroNex Registro] Paso 2: OK", { authError: authError?.message, hasSession: !!session });
 
                 if (authError) {
                     if (!isUserAlreadyRegisteredError(authError)) {
                         throw authError;
                     }
 
+                    console.log("[AgroNex Registro] Paso 2b: Usuario ya existe, intentando login...");
                     const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
                         email: email.trim(),
                         password,
@@ -237,6 +250,7 @@ export default function AuthPage() {
                         );
                     }
                     session = signInData?.session;
+                    console.log("[AgroNex Registro] Paso 2b: Login OK");
                 } else if (authData?.user && !session) {
                     setShowOtpChallenge(true);
                     setLoading(false);
@@ -247,7 +261,9 @@ export default function AuthPage() {
                     throw new Error("No hay sesión para completar el registro. Intente iniciar sesión.");
                 }
 
+                console.log("[AgroNex Registro] Paso 3: Verificando estado de registro...");
                 const registroEstado = await apiClient.get("/usuarios/me/check");
+                console.log("[AgroNex Registro] Paso 3: OK", registroEstado?.data);
                 if (registroEstado?.data?.registrado === true) {
                     router.push("/dashboard");
                     return;
@@ -261,14 +277,21 @@ export default function AuthPage() {
                     ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim(), rol: rolRegistro }
                     : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim(), rol: rolRegistro };
 
+                console.log("[AgroNex Registro] Paso 4: Registrando en backend...");
                 await apiClient.post(url, payload, {
                     headers: { Authorization: `Bearer ${session.access_token}` },
                 });
+                console.log("[AgroNex Registro] Paso 4: OK");
 
                 router.push("/dashboard");
             }
         } catch (err) {
-            setError(resolveAuthError(err));
+            console.error("[AgroNex Registro] ERROR:", err);
+            if (err?.message === "Network Error" || err?.code === "ERR_NETWORK") {
+                setError("No se pudo conectar con el servidor. Verificá que el backend esté corriendo en localhost:8080.");
+            } else {
+                setError(resolveAuthError(err));
+            }
         } finally {
             setLoading(false);
         }
@@ -395,7 +418,7 @@ export default function AuthPage() {
                     </div>
 
                     {/* Card 3D flip */}
-                    <div className={`relative w-full max-w-[420px] h-auto min-h-[520px] sm:h-[620px] transition-all duration-1000 preserve-3d ${!isLogin ? "is-flipped" : ""}`}>
+                    <div className={`relative w-full max-w-[420px] h-auto min-h-[520px] sm:h-[720px] transition-all duration-1000 preserve-3d ${!isLogin ? "is-flipped" : ""}`}>
 
                         {/* CARA FRONT: LOGIN */}
                         <div className="card-face absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2.5rem] p-10 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)]">
@@ -411,9 +434,17 @@ export default function AuthPage() {
                                     </div>
                                     <div className="relative group/input">
                                         <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl pl-12 pr-5 py-4 text-sm font-bold text-gray-900 focus:bg-white focus:border-[#2D6A4F] outline-none transition-all placeholder:text-gray-500" placeholder="Contraseña" />
+                                        <input type={showLoginPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl pl-12 pr-12 py-4 text-sm font-bold text-gray-900 focus:bg-white focus:border-[#2D6A4F] outline-none transition-all placeholder:text-gray-500" placeholder="Contraseña" />
+                                        <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2D6A4F] transition-colors" tabIndex={-1}>
+                                            {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
                                     </div>
                                 </div>
+                                {error && isLogin && !showMfaChallenge && !showOtpChallenge && (
+                                    <div className="w-full bg-red-50 border-2 border-red-200 rounded-xl px-5 py-3 text-center">
+                                        <p className="text-red-700 text-[11px] font-black uppercase tracking-widest">{error}</p>
+                                    </div>
+                                )}
                                 <button type="submit" disabled={loading} className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white py-4.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 mt-6 flex items-center justify-center gap-2 disabled:opacity-50">
                                     {loading ? "Cargando..." : "Acceder"}<ArrowRight size={14} />
                                 </button>
@@ -464,15 +495,31 @@ export default function AuthPage() {
                                         </>
                                     )}
                                     <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-5 py-3 text-sm font-bold text-gray-900 focus:border-[#2D6A4F] outline-none transition-all" placeholder="Email" />
-                                    <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl px-5 py-3 text-sm font-bold text-gray-900 focus:border-[#2D6A4F] outline-none transition-all" placeholder="Contraseña" />
+                                    <div className="relative">
+                                        <input type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl pl-5 pr-12 py-3 text-sm font-bold text-gray-900 focus:border-[#2D6A4F] outline-none transition-all" placeholder="Contraseña" />
+                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2D6A4F] transition-colors" tabIndex={-1}>
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                    <div className="relative">
+                                        <input type={showConfirmPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-gray-50 border-2 border-gray-100 rounded-xl pl-5 pr-12 py-3 text-sm font-bold text-gray-900 focus:border-[#2D6A4F] outline-none transition-all" placeholder="Confirmar contraseña" />
+                                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#2D6A4F] transition-colors" tabIndex={-1}>
+                                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
                                 </div>
+                                {error && !isLogin && (
+                                    <div className="w-full bg-red-50 border-2 border-red-200 rounded-xl px-5 py-3 text-center">
+                                        <p className="text-red-700 text-[11px] font-black uppercase tracking-widest">{error}</p>
+                                    </div>
+                                )}
                                 <button type="submit" disabled={loading} className="w-full bg-[#2D6A4F] text-white py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all hover:bg-[#1B4332] active:scale-95 disabled:opacity-50">
                                     {loading ? "Registrando..." : "Registrar cuenta"}
                                 </button>
                             </form>
                         </div>
                     </div>
-                    {error && !showMfaChallenge && !showOtpChallenge && <p className="absolute bottom-4 text-red-600 text-[10px] font-bold uppercase tracking-widest text-center px-4">{error}</p>}
+
                 </div>
 
                 {/* ── OTP Challenge Overlay ── */}

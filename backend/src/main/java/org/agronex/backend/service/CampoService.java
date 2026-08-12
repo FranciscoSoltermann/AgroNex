@@ -91,6 +91,61 @@ public class CampoService {
     }
 
     @Transactional
+    public CampoResponse actualizarCampo(UUID idCampo, CampoRequest request, Jwt jwt) {
+        Campo campo = campoRepository.findById(idCampo)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Campo no encontrado"));
+
+        UUID idUsuarioToken = org.agronex.backend.infrastructure.security.SecurityUtils.requireUserId(jwt);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
+        if (campo.getUsuario() != null) {
+            UUID ownerId = campo.getUsuario().getIdUsuario();
+            if (!ownerId.equals(idUsuarioToken) && !ownerId.equals(idDatos)) {
+                throw new org.springframework.security.access.AccessDeniedException("No tenés permiso para modificar este campo");
+            }
+        }
+
+        if (campo.getLotes() != null && !campo.getLotes().isEmpty()) {
+            BigDecimal superficieLotesTotal = campo.getLotes().stream()
+                    .map(org.agronex.backend.entity.Lote::getSuperficie)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (request.getSuperficieTotal() != null && request.getSuperficieTotal().compareTo(superficieLotesTotal) < 0) {
+                throw new IllegalArgumentException(
+                        "La superficie total (" + request.getSuperficieTotal() + " Ha) no puede ser menor a la suma de las hectáreas de los lotes existentes (" + superficieLotesTotal + " Ha)"
+                );
+            }
+        }
+
+        campo.setNombre(request.getNombre());
+        if (request.getSuperficieTotal() != null) {
+            campo.setSuperficieTotal(request.getSuperficieTotal());
+        }
+        if (request.getUbicacion() != null) {
+            campo.setUbicacion(request.getUbicacion());
+        }
+        if (request.getLatitud() != null) {
+            campo.setLatitud(request.getLatitud());
+        }
+        if (request.getLongitud() != null) {
+            campo.setLongitud(request.getLongitud());
+        }
+
+        Campo guardado = campoRepository.save(campo);
+
+        String userEmail = (campo.getUsuario() != null) ? campo.getUsuario().getEmail() : null;
+        auditService.registrar(
+                idUsuarioToken, userEmail,
+                EntidadAudit.CAMPO, guardado.getIdCampo().toString(),
+                guardado.getNombre(), AccionAudit.ACTUALIZAR,
+                "Campo actualizado. Superficie: " + guardado.getSuperficieTotal() + " Ha"
+        );
+
+        return campoMapper.toResponse(guardado);
+    }
+
+    @Transactional
     public void eliminarCampo(UUID idCampo, UUID idUsuarioToken) {
         Campo campo = campoRepository.findById(idCampo)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Campo no encontrado"));
