@@ -15,12 +15,12 @@ function OAuthRedirectHandlerInner() {
 
         if (code) {
             console.log("[AgroNex Auth] Redirigiendo ?code= a /auth/callback...");
-            window.location.href = `/auth/callback?code=${encodeURIComponent(code)}`;
+            router.replace(`/auth/callback?code=${encodeURIComponent(code)}`);
         } else if (hash && hash.includes("access_token")) {
             console.log("[AgroNex Auth] Redirigiendo #access_token a /auth/callback...");
-            window.location.href = `/auth/callback${hash}`;
+            router.replace(`/auth/callback${hash}`);
         }
-    }, [searchParams]);
+    }, [searchParams, router]);
 
     return null;
 }
