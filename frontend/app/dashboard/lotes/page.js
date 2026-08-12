@@ -32,7 +32,7 @@ const TIPOS_CON_DOSIS = ["Siembra", "Pulverización", "Inoculante/Curasemilla"];
 const emptyInsumoRow = () => ({ idInsumo: "", dosisHa: "" });
 
 export default function CiclosPage() {
-    const { symbol } = useCurrency();
+    const { symbol, convertCurrency } = useCurrency();
     const [campanias, setCampanias] = useState([]);
     const [actividades, setActividades] = useState([]);
     const [lotes, setLotes] = useState([]);
@@ -441,11 +441,6 @@ export default function CiclosPage() {
                             <MapPin size={10} className="inline mr-1" />
                             Lote
                         </label>
-                        {idLoteSeleccionado && (
-                            <button onClick={handleEliminarLote} className="text-[10px] text-red-400 hover:text-red-500 font-bold flex items-center gap-1">
-                                Eliminar lote
-                            </button>
-                        )}
                     </div>
                     <select
                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
@@ -809,7 +804,7 @@ export default function CiclosPage() {
 }
 
 function ActividadCard({ actividad, onEliminar, onEditar }) {
-    const { symbol } = useCurrency();
+    const { symbol, convertCurrency } = useCurrency();
     const colorMap = {
         Siembra: { icon: <Sprout size={16} /> },
         Pulverización: { icon: <BugOff size={16} /> },
@@ -887,10 +882,10 @@ function ActividadCard({ actividad, onEliminar, onEditar }) {
                     {actividad.costoServicio > 0 && (
                         <>
                             <p className="text-[11px] font-black text-gray-900">
-                                {symbol}{Number((actividad.costoServicio || 0) * (actividad.hectareasTratadas != null ? actividad.hectareasTratadas : (actividad.superficieLoteHa || 0))).toLocaleString("es-AR")} total
+                                {symbol}{convertCurrency(Number((actividad.costoServicio || 0) * (actividad.hectareasTratadas != null ? actividad.hectareasTratadas : (actividad.superficieLoteHa || 0)))).toLocaleString("es-AR")} total
                             </p>
                             <p className="text-[9px] text-gray-400 mt-0.5">
-                                ({symbol}{Number(actividad.costoServicio).toLocaleString("es-AR")}/Ha)
+                                ({symbol}{convertCurrency(Number(actividad.costoServicio)).toLocaleString("es-AR")}/Ha)
                             </p>
                         </>
                     )}

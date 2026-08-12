@@ -59,6 +59,11 @@ export default function CamposPage() {
     const [submitError, setSubmitError] = useState(null);
     const [submitSuccess, setSubmitSuccess] = useState(null);
 
+    // Modal editar campo
+    const [showModalEditCampo, setShowModalEditCampo] = useState(false);
+    const [editingCampo, setEditingCampo] = useState(null);
+    const [formEditCampo, setFormEditCampo] = useState({ nombre: "", ubicacion: "", superficieTotal: "", latitud: null, longitud: null });
+
     // Modal nuevo lote
     const [showModalLote, setShowModalLote] = useState(false);
     const [campoSeleccionado, setCampoSeleccionado] = useState(null);
@@ -174,6 +179,68 @@ export default function CamposPage() {
             else if (data?.error) errMsg = data.error;
             else if (data?.message) errMsg = data.message;
             else if (data && typeof data === 'object') Object.values(data).forEach(v => { if (typeof v === 'string') errMsg = v; });
+            setSubmitError(errMsg);
+        } finally {
+            setSubmitLoading(false);
+        }
+    };
+
+    const handleOpenEditCampo = (campo) => {
+        setEditingCampo(campo);
+        setFormEditCampo({
+            nombre: campo.nombre || "",
+            ubicacion: campo.ubicacion || "",
+            superficieTotal: campo.superficieTotal != null ? String(campo.superficieTotal) : "",
+            latitud: campo.latitud ?? null,
+            longitud: campo.longitud ?? null
+        });
+        setSubmitError(null);
+        setSubmitSuccess(null);
+        setShowModalEditCampo(true);
+    };
+
+    const handleEditarCampo = async (e) => {
+        e.preventDefault();
+
+        const supTotal = parseFloat(formEditCampo.superficieTotal);
+        if (isNaN(supTotal) || supTotal <= 0) {
+            setSubmitError("Ingresá una superficie total válida mayor a 0.");
+            return;
+        }
+
+        setSubmitLoading(true);
+        setSubmitError(null);
+        try {
+            const payload = {
+                nombre: formEditCampo.nombre,
+                ubicacion: formEditCampo.ubicacion,
+                superficieTotal: supTotal,
+                latitud: formEditCampo.latitud,
+                longitud: formEditCampo.longitud
+            };
+
+            await apiClient.put(`/campos/${editingCampo.idCampo}`, payload);
+
+            setSubmitSuccess("¡Campo actualizado con éxito!");
+            toast.success("¡Campo actualizado!");
+
+            invalidateDashboardBootstrapCache();
+            await fetchData(userId, { forceRefresh: true });
+            setTimeout(() => {
+                setShowModalEditCampo(false);
+                setEditingCampo(null);
+                setSubmitSuccess(null);
+            }, 800);
+        } catch (err) {
+            let errMsg = "Error al actualizar el campo.";
+            const data = err.response?.data;
+            if (typeof data === 'string') errMsg = data;
+            else if (data?.error) errMsg = data.error;
+            else if (data?.message) errMsg = data.message;
+            else if (data && typeof data === 'object') {
+                const values = Object.values(data).filter(v => typeof v === 'string');
+                if (values.length > 0) errMsg = values.join(" | ");
+            }
             setSubmitError(errMsg);
         } finally {
             setSubmitLoading(false);
@@ -437,6 +504,7 @@ export default function CamposPage() {
                                 editMode={editMode}
                                 onClickDetalle={() => handleOpenDetalle(campo)}
                                 onEliminarCampo={handleEliminarCampo}
+                                onEditarCampo={() => handleOpenEditCampo(campo)}
                                 onGestionarLotes={() => handleOpenGestionLotes(campo)}
                             />
                         ))}
@@ -503,6 +571,61 @@ export default function CamposPage() {
                         {submitSuccess && <SuccessMsg msg={submitSuccess} />}
                         <SubmitBtn loading={submitLoading} text="Confirmar Registro" />
                         <p className="text-[10px] text-gray-400 text-center">Definir un campo crea automáticamente un ciclo de cultivo predeterminado para asignación inmediata.</p>
+                    </form>
+                </Modal>
+            )}
+
+            {/* Modal: Editar Campo */}
+            {showModalEditCampo && editingCampo && (
+                <Modal titulo={`Editar Campo: ${editingCampo.nombre}`} onClose={() => setShowModalEditCampo(false)}>
+                    <form onSubmit={handleEditarCampo} className="space-y-4">
+                        <FormField label="Nombre del campo" required>
+                            <input
+                                type="text"
+                                required
+                                value={formEditCampo.nombre}
+                                onChange={e => setFormEditCampo(p => ({ ...p, nombre: e.target.value }))}
+                                className={INPUT_CLASS}
+                                placeholder="ej. Sunset Ridge"
+                            />
+                        </FormField>
+                        <FormField label="Referencia de ubicación">
+                            <SelectorUbicacion
+                                initialValue={formEditCampo.ubicacion}
+                                onSelect={(data) => {
+                                    setFormEditCampo(p => ({
+                                        ...p,
+                                        ubicacion: data.nombre,
+                                        latitud: data.lat,
+                                        longitud: data.lon
+                                    }));
+                                }}
+                            />
+                            {formEditCampo.latitud && (
+                                <div className="flex items-center gap-1 mt-2 text-green-600">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
+                                </div>
+                            )}
+                        </FormField>
+                        <FormField label="Superficie total (Ha)" required>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    required
+                                    value={formEditCampo.superficieTotal}
+                                    onChange={e => setFormEditCampo(p => ({ ...p, superficieTotal: e.target.value }))}
+                                    className={`${INPUT_CLASS} pr-10`}
+                                    placeholder="0.00"
+                                />
+                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
+                            </div>
+                        </FormField>
+                        {submitError && <ErrorMsg msg={submitError} />}
+                        {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                        <SubmitBtn loading={submitLoading} text="Guardar Cambios" />
                     </form>
                 </Modal>
             )}
@@ -726,7 +849,7 @@ export default function CamposPage() {
     );
 }
 
-function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarCampo, onGestionarLotes }) {
+function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarCampo, onGestionarLotes, onEditarCampo }) {
     if (vista === "lista") {
         return (
             <div
@@ -744,11 +867,14 @@ function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarC
                         <p className="text-[10px] text-gray-400">{campo.cantidadLotes} lotes</p>
                     </div>
                     {editMode && (
-                        <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-200">
-                            <button type="button" onClick={(e) => { e.stopPropagation(); onGestionarLotes && onGestionarLotes(); }} className="text-[10px] font-bold text-[#2D6A4F] hover:text-[#1B4332] bg-green-50 hover:bg-green-100 px-2.5 py-1.5 rounded-lg transition-colors">
-                                Gestionar Lotes
+                        <div className="flex items-center gap-1.5 animate-in fade-in slide-in-from-right-2 duration-200">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); onEditarCampo && onEditarCampo(); }} className="text-[10px] font-bold text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                                <Pencil size={11} /> Editar Campo
                             </button>
-                            <button type="button" onClick={(e) => { e.stopPropagation(); onEliminarCampo && onEliminarCampo(campo); }} className="text-[10px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg transition-colors">
+                            <button type="button" onClick={(e) => { e.stopPropagation(); onGestionarLotes && onGestionarLotes(); }} className="text-[10px] font-bold text-[#2D6A4F] hover:text-[#1B4332] bg-green-50 hover:bg-green-100 border border-green-200 px-2.5 py-1.5 rounded-lg transition-colors">
+                                Lotes
+                            </button>
+                            <button type="button" onClick={(e) => { e.stopPropagation(); onEliminarCampo && onEliminarCampo(campo); }} className="text-[10px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-lg transition-colors">
                                 Eliminar
                             </button>
                         </div>
@@ -782,15 +908,18 @@ function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarC
                     </div>
                 </div>
                 {editMode && (
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        <button onClick={(e) => { e.stopPropagation(); onEliminarCampo && onEliminarCampo(campo); }} className="text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
-                            <Trash2 size={11} /> Eliminar
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700 animate-in fade-in slide-in-from-bottom-2 duration-200 gap-1">
+                        <button onClick={(e) => { e.stopPropagation(); onEditarCampo && onEditarCampo(); }} className="text-[11px] font-bold text-amber-700 hover:text-amber-900 transition-colors flex items-center gap-1">
+                            <Pencil size={11} /> Editar
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); onGestionarLotes && onGestionarLotes(); }}
                             className="text-[11px] font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors flex items-center gap-1"
                         >
-                            Gestionar Lotes →
+                            Lotes →
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); onEliminarCampo && onEliminarCampo(campo); }} className="text-[11px] font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
+                            <Trash2 size={11} /> Eliminar
                         </button>
                     </div>
                 )}

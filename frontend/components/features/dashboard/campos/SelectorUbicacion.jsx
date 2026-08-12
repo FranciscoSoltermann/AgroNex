@@ -2,11 +2,17 @@
 import React, { useState, useRef } from 'react';
 import { Search, MapPin, Loader2 } from 'lucide-react';
 
-export default function SelectorUbicacion({ onSelect }) {
-    const [query, setQuery] = useState('');
+export default function SelectorUbicacion({ onSelect, initialValue = "" }) {
+    const [query, setQuery] = useState(initialValue);
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const timerRef = useRef(null);
+
+    React.useEffect(() => {
+        if (initialValue) {
+            setQuery(initialValue);
+        }
+    }, [initialValue]);
 
     const buscarCiudades = (texto) => {
         setQuery(texto);

@@ -28,7 +28,7 @@ const CARD_CLASS = "bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-10
 const INPUT_CLASS = "w-full bg-gray-50 dark:bg-[#0f1419] dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white dark:focus:bg-[#1a1f25] transition-colors";
 
 export default function SettingsPage() {
-    const { currency, setCurrency } = useCurrency();
+    const { currency, setCurrency, exchangeRate, rateLoading, rateError, fechaActualizacion } = useCurrency();
     const [settings, setSettings] = useState(null);
     const [draft, setDraft] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -448,6 +448,36 @@ export default function SettingsPage() {
                     <p className="text-[10px] text-gray-400 mt-2">
                         {currency === "ARS" ? "Peso Argentino ($)" : "Dólar Estadounidense (US$)"} — se aplica a finanzas, inventario, campañas y todo apartado monetario.
                     </p>
+                    {/* Cotización del dólar blue */}
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        {rateLoading ? (
+                            <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                                <Loader2 size={12} className="animate-spin" />
+                                Obteniendo cotización del dólar blue…
+                            </div>
+                        ) : rateError ? (
+                            <div className="flex items-center gap-2 text-[11px] text-orange-500">
+                                <AlertTriangle size={12} />
+                                No se pudo obtener la cotización. Los valores en USD podrían no estar disponibles.
+                            </div>
+                        ) : exchangeRate ? (
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold border border-blue-100 dark:border-blue-800">
+                                        Dólar Blue
+                                    </span>
+                                    <span className="text-[12px] font-black text-gray-900 dark:text-gray-100">
+                                        ${exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                                {fechaActualizacion && (
+                                    <span className="text-[10px] text-gray-400">
+                                        Actualizado: {new Date(fechaActualizacion).toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
+                                    </span>
+                                )}
+                            </div>
+                        ) : null}
+                    </div>
                 </div>
             </section>
             {/* ── Zona de Peligro (Baja del Servicio) ── */}

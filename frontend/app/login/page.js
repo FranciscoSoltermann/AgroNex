@@ -198,7 +198,7 @@ export default function AuthPage() {
         try {
             if (isLogin) {
                 const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-                if (loginError) throw loginError;
+                if (loginError) throw new Error("Usuario o contraseña incorrectos.");
 
                 // Check if MFA challenge is needed
                 const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -214,16 +214,21 @@ export default function AuthPage() {
                     ? { email: email.trim(), dni: dni.trim() }
                     : { email: email.trim(), cuit: cuit.trim() };
 
+                console.log("[AgroNex Registro] Paso 1: Validando disponibilidad...");
                 await apiClient.post("/public/auth/registro/validar-disponibilidad", disponibilidadPayload);
+                console.log("[AgroNex Registro] Paso 1: OK");
 
+                console.log("[AgroNex Registro] Paso 2: Registrando en Supabase...");
                 const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim(), password });
                 let session = authData?.session;
+                console.log("[AgroNex Registro] Paso 2: OK", { authError: authError?.message, hasSession: !!session });
 
                 if (authError) {
                     if (!isUserAlreadyRegisteredError(authError)) {
                         throw authError;
                     }
 
+                    console.log("[AgroNex Registro] Paso 2b: Usuario ya existe, intentando login...");
                     const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
                         email: email.trim(),
                         password,
@@ -245,6 +250,7 @@ export default function AuthPage() {
                         );
                     }
                     session = signInData?.session;
+                    console.log("[AgroNex Registro] Paso 2b: Login OK");
                 } else if (authData?.user && !session) {
                     setShowOtpChallenge(true);
                     setLoading(false);
@@ -255,7 +261,9 @@ export default function AuthPage() {
                     throw new Error("No hay sesión para completar el registro. Intente iniciar sesión.");
                 }
 
+                console.log("[AgroNex Registro] Paso 3: Verificando estado de registro...");
                 const registroEstado = await apiClient.get("/usuarios/me/check");
+                console.log("[AgroNex Registro] Paso 3: OK", registroEstado?.data);
                 if (registroEstado?.data?.registrado === true) {
                     router.push("/dashboard");
                     return;
@@ -269,14 +277,21 @@ export default function AuthPage() {
                     ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim(), rol: rolRegistro }
                     : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim(), rol: rolRegistro };
 
+                console.log("[AgroNex Registro] Paso 4: Registrando en backend...");
                 await apiClient.post(url, payload, {
                     headers: { Authorization: `Bearer ${session.access_token}` },
                 });
+                console.log("[AgroNex Registro] Paso 4: OK");
 
                 router.push("/dashboard");
             }
         } catch (err) {
-            setError(resolveAuthError(err));
+            console.error("[AgroNex Registro] ERROR:", err);
+            if (err?.message === "Network Error" || err?.code === "ERR_NETWORK") {
+                setError("No se pudo conectar con el servidor. Verificá que el backend esté corriendo en localhost:8080.");
+            } else {
+                setError(resolveAuthError(err));
+            }
         } finally {
             setLoading(false);
         }
@@ -425,6 +440,11 @@ export default function AuthPage() {
                                         </button>
                                     </div>
                                 </div>
+                                {error && isLogin && !showMfaChallenge && !showOtpChallenge && (
+                                    <div className="w-full bg-red-50 border-2 border-red-200 rounded-xl px-5 py-3 text-center">
+                                        <p className="text-red-700 text-[11px] font-black uppercase tracking-widest">{error}</p>
+                                    </div>
+                                )}
                                 <button type="submit" disabled={loading} className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white py-4.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all active:scale-95 mt-6 flex items-center justify-center gap-2 disabled:opacity-50">
                                     {loading ? "Cargando..." : "Acceder"}<ArrowRight size={14} />
                                 </button>
@@ -499,7 +519,7 @@ export default function AuthPage() {
                             </form>
                         </div>
                     </div>
-                    {error && isLogin && !showMfaChallenge && !showOtpChallenge && <p className="absolute bottom-4 text-red-600 text-[10px] font-bold uppercase tracking-widest text-center px-4">{error}</p>}
+
                 </div>
 
                 {/* ── OTP Challenge Overlay ── */}

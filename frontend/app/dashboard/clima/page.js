@@ -325,7 +325,7 @@ function PronosticoBoard({ campo, weatherData, onRefresh, loading }) {
                     <div>
                         <h3 className="font-black text-sm text-gray-900 dark:text-gray-100 uppercase tracking-wider">Pronóstico en tiempo real — {campo.nombre}</h3>
                         <p className="text-[12px] text-gray-450 dark:text-gray-500 font-semibold leading-relaxed mt-0.5">
-                            Condición actual: <span className="text-sky-600 dark:text-sky-400 font-black">{desc}</span> (Lat: {parseFloat(campo.latitud).toFixed(4)}, Lon: {parseFloat(campo.longitud).toFixed(4)})
+                            Condición actual: <span className="text-sky-600 dark:text-sky-400 font-black">{desc}</span>
                         </p>
                     </div>
                 </div>
