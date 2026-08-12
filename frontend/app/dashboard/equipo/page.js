@@ -212,7 +212,7 @@ export default function EquipoPage() {
 
     return (
         <PermissionGuard requiredRole="PROPIETARIO">
-        <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
+        <div className="space-y-6 animate-in fade-in duration-500 h-full flex flex-col pb-24">
             
             {/* TABS NAVEGACIÓN */}
             <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-4">
@@ -239,7 +239,6 @@ export default function EquipoPage() {
                     Auditoría y Trazabilidad
                 </button>
             </div>
-
             {/* CONTENIDO DE AUDITORIA */}
             {activeTab === "auditoria" && (
                 <div className="flex-1 animate-in fade-in zoom-in-95 duration-300">

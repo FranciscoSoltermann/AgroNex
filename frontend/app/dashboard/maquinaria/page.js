@@ -14,7 +14,7 @@ export default function EcosistemaPage() {
                 Ecosistema e Integraciones
             </h1>
             <p className="text-sm sm:text-base font-medium text-gray-500 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
-                Estamos construyendo el centro de control definitivo. Muy pronto podrás conectar AgroNex con plataformas como John Deere, Case IH y otros líderes del sector.
+                Estamos construyendo el centro de control definitivo. Muy pronto podrás conectar AgroNex con plataformas de distintos proveedores líderes en el sector.
             </p>
             <div className="mt-8 px-5 py-2.5 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm">
                 Próximamente

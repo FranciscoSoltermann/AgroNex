@@ -105,7 +105,7 @@ function generarAlertasAgro(current, daily) {
     const minHoy = daily?.temperature_2m_min?.[0] ?? 99;
     const minManana = daily?.temperature_2m_min?.[1] ?? 99;
     const minProyectada = Math.min(minHoy, minManana);
-    
+
     if (minProyectada <= 3) {
         alertas.push({
             id: 'helada',
@@ -159,13 +159,12 @@ function DiaDaysCard({ iso, code, tMax, tMin, mm, prob, isToday, isSelected, onC
     return (
         <button
             onClick={onClick}
-            className={`rounded-2xl p-3 text-center border transition-all duration-300 cursor-pointer w-full focus:outline-none focus:ring-2 focus:ring-sky-300 ${
-                isSelected
-                    ? "bg-sky-500 dark:bg-sky-600 border-sky-600 dark:border-sky-500 shadow-lg shadow-sky-200 dark:shadow-none scale-[1.03] text-white"
-                    : isToday
-                        ? "bg-sky-50 dark:bg-sky-955/20 border-sky-200 dark:border-sky-850 hover:border-sky-400 hover:shadow-sm"
-                        : "bg-white dark:bg-[#1a1f25] border-gray-100 dark:border-gray-800 hover:border-sky-300 dark:hover:border-sky-700 hover:bg-sky-50/55 dark:hover:bg-sky-900/10 hover:shadow-sm"
-            }`}
+            className={`rounded-2xl p-3 text-center border transition-all duration-300 cursor-pointer w-full focus:outline-none focus:ring-2 focus:ring-sky-300 ${isSelected
+                ? "bg-sky-500 dark:bg-sky-600 border-sky-600 dark:border-sky-500 shadow-lg shadow-sky-200 dark:shadow-none scale-[1.03] text-white"
+                : isToday
+                    ? "bg-sky-50 dark:bg-sky-955/20 border-sky-200 dark:border-sky-850 hover:border-sky-400 hover:shadow-sm"
+                    : "bg-white dark:bg-[#1a1f25] border-gray-100 dark:border-gray-800 hover:border-sky-300 dark:hover:border-sky-700 hover:bg-sky-50/55 dark:hover:bg-sky-900/10 hover:shadow-sm"
+                }`}
         >
             <p className={`text-[10px] font-black uppercase ${isSelected ? "text-white" : isToday ? "text-sky-600 dark:text-sky-400" : "text-gray-400 dark:text-gray-500"}`}>
                 {label}
@@ -235,7 +234,7 @@ function AlertaAgroCard({ alerta }) {
             textColor: "text-emerald-700 dark:text-emerald-400"
         }
     };
-    
+
     const style = config[alerta.type];
     const Icon = alerta.icon;
 
@@ -274,9 +273,9 @@ function PronosticoBoard({ campo, weatherData, onRefresh, loading }) {
 
         const enviarNotificaciones = async () => {
             const hoy = new Date().toISOString().split('T')[0];
-            
+
             for (const alerta of alertasAgro) {
-                if (alerta.type === 'success') continue; 
+                if (alerta.type === 'success') continue;
 
                 const storageKey = `agronex_alerta_campo_${campo.idCampo}_${alerta.id}`;
                 const lastSent = localStorage.getItem(storageKey);
@@ -579,7 +578,6 @@ function ModuloLluvias({ campoId, onDataChange }) {
                     </div>
                     <div>
                         <h3 className="text-base font-black text-gray-900 dark:text-gray-100">Registros Climáticos del Campo</h3>
-                        <p className="text-[12px] text-gray-400 dark:text-gray-550">Historial manual de precipitaciones y temperaturas</p>
                     </div>
                 </div>
                 <button
@@ -801,7 +799,7 @@ export default function ClimaPage() {
             const bootstrap = await getDashboardBootstrapData();
             const camposList = bootstrap.campos || [];
             setCampos(camposList);
-            
+
             // Auto-select first campo if available
             if (camposList.length > 0) {
                 setSeleccion({ campoId: camposList[0].idCampo });
@@ -890,17 +888,8 @@ export default function ClimaPage() {
 
     return (
         <PermissionGuard requiredPermission="LECTURA_CAMPOS">
-            <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="space-y-6 animate-in fade-in duration-500 pb-24">
             {/* Header */}
-            <div className="flex flex-col gap-1">
-                <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight flex items-center gap-2">
-                    <Cloud className="text-[#2D6A4F]" /> Pronósticos
-                </h2>
-                <p className="text-[12px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-widest leading-relaxed">
-                    Monitoreo climatológico de los campos del establecimiento
-                </p>
-            </div>
-
             {error && (
                 <div className="flex items-center gap-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-2xl p-4 text-red-700 dark:text-red-400 text-sm">
                     <AlertTriangle size={16} /> {error}
