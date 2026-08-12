@@ -42,6 +42,170 @@ const TIPO_ICONS = {
     OTRO: Box
 };
 
+const detectFormaFisica = (nombre = "") => {
+    const nom = (nombre || "").toLowerCase().trim();
+    if (!nom) return "AMBAS";
+
+    const solidKeywords = [
+        "granulado", "granulos", "gránulos", "polvo", "seco", "solido", "sólido",
+        "wg", "sg", "wdg", "df", "sp", "tab", "wp", "ws", "gr ", " 90%", " 80%", " 70%", "70 dg",
+        "turba", "cristales", "perlado"
+    ];
+
+    const liquidKeywords = [
+        "liquido", "líquido", "líquida", "liquida", "solucion", "solución",
+        "ec", "sl", "sc", "cs", "ew", "me", "fs", "uan", "sachet", "vejiga", "fertirriego"
+    ];
+
+    const hasSolidWord = solidKeywords.some(k => {
+        const regex = new RegExp(`\\b${k.trim()}\\b`, "i");
+        return regex.test(nom) || nom.includes(k);
+    });
+
+    const hasLiquidWord = liquidKeywords.some(k => {
+        const regex = new RegExp(`\\b${k.trim()}\\b`, "i");
+        return regex.test(nom) || nom.includes(k);
+    });
+
+    if (hasSolidWord && !hasLiquidWord) return "SOLIDO";
+    if (hasLiquidWord && !hasSolidWord) return "LIQUIDO";
+
+    return "AMBAS";
+};
+
+const getUnidadesDisponibles = (tipoArticulo, nombre = "", subtipo = "") => {
+    const text = `${nombre || ""} ${subtipo || ""}`;
+    const nom = text.toLowerCase().trim();
+    const forma = detectFormaFisica(text);
+
+    // Strictly SOLID products:
+    const isStrictlySolid = nom.includes("metsulfuron") || nom.includes("metsulfurón") ||
+                            nom.includes("dap") || nom.includes("fosfato diamonico") || nom.includes("fosfato diamónico") ||
+                            nom.includes("kcl") || nom.includes("cloruro de potasio");
+
+    // Strictly LIQUID products:
+    const isStrictlyLiquid = nom.includes("paraquat") ||
+                             nom.includes("cletodim") || nom.includes("clethodim") ||
+                             nom.includes("engeo");
+
+    if (isStrictlySolid) {
+        if (tipoArticulo === "FERTILIZANTE") {
+            return [
+                { value: "TONELADAS", label: "Toneladas" },
+                { value: "KILOGRAMOS", label: "Kilogramos" }
+            ];
+        }
+        return [
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "GRAMOS", label: "Gramos" }
+        ];
+    }
+
+    if (isStrictlyLiquid) {
+        return [
+            { value: "LITROS", label: "Litros" },
+            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
+        ];
+    }
+
+    if (tipoArticulo === "HERBICIDA") {
+        if (forma === "LIQUIDO") {
+            return [
+                { value: "LITROS", label: "Litros" },
+                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
+            ];
+        }
+        if (forma === "SOLIDO") {
+            return [
+                { value: "KILOGRAMOS", label: "Kilogramos" },
+                { value: "GRAMOS", label: "Gramos" }
+            ];
+        }
+        return [
+            { value: "LITROS", label: "Litros" },
+            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "GRAMOS", label: "Gramos" }
+        ];
+    }
+
+    if (tipoArticulo === "FERTILIZANTE") {
+        if (forma === "LIQUIDO") {
+            return [
+                { value: "LITROS", label: "Litros" },
+                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
+            ];
+        }
+        if (forma === "SOLIDO") {
+            return [
+                { value: "TONELADAS", label: "Toneladas" },
+                { value: "KILOGRAMOS", label: "Kilogramos" }
+            ];
+        }
+        return [
+            { value: "TONELADAS", label: "Toneladas" },
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "LITROS", label: "Litros" }
+        ];
+    }
+
+    if (tipoArticulo === "INSECTICIDA") {
+        if (forma === "SOLIDO") {
+            return [
+                { value: "KILOGRAMOS", label: "Kilogramos" },
+                { value: "GRAMOS", label: "Gramos" }
+            ];
+        }
+        if (forma === "LIQUIDO") {
+            return [
+                { value: "LITROS", label: "Litros" },
+                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
+            ];
+        }
+        return [
+            { value: "LITROS", label: "Litros" },
+            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "GRAMOS", label: "Gramos" }
+        ];
+    }
+
+    if (tipoArticulo === "INOCULANTE_CURASEMILLA") {
+        if (forma === "SOLIDO") {
+            return [
+                { value: "KILOGRAMOS", label: "Kilogramos" },
+                { value: "GRAMOS", label: "Gramos" }
+            ];
+        }
+        if (forma === "LIQUIDO") {
+            return [
+                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+                { value: "LITROS", label: "Litros" }
+            ];
+        }
+        return [
+            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+            { value: "LITROS", label: "Litros" },
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "GRAMOS", label: "Gramos" }
+        ];
+    }
+
+    if (tipoArticulo === "COMBUSTIBLE") {
+        return [
+            { value: "LITROS", label: "Litros" }
+        ];
+    }
+
+    return [
+        { value: "KILOGRAMOS", label: "Kilogramos" },
+        { value: "GRAMOS", label: "Gramos" },
+        { value: "LITROS", label: "Litros" },
+        { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+        { value: "TONELADAS", label: "Toneladas" }
+    ];
+};
+
 const getSemillaType = (tipoArticulo, subtipo = "", nombre = "") => {
     if (tipoArticulo !== "SEMILLA") return null;
     const sub = (subtipo || "").toLowerCase();
@@ -546,24 +710,41 @@ export default function InventarioPage() {
                             <form onSubmit={handleRegistrarInsumo} className="space-y-4">
                                 <div>
                                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Nombre del Artículo</label>
-                                    <input required type="text" value={formInsumo.nombre} onChange={e => setFormInsumo(p => ({ ...p, nombre: e.target.value }))}
+                                    <input required type="text" value={formInsumo.nombre} onChange={e => {
+                                         const nuevoNombre = e.target.value;
+                                         setFormInsumo(p => {
+                                             const disponibles = getUnidadesDisponibles(p.tipoArticulo, nuevoNombre, p.subtipo);
+                                             let nuevaUnidad = p.unidad;
+                                             if (disponibles.length > 0 && !disponibles.some(u => u.value === p.unidad)) {
+                                                 nuevaUnidad = disponibles[0].value;
+                                             }
+                                             return {
+                                                 ...p,
+                                                 nombre: nuevoNombre,
+                                                 unidad: nuevaUnidad
+                                             };
+                                         });
+                                     }}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] focus:bg-white outline-none transition-colors" placeholder="ej. Semilla de Maíz" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Tipo de Artículo</label>
                                         <select value={formInsumo.tipoArticulo} onChange={e => {
-                                            const tipo = e.target.value;
-                                            const isSemilla = tipo === "SEMILLA";
-                                            setFormInsumo(p => ({
-                                                ...p,
-                                                tipoArticulo: tipo,
-                                                subtipo: tipo === "OTRO" ? "" : "",
-                                                unidad: isSemilla ? "" : "",
-                                                pesoBolsaKg: isSemilla ? p.pesoBolsaKg : "",
-                                                semillaMode: isSemilla ? "" : ""
-                                            }));
-                                        }}
+                                             const tipo = e.target.value;
+                                             const isSemilla = tipo === "SEMILLA";
+                                             const disponibles = getUnidadesDisponibles(tipo, formInsumo.nombre, formInsumo.subtipo);
+                                             const defaultUnit = disponibles.length > 0 ? disponibles[0].value : "";
+
+                                             setFormInsumo(p => ({
+                                                 ...p,
+                                                 tipoArticulo: tipo,
+                                                 subtipo: tipo === "OTRO" ? "" : "",
+                                                 unidad: defaultUnit,
+                                                 pesoBolsaKg: isSemilla ? p.pesoBolsaKg : "",
+                                                 semillaMode: isSemilla ? "" : ""
+                                             }));
+                                         }}
                                             className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
                                             <option value="" disabled>-- Seleccionar --</option>
                                             {Object.entries(TIPO_LABELS).map(([key, label]) => (
@@ -702,9 +883,9 @@ export default function InventarioPage() {
                                                 const UNIDAD_DISPLAY = {
                                                     KILOGRAMOS: 'Kg',
                                                     GRAMOS: 'g',
-                                                    LITROS: 'L',
+                                                    LITROS: 'Lts',
                                                     TONELADAS: 'Tn',
-                                                    CENTIMETROS_CUBICOS: 'cm³',
+                                                    CENTIMETROS_CUBICOS: 'cc',
                                                     BOLSAS: 'Bolsas'
                                                 };
                                                 if (formInsumo.unidad && UNIDAD_DISPLAY[formInsumo.unidad]) {
@@ -790,24 +971,20 @@ export default function InventarioPage() {
                                                     )}
                                                     {/* Selector de unidad (solo si eligió Peso) */}
                                                     {formInsumo.semillaMode === "PESO" && (
-                                                        <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))}
-                                                            className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
+                                                        <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-[#2D6A4F] outline-none">
                                                             <option value="" disabled>-- Seleccionar unidad --</option>
-                                                            <option value="KILOGRAMOS">Kilogramos</option>
-                                                            <option value="GRAMOS">Gramos</option>
-                                                            <option value="TONELADAS">Toneladas</option>
+                                                            {(UNIDADES_POR_TIPO[formInsumo.tipoArticulo] || []).map(op => (
+                                                                <option key={op.value} value={op.value}>{op.label}</option>
+                                                            ))}
                                                         </select>
                                                     )}
                                                 </div>
                                             ) : (
-                                                <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))}
-                                                    className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
-                                                    <option value="" disabled>-- Seleccionar --</option>
-                                                    <option value="KILOGRAMOS">Kilogramos</option>
-                                                    <option value="GRAMOS">Gramos</option>
-                                                    <option value="LITROS">Litros</option>
-                                                    <option value="CENTIMETROS_CUBICOS">Centímetros Cúbicos</option>
-                                                    <option value="TONELADAS">Toneladas</option>
+                                                <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-[#2D6A4F] outline-none">
+                                                    <option value="" disabled>-- Seleccionar unidad --</option>
+                                                    {getUnidadesDisponibles(formInsumo.tipoArticulo, formInsumo.nombre, formInsumo.subtipo).map(op => (
+                                                        <option key={op.value} value={op.value}>{op.label}</option>
+                                                    ))}
                                                 </select>
                                             )}
                                         </>
