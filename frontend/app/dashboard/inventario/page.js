@@ -435,7 +435,11 @@ export default function InventarioPage() {
         "Insecticida": "INSECTICIDA",
         "Inoculantes / Curasemillas": "INOCULANTE_CURASEMILLA",
         "Inoculantes/Curasemillas": "INOCULANTE_CURASEMILLA",
-        "Inoc./Curasem.": "INOCULANTE_CURASEMILLA"
+        "Inoc./Curasem.": "INOCULANTE_CURASEMILLA",
+        "Combustibles": "COMBUSTIBLE",
+        "Combustible": "COMBUSTIBLE",
+        "Otros": "OTRO",
+        "Otro": "OTRO"
     };
 
     const displayInsumos = insumos.filter(i => {
@@ -454,7 +458,9 @@ export default function InventarioPage() {
                     (tipoEsperado === "SEMILLA" && (itemNombre.includes("semilla") || itemSubtipo.includes("semilla"))) ||
                     (tipoEsperado === "HERBICIDA" && (itemNombre.includes("herbicida") || itemNombre.includes("glifosato") || itemSubtipo.includes("herbicida"))) ||
                     (tipoEsperado === "INSECTICIDA" && (itemNombre.includes("insecticida") || itemSubtipo.includes("insecticida"))) ||
-                    (tipoEsperado === "INOCULANTE_CURASEMILLA" && (itemNombre.includes("inoculante") || itemNombre.includes("curasemilla") || itemSubtipo.includes("curasemilla")))
+                    (tipoEsperado === "INOCULANTE_CURASEMILLA" && (itemNombre.includes("inoculante") || itemNombre.includes("curasemilla") || itemSubtipo.includes("curasemilla"))) ||
+                    (tipoEsperado === "COMBUSTIBLE" && (itemNombre.includes("combustible") || itemNombre.includes("gasoil") || itemNombre.includes("nafta") || itemSubtipo.includes("combustible"))) ||
+                    (tipoEsperado === "OTRO" && (itemTipo === "OTRO" || itemTipo === "REPUESTO"))
                 );
 
                 if (!matchesEnum && !matchesKeyword) return false;
@@ -609,7 +615,7 @@ export default function InventarioPage() {
                         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
                             <div className="flex items-center justify-center p-4 border-b border-gray-100 dark:border-gray-800">
                                 <div className="flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl w-full sm:w-auto items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto">
-                                    {["Todos", "Fertilizantes", "Semillas", "Herbicidas", "Insecticidas", "Inoculantes / Curasemillas"].map((tab) => (
+                                    {["Todos", "Semillas", "Herbicidas", "Fertilizantes", "Insecticidas", "Inoculantes/Curasemillas", "Combustibles", "Otros"].map((tab) => (
                                         <button key={tab} type="button" onClick={() => setFiltroActivo(tab)}
                                             className={`shrink-0 px-2 sm:px-3 md:px-2.5 lg:px-4 py-2 rounded-lg text-[11px] sm:text-xs lg:text-sm font-bold transition-all min-h-9 ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                                             {tab}
