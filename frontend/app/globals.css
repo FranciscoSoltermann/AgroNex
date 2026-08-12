@@ -62,3 +62,59 @@ body {
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: rgba(75, 85, 99, 0.5);
 }
+
+/* ── Auth page: safe-area support for notch devices ── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ── Auth page: disable 3D card flip on mobile for scroll support ── */
+@media (max-width: 767px) {
+  .perspective-1000 {
+    perspective: none !important;
+  }
+  .preserve-3d {
+    transform-style: flat !important;
+    transform: none !important;
+  }
+  .is-flipped {
+    transform: none !important;
+  }
+  .card-face,
+  .card-face-back {
+    backface-visibility: visible !important;
+    position: relative !important;
+    transform: none !important;
+    inset: auto !important;
+  }
+}
+
+/* ── Password strength bar animation ── */
+.password-strength-bar {
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* ── Auth page: 3D flip effects for Desktop/Tablet (md >= 768px) ── */
+@media (min-width: 768px) {
+  .perspective-1000 {
+    perspective: 1200px;
+  }
+  .preserve-3d {
+    transform-style: preserve-3d;
+  }
+  .is-flipped {
+    transform: rotateY(180deg);
+  }
+  .card-face {
+    backface-visibility: hidden;
+  }
+  .card-face-back {
+    transform: rotateY(180deg);
+  }
+}
+
