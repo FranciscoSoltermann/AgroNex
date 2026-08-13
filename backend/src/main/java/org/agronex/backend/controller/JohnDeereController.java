@@ -104,42 +104,7 @@ public class JohnDeereController {
         return ResponseEntity.ok(Map.of("authorizationUrl", authUrl, "state", nonce));
     }
 
-    /**
-     * Callback de John Deere: recibe el authorization_code y lo intercambia por tokens.
-     * <p>
-     * SEGURIDAD (VUL-C01): el state es un nonce opaco gestionado por OAuthStateStore.
-     * El userId se resuelve desde el nonce, nunca desde el state directamente.
-     * Esto previene ataques CSRF donde un atacante podría vincular su code JD a otra cuenta.
-     */
-    @GetMapping("/auth/callback")
-    public ResponseEntity<Void> callback(
-            @RequestParam("code") String code,
-            @RequestParam(value = "state", required = false) String state
-    ) {
-        // VUL-C01: consumeNonce valida que el nonce exista, no haya expirado y lo elimina (one-use)
-        UUID userId = oAuthStateStore.consumeNonce(state);
-        if (userId == null) {
-            log.warn("Callback JD rechazado: nonce inválido o expirado. state_prefix={}",
-                    state != null && state.length() > 8 ? state.substring(0, 8) + "..." : "null");
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(frontendRedirect + "?jd_error=invalid_state"))
-                    .build();
-        }
 
-        try {
-            authService.exchangeCodeForTokens(code, redirectUri, userId);
-            log.info("Usuario {} conectado exitosamente con John Deere.", userId);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(frontendRedirect + "?jd_connected=true"))
-                    .build();
-        } catch (Exception e) {
-            // VUL-C02: mensaje interno NO se expone al cliente; se loguea internamente
-            log.error("Error intercambiando tokens JD para usuario {}: {}", userId, e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(frontendRedirect + "?jd_error=connection_failed"))
-                    .build();
-        }
-    }
 
     /**
      * Genera una URL de autorización segura con nonce embebido en el state.
