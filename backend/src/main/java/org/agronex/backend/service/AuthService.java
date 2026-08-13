@@ -27,6 +27,21 @@ public class AuthService {
     private final PersonaFisicaMapper fisicaMapper;
     private final PersonaJuridicaMapper juridicaMapper;
     private final AuditService auditService;
+    private final VerificationCodeService verificationCodeService;
+
+    public void solicitarCodigoRegistro(String email, String dni, String cuit) {
+        String emailNormalizado = normalizarEmail(email);
+        String dniNormalizado = normalizarNumerico(dni);
+        String cuitNormalizado = normalizarNumerico(cuit);
+
+        validarDisponibilidadRegistro(emailNormalizado, dniNormalizado, cuitNormalizado);
+        verificationCodeService.generarYEnviarCodigo(emailNormalizado);
+    }
+
+    public boolean validarCodigoRegistro(String email, String codigo) {
+        String emailNormalizado = normalizarEmail(email);
+        return verificationCodeService.verificarCodigo(emailNormalizado, codigo);
+    }
 
     @Transactional
     public PersonaFisicaResponse registrarPersonaFisica(PersonaFisicaRequest request, UUID supabaseUuid) {
@@ -95,18 +110,17 @@ public class AuthService {
         String emailNormalizado = normalizarEmail(email);
         String dniNormalizado = normalizarNumerico(dni);
         String cuitNormalizado = normalizarNumerico(cuit);
-        String mensajeDuplicado = "Algunos datos de registro ya están en uso.";
 
         if (emailNormalizado != null && usuarioRepository.existsByEmailIgnoreCase(emailNormalizado)) {
-            throw new IllegalArgumentException(mensajeDuplicado);
+            throw new IllegalArgumentException("El correo electrónico ya se encuentra registrado.");
         }
 
         if (dniNormalizado != null && fisicaRepository.existsByDni(dniNormalizado)) {
-            throw new IllegalArgumentException(mensajeDuplicado);
+            throw new IllegalArgumentException("El DNI ingresado ya se encuentra registrado.");
         }
 
         if (cuitNormalizado != null && juridicaRepository.existsByCuit(cuitNormalizado)) {
-            throw new IllegalArgumentException(mensajeDuplicado);
+            throw new IllegalArgumentException("El CUIT ingresado ya se encuentra registrado.");
         }
     }
 

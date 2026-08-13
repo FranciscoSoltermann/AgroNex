@@ -10,6 +10,10 @@ import org.agronex.backend.entity.PersonaJuridica;
 import org.agronex.backend.entity.Usuario;
 import org.agronex.backend.enums.RolUsuario;
 import org.agronex.backend.repository.CampoRepository;
+import org.agronex.backend.repository.JohnDeereTokenRepository;
+import org.agronex.backend.repository.NotificacionUsuarioRepository;
+import org.agronex.backend.repository.SuscripcionUsuarioRepository;
+import org.agronex.backend.repository.UsuarioConfiguracionRepository;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
@@ -29,6 +33,52 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final CampoRepository campoRepository;
+    private final NotificacionUsuarioRepository notificacionUsuarioRepository;
+    private final UsuarioConfiguracionRepository usuarioConfiguracionRepository;
+    private final JohnDeereTokenRepository johnDeereTokenRepository;
+    private final SuscripcionUsuarioRepository suscripcionUsuarioRepository;
+
+    /**
+     * Elimina permanentemente la cuenta del usuario y sus datos asociados.
+     */
+    @Transactional
+    public void eliminarCuenta(UUID idUsuario) {
+        Usuario usuario = usuarioRepository.findById(idUsuario)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+
+        // 1. Si es propietario, desvincular empleados asignados
+        List<Usuario> empleados = usuarioRepository.findByIdPropietario(idUsuario);
+        for (Usuario emp : empleados) {
+            emp.setIdPropietario(null);
+            emp.setRol(RolUsuario.PROPIETARIO);
+            emp.setRolOperativo(null);
+            if (emp.getPermisos() != null) {
+                emp.getPermisos().clear();
+            }
+            usuarioRepository.save(emp);
+        }
+
+        // 2. Eliminar campos y lotes asociados
+        List<Campo> campos = campoRepository.findByUsuarioIdUsuario(idUsuario);
+        campoRepository.deleteAll(campos);
+
+        // 3. Eliminar notificaciones
+        notificacionUsuarioRepository.deleteByUsuario_IdUsuario(idUsuario);
+
+        // 4. Eliminar configuración personalizada
+        usuarioConfiguracionRepository.findByUsuario_IdUsuario(idUsuario)
+                .ifPresent(usuarioConfiguracionRepository::delete);
+
+        // 5. Eliminar tokens de John Deere si existen
+        johnDeereTokenRepository.deleteByIdUsuario(idUsuario);
+
+        // 6. Eliminar suscripción si existe
+        suscripcionUsuarioRepository.deleteByUsuario_IdUsuario(idUsuario);
+
+        // 7. Eliminar usuario de la base de datos y forzar flush inmediato
+        usuarioRepository.delete(usuario);
+        usuarioRepository.flush();
+    }
 
     /**
      * Para listados y consultas de datos agrícolas: un empleado ve los datos del propietario vinculado.
