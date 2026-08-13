@@ -22,6 +22,7 @@ import {
     Link2,
     Unlink,
     Coins,
+    Trash2,
 } from "lucide-react";
 import { useCurrency, CURRENCY_CONFIG } from "@/lib/currency-context";
 
@@ -34,6 +35,10 @@ export default function SettingsPage() {
     const [draft, setDraft] = useState(null);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+
+    // ── Delete Account State ──
+    const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+    const [deletingAccount, setDeletingAccount] = useState(false);
 
     // ── MFA State ──
     const [mfaFactors, setMfaFactors] = useState([]);
@@ -247,6 +252,21 @@ export default function SettingsPage() {
         }
     };
 
+    const handleConfirmDeleteAccount = async () => {
+        setDeletingAccount(true);
+        setError(null);
+        try {
+            await apiClient.delete("/usuarios/me");
+            await supabase.auth.signOut();
+            window.location.href = "/login";
+        } catch (e) {
+            console.error("Error al eliminar cuenta:", e);
+            setError("No se pudo eliminar la cuenta: " + (e?.response?.data?.message || e?.message || "Error desconocido"));
+            setDeletingAccount(false);
+            setShowDeleteAccountModal(false);
+        }
+    };
+
     const initials = useMemo(() => {
         if (!draft?.nombreMostrar) return "US";
         return draft.nombreMostrar
@@ -393,10 +413,10 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between gap-3 mb-2">
                             <div className="flex items-center gap-2">
                                 <svg viewBox="0 0 24 24" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                                 </svg>
                                 <div>
                                     <p className="text-[14px] font-black text-gray-900 dark:text-gray-100">Google</p>
@@ -492,11 +512,10 @@ export default function SettingsPage() {
                                                             key={code}
                                                             type="button"
                                                             onClick={() => onField("currency", code)}
-                                                            className={`px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-wider transition-all ${
-                                                                activeCurrency === code
-                                                                    ? "bg-[#2D6A4F] text-white shadow-sm"
-                                                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                                                            }`}
+                                                            className={`px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-wider transition-all ${activeCurrency === code
+                                                                ? "bg-[#2D6A4F] text-white shadow-sm"
+                                                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                                                }`}
                                                         >
                                                             {code}
                                                         </button>
@@ -529,11 +548,10 @@ export default function SettingsPage() {
                                                             key={dt.id}
                                                             type="button"
                                                             onClick={() => onField("dolarType", dt.id)}
-                                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${
-                                                                isSelected
-                                                                    ? "bg-[#2D6A4F] text-white shadow-sm"
-                                                                    : "bg-gray-200/70 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-                                                            }`}
+                                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${isSelected
+                                                                ? "bg-[#2D6A4F] text-white shadow-sm"
+                                                                : "bg-gray-200/70 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                                                }`}
                                                         >
                                                             {dt.label}
                                                         </button>
@@ -551,19 +569,30 @@ export default function SettingsPage() {
 
             {/* ── Fila Inferior de Acciones ── */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-                {/* Izquierda: Dar de baja mi suscripción */}
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (window.confirm("¿Está seguro que desea dar de baja su suscripción? Esta acción suspenderá su acceso premium.")) {
-                            alert("Su solicitud de baja ha sido procesada. Se le enviará un correo con la confirmación de la baja del servicio.");
-                        }
-                    }}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60 px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide transition-colors"
-                >
-                    <AlertTriangle size={15} />
-                    Dar de baja mi suscripción
-                </button>
+                {/* Izquierda: Dar de baja mi suscripción + Eliminar mi cuenta */}
+                <div className="flex flex-col min-[480px]:flex-row items-center gap-2.5 w-full sm:w-auto">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (window.confirm("¿Está seguro que desea dar de baja su suscripción? Esta acción suspenderá su acceso premium.")) {
+                                alert("Su solicitud de baja ha sido procesada. Se le enviará un correo con la confirmación de la baja del servicio.");
+                            }
+                        }}
+                        className="w-full min-[480px]:w-auto inline-flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide transition-colors"
+                    >
+                        <AlertTriangle size={15} />
+                        Dar de baja mi suscripción
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowDeleteAccountModal(true)}
+                        className="w-full min-[480px]:w-auto inline-flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60 px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide transition-colors"
+                    >
+                        <Trash2 size={15} />
+                        Eliminar mi cuenta
+                    </button>
+                </div>
 
                 {/* Derecha: Guardar preferencias */}
                 <button
@@ -576,6 +605,47 @@ export default function SettingsPage() {
                     Guardar preferencias
                 </button>
             </div>
+
+            {/* ── Modal de Confirmación de Borrado de Cuenta ── */}
+            {showDeleteAccountModal && (
+                <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-red-200 dark:border-red-900/50 p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                                <Trash2 size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-gray-900 dark:text-gray-100">Eliminar cuenta permanentemente</h3>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+                            ¿Estás seguro de que deseas borrar de tu cuenta? Esta acción no se podra deshacer.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
+                            <button
+                                type="button"
+                                disabled={deletingAccount}
+                                onClick={() => setShowDeleteAccountModal(false)}
+                                className="w-full sm:w-auto flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
+                            >
+                                Cancelar
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={deletingAccount}
+                                onClick={handleConfirmDeleteAccount}
+                                className="w-full sm:w-auto flex-1 bg-red-600 text-white hover:bg-red-700 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-colors shadow-sm text-center flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {deletingAccount ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                Confirmar eliminación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── MFA Enrollment Modal ── */}
             {showEnrollModal && (

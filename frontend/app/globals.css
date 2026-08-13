@@ -99,22 +99,23 @@ body {
   transition: width 0.3s ease, background-color 0.3s ease;
 }
 
-/* ── Auth page: 3D flip effects for Desktop/Tablet (md >= 768px) ── */
-@media (min-width: 768px) {
-  .perspective-1000 {
-    perspective: 1200px;
-  }
-  .preserve-3d {
-    transform-style: preserve-3d;
-  }
-  .is-flipped {
-    transform: rotateY(180deg);
-  }
-  .card-face {
-    backface-visibility: hidden;
-  }
-  .card-face-back {
-    transform: rotateY(180deg);
-  }
+/* ── Auth page: 3D flip effects ── */
+.perspective-1000 {
+  perspective: 1200px;
+}
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+.is-flipped {
+  transform: rotateY(180deg);
+}
+.card-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-face-back {
+  transform: rotateY(180deg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 

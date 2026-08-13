@@ -8,5 +8,6 @@ import java.util.UUID;
 
 public interface SuscripcionUsuarioRepository extends JpaRepository<SuscripcionUsuario, UUID> {
     Optional<SuscripcionUsuario> findByPreapprovalId(String preapprovalId);
+    void deleteByUsuario_IdUsuario(UUID idUsuario);
 }
 

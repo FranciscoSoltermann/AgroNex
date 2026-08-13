@@ -39,6 +39,7 @@ export default function AuthPage() {
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [rememberMe, setRememberMe] = useState(false);
 
     // Si ya hay sesión activa, redirigir al dashboard (con timeout de seguridad para evitar spinner infinito)
     useEffect(() => {
@@ -56,8 +57,17 @@ export default function AuthPage() {
                     const session = result?.data?.session;
 
                     if (session?.access_token && isMounted) {
-                        router.replace("/dashboard");
-                        return;
+                        try {
+                            const regCheck = await apiClient.get("/usuarios/me/check");
+                            if (regCheck?.data?.registrado === true && isMounted) {
+                                router.replace("/dashboard");
+                                return;
+                            } else {
+                                await supabase.auth.signOut();
+                            }
+                        } catch (e) {
+                            console.warn("[AgroNex Auth] Excepción al verificar registro previo:", e);
+                        }
                     }
                 }
             } catch (err) {
@@ -252,7 +262,64 @@ export default function AuthPage() {
         }
     };
 
-    const handleAuth = async (e) => {
+    const handleLogin = async (e) => {
+        e.preventDefault();
+
+        const trimmedEmail = email.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+            setError("Ingresá un correo electrónico real y válido.");
+            return;
+        }
+        if (!password) {
+            setError("Ingresá tu contraseña.");
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+        try {
+            if (typeof window !== "undefined") {
+                localStorage.setItem("agronex_remember_me", rememberMe ? "true" : "false");
+            }
+            const { error: loginError } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password });
+            if (loginError) {
+                setError("Usuario o contraseña incorrectos.");
+                setLoading(false);
+                return;
+            }
+
+            // Verificar si el usuario realmente está registrado en la BD de AgroNex
+            try {
+                const regCheck = await apiClient.get("/usuarios/me/check");
+                if (regCheck?.data?.registrado !== true) {
+                    await supabase.auth.signOut();
+                    setError("Esta cuenta fue eliminada o no se encuentra registrada en AgroNex.");
+                    setLoading(false);
+                    return;
+                }
+            } catch (checkErr) {
+                console.warn("[AgroNex Login] Error al verificar registro:", checkErr);
+            }
+
+            // Check if MFA challenge is needed
+            const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            if (aalData?.nextLevel === "aal2" && aalData?.currentLevel !== "aal2") {
+                setShowMfaChallenge(true);
+                setLoading(false);
+                return;
+            }
+
+            router.push("/dashboard");
+        } catch (err) {
+            console.error("[AgroNex Login] Error:", err);
+            setError(resolveAuthError(err, "Usuario o contraseña incorrectos."));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRegister = async (e) => {
         e.preventDefault();
 
         const validationError = validateForm();
@@ -264,95 +331,15 @@ export default function AuthPage() {
         setLoading(true);
         setError(null);
         try {
-            if (isLogin) {
-                const { error: loginError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-                if (loginError) throw new Error("Usuario o contraseña incorrectos.");
+            const codigoPayload = tipoUsuario === "FISICA"
+                ? { email: email.trim(), dni: dni.trim() }
+                : { email: email.trim(), cuit: cuit.trim() };
 
-                // Check if MFA challenge is needed
-                const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-                if (aalData?.nextLevel === "aal2" && aalData?.currentLevel !== "aal2") {
-                    setShowMfaChallenge(true);
-                    setLoading(false);
-                    return;
-                }
+            console.log("[AgroNex Registro] Paso 1: Solicitando código de verificación por mail...");
+            await apiClient.post("/public/auth/registro/enviar-codigo", codigoPayload);
+            console.log("[AgroNex Registro] Código enviado exitosamente a:", email.trim());
 
-                router.push("/dashboard");
-            } else {
-                const disponibilidadPayload = tipoUsuario === "FISICA"
-                    ? { email: email.trim(), dni: dni.trim() }
-                    : { email: email.trim(), cuit: cuit.trim() };
-
-                console.log("[AgroNex Registro] Paso 1: Validando disponibilidad...");
-                await apiClient.post("/public/auth/registro/validar-disponibilidad", disponibilidadPayload);
-                console.log("[AgroNex Registro] Paso 1: OK");
-
-                console.log("[AgroNex Registro] Paso 2: Registrando en Supabase...");
-                const { data: authData, error: authError } = await supabase.auth.signUp({ email: email.trim(), password });
-                let session = authData?.session;
-                console.log("[AgroNex Registro] Paso 2: OK", { authError: authError?.message, hasSession: !!session });
-
-                if (authError) {
-                    if (!isUserAlreadyRegisteredError(authError)) {
-                        throw authError;
-                    }
-
-                    console.log("[AgroNex Registro] Paso 2b: Usuario ya existe, intentando login...");
-                    const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-                        email: email.trim(),
-                        password,
-                    });
-
-                    if (signInErr) {
-                        if (signInErr.message.includes("Email not confirmed")) {
-                            // Automatically resend OTP since they are trying to register again
-                            await supabase.auth.resend({
-                                type: 'signup',
-                                email: email.trim()
-                            });
-                            setShowOtpChallenge(true);
-                            setLoading(false);
-                            return;
-                        }
-                        throw new Error(
-                            "Ese correo ya existe en Supabase. Iniciá sesión con su contraseña original para completar el alta en AgroNex."
-                        );
-                    }
-                    session = signInData?.session;
-                    console.log("[AgroNex Registro] Paso 2b: Login OK");
-                } else if (authData?.user && !session) {
-                    setShowOtpChallenge(true);
-                    setLoading(false);
-                    return;
-                }
-
-                if (!session?.access_token) {
-                    throw new Error("No hay sesión para completar el registro. Intente iniciar sesión.");
-                }
-
-                console.log("[AgroNex Registro] Paso 3: Verificando estado de registro...");
-                const registroEstado = await apiClient.get("/usuarios/me/check");
-                console.log("[AgroNex Registro] Paso 3: OK", registroEstado?.data);
-                if (registroEstado?.data?.registrado === true) {
-                    router.push("/dashboard");
-                    return;
-                }
-
-                const url = tipoUsuario === "FISICA"
-                    ? `/public/auth/registro/fisica`
-                    : `/public/auth/registro/juridica`;
-
-                const payload = tipoUsuario === "FISICA"
-                    ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim(), rol: rolRegistro }
-                    : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim(), rol: rolRegistro };
-
-                console.log("[AgroNex Registro] Paso 4: Registrando en backend...");
-                await apiClient.post(url, payload, {
-                    headers: { Authorization: `Bearer ${session.access_token}` },
-                });
-                console.log("[AgroNex Registro] Paso 4: OK");
-
-                router.push("/dashboard");
-            }
+            setShowOtpChallenge(true);
         } catch (err) {
             console.error("[AgroNex Registro] ERROR:", err);
             if (err?.message === "Network Error" || err?.code === "ERR_NETWORK") {
@@ -371,15 +358,45 @@ export default function AuthPage() {
         setOtpVerifying(true);
         setOtpError("");
         try {
-            const { data, error: verifyError } = await supabase.auth.verifyOtp({
+            // 1. Validar el código enviado por email mediante el backend
+            console.log("[AgroNex OTP] Verificando código con el backend...");
+            await apiClient.post("/public/auth/registro/verificar-codigo", {
                 email: email.trim(),
-                token: otpCode,
-                type: 'signup'
+                codigo: otpCode.trim()
             });
 
-            if (verifyError) throw verifyError;
-            if (!data?.session) throw new Error("No se pudo iniciar sesión tras verificar.");
+            // 2. Registrar en Supabase
+            console.log("[AgroNex OTP] Código válido. Registrando usuario en Supabase...");
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: email.trim(),
+                password
+            });
 
+            let session = authData?.session;
+
+            if (authError) {
+                if (!isUserAlreadyRegisteredError(authError)) {
+                    throw authError;
+                }
+                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                    email: email.trim(),
+                    password,
+                });
+                if (signInErr) throw signInErr;
+                session = signInData?.session;
+            }
+
+            if (!session?.access_token) {
+                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                    email: email.trim(),
+                    password,
+                });
+                if (signInErr) throw new Error("No se pudo obtener sesión activa. Iniciá sesión con tus credenciales.");
+                session = signInData?.session;
+            }
+
+            // 3. Crear perfil de usuario en el backend AgroNex
+            console.log("[AgroNex OTP] Verificando si ya posee perfil registrado...");
             const registroEstado = await apiClient.get("/usuarios/me/check");
             if (registroEstado?.data?.registrado === true) {
                 router.push("/dashboard");
@@ -391,13 +408,15 @@ export default function AuthPage() {
                 ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim(), rol: rolRegistro }
                 : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim(), rol: rolRegistro };
 
+            console.log("[AgroNex OTP] Registrando datos de perfil...");
             await apiClient.post(url, payload, {
-                headers: { Authorization: `Bearer ${data.session.access_token}` },
+                headers: { Authorization: `Bearer ${session.access_token}` },
             });
 
             router.push("/dashboard");
         } catch (err) {
-            setOtpError(err?.message || "Código de verificación inválido.");
+            console.error("[AgroNex OTP] Error:", err);
+            setOtpError(resolveAuthError(err, "Código de verificación inválido o expirado."));
         } finally {
             setOtpVerifying(false);
         }
@@ -407,14 +426,13 @@ export default function AuthPage() {
         setOtpVerifying(true);
         setOtpError("");
         try {
-            const { error } = await supabase.auth.resend({
-                type: 'signup',
-                email: email.trim()
-            });
-            if (error) throw error;
-            setOtpError("✅ Nuevo código enviado. Revisá tu bandeja de entrada o Spam.");
+            const codigoPayload = tipoUsuario === "FISICA"
+                ? { email: email.trim(), dni: dni.trim() }
+                : { email: email.trim(), cuit: cuit.trim() };
+            await apiClient.post("/public/auth/registro/enviar-codigo", codigoPayload);
+            setOtpError("✅ Nuevo código enviado a tu correo electrónico. Revisá tu bandeja o Spam.");
         } catch (err) {
-            setOtpError(err?.message || "Error al reenviar el código. Intentá más tarde.");
+            setOtpError(resolveAuthError(err, "Error al reenviar el código. Intentá más tarde."));
         } finally {
             setOtpVerifying(false);
         }
@@ -515,13 +533,13 @@ export default function AuthPage() {
                     <div className="flex flex-col items-center mb-4 md:mb-6 z-20 mt-2 sm:mt-0">
                         <div className="flex bg-white/25 p-1.5 rounded-[999px] mb-4 md:mb-5 border border-white/50 backdrop-blur-md shadow-[0_8px_20px_rgba(0,0,0,0.16)]">
                             <button
-                                onClick={() => setIsLogin(true)}
+                                onClick={() => { setIsLogin(true); setError(null); }}
                                 className={`min-w-[120px] sm:min-w-[150px] lg:min-w-[170px] px-4 sm:px-6 lg:px-7 py-2.5 rounded-[999px] text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300 ${isLogin ? "bg-white text-[#2D6A4F] shadow-sm" : "text-white/90 hover:text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"}`}
                             >
                                 Iniciar Sesión
                             </button>
                             <button
-                                onClick={() => setIsLogin(false)}
+                                onClick={() => { setIsLogin(false); setError(null); }}
                                 className={`min-w-[120px] sm:min-w-[150px] lg:min-w-[170px] px-4 sm:px-6 lg:px-7 py-2.5 rounded-[999px] text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all duration-300 ${!isLogin ? "bg-white text-[#2D6A4F] shadow-sm" : "text-white/90 hover:text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]"}`}
                             >
                                 Registrarse
@@ -529,16 +547,16 @@ export default function AuthPage() {
                         </div>
                     </div>
 
-                    {/* ── Card container: 3D flip on desktop/tablet, show/hide on mobile ── */}
-                    <div className={`relative w-full max-w-[420px] md:min-h-[480px] lg:min-h-[520px] md:h-[660px] lg:h-[700px] xl:h-[720px] transition-all duration-1000 preserve-3d ${!isLogin ? "is-flipped" : ""}`}>
+                    {/* ── Card container: 3D flip ── */}
+                    <div className={`relative w-full max-w-[420px] md:min-h-[480px] lg:min-h-[520px] md:h-[660px] lg:h-[700px] xl:h-[720px] transition-transform duration-700 preserve-3d ${!isLogin ? "is-flipped" : ""}`}>
 
                         {/* ══════════════════ CARA FRONT: LOGIN ══════════════════ */}
-                        <div className={`card-face absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)] ${!isLogin ? "max-md:hidden" : ""}`}>
+                        <div className={`card-face absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)] transition-opacity duration-300 ${!isLogin ? "opacity-0 pointer-events-none" : "opacity-100 pointer-events-auto"}`}>
                             <div className="h-auto sm:h-24 flex flex-col items-center text-center justify-center gap-1.5 sm:gap-2 mb-6 sm:mb-8">
                                 <h2 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tighter uppercase italic">Bienvenido</h2>
                                 <p className="text-gray-700 text-sm font-medium italic">Accedé a tu ecosistema digital.</p>
                             </div>
-                            <form className="space-y-4" onSubmit={handleAuth}>
+                            <form className="space-y-4" onSubmit={handleLogin}>
                                 <div className="space-y-3">
                                     <div className="relative group/input">
                                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -569,6 +587,18 @@ export default function AuthPage() {
                                         </button>
                                     </div>
                                 </div>
+
+                                <label className="flex items-center gap-2 cursor-pointer pt-1 pl-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={rememberMe}
+                                        onChange={(e) => setRememberMe(e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-300 text-[#2D6A4F] focus:ring-[#2D6A4F] accent-[#2D6A4F] cursor-pointer"
+                                    />
+                                    <span className="text-xs font-bold text-gray-800">
+                                        Mantener sesión iniciada
+                                    </span>
+                                </label>
 
                                 {error && isLogin && !showMfaChallenge && !showOtpChallenge && (
                                     <div className="w-full bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3 text-center">
@@ -602,7 +632,7 @@ export default function AuthPage() {
                         </div>
 
                         {/* ══════════════════ CARA BACK: REGISTER ══════════════════ */}
-                        <div className={`card-face card-face-back absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)] overflow-y-auto md:overflow-hidden ${isLogin ? "max-md:hidden" : ""}`}>
+                        <div className={`card-face card-face-back absolute inset-0 bg-white/25 backdrop-blur-md border border-white/50 rounded-[2rem] sm:rounded-[2.5rem] p-5 sm:p-8 flex flex-col shadow-[0_25px_60px_rgba(0,0,0,0.12)] overflow-y-auto md:overflow-hidden transition-opacity duration-300 ${isLogin ? "opacity-0 pointer-events-none" : "opacity-100 pointer-events-auto"}`}>
                             <div className="h-auto sm:h-16 flex flex-col items-center text-center justify-center mb-2">
                                 <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter uppercase italic">Crear cuenta</h2>
                             </div>
@@ -619,7 +649,7 @@ export default function AuthPage() {
                                 <button type="button" onClick={() => setTipoUsuario("JURIDICA")} className={`flex-1 py-1.5 rounded-[10px] text-[10px] font-black uppercase transition-all ${tipoUsuario === "JURIDICA" ? "bg-white text-[#2D6A4F] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>Empresa</button>
                             </div>
 
-                            <form className="space-y-2.5 sm:space-y-3" onSubmit={handleAuth}>
+                            <form className="space-y-2.5 sm:space-y-3" onSubmit={handleRegister}>
                                 <div className="space-y-2 sm:space-y-2.5">
                                     {tipoUsuario === "FISICA" ? (
                                         <>
@@ -683,12 +713,6 @@ export default function AuthPage() {
                                             {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                         </button>
                                     </div>
-                                    {/* Confirm match indicator */}
-                                    {confirmPassword && (
-                                        <p className={`text-[10px] font-bold ${password === confirmPassword ? "text-green-600" : "text-red-500"}`}>
-                                            {password === confirmPassword ? "✓ Las contraseñas coinciden" : "✗ Las contraseñas no coinciden"}
-                                        </p>
-                                    )}
                                 </div>
 
                                 {/* Terms & Conditions checkbox */}

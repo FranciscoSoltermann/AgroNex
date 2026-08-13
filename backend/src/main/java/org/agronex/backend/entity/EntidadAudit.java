@@ -16,6 +16,7 @@ public enum EntidadAudit {
     NOTIFICACION,
     SUSCRIPCION,
     USUARIO,
+    INVITACION_EQUIPO,
     CONFIGURACION,
     SISTEMA
 }

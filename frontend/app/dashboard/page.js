@@ -127,10 +127,16 @@ export default function DashboardHome() {
 
     const actividades = actos;
     
-    // Inventario: 3 items con menor stock
+    // Inventario: solo insumos con bajo o crítico nivel de stock
     const allInsumos = queryData?.insumos || [];
     const lowStockItems = [...allInsumos]
-        .filter(i => i.cantidad != null)
+        .filter(i => {
+            if (i.cantidad == null) return false;
+            const qty = Number(i.cantidad || 0);
+            const ini = Number(i.cantidadInicial || 0);
+            const pct = ini > 0 ? (qty / ini) * 100 : (qty <= 0 ? 0 : 100);
+            return qty <= 0 || pct < 40 || (ini === 0 && qty <= 10);
+        })
         .sort((a, b) => Number(a.cantidad) - Number(b.cantidad))
         .slice(0, 3);
 
@@ -269,8 +275,8 @@ export default function DashboardHome() {
                     </div>
                     {lowStockItems.length === 0 ? (
                         <div className="flex-1 flex flex-col items-center justify-center text-gray-400 text-xs font-medium min-h-[120px]">
-                            <Package size={24} className="mb-2 text-gray-300" />
-                            No hay insumos registrados.
+                            <Package size={24} className="mb-2 text-emerald-500" />
+                            No hay alertas de inventario. Stock en niveles óptimos.
                         </div>
                     ) : (
                         <div className="space-y-3">
