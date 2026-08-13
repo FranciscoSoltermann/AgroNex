@@ -22,6 +22,7 @@ import {
     Link2,
     Unlink,
     Coins,
+    Trash2,
 } from "lucide-react";
 import { useCurrency, CURRENCY_CONFIG } from "@/lib/currency-context";
 
@@ -29,11 +30,15 @@ const CARD_CLASS = "bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-10
 const INPUT_CLASS = "w-full bg-gray-50 dark:bg-[#0f1419] dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:bg-white dark:focus:bg-[#1a1f25] transition-colors";
 
 export default function SettingsPage() {
-    const { currency, setCurrency, exchangeRate, rateLoading, rateError, fechaActualizacion } = useCurrency();
+    const { currency, setCurrency, dolarType, setDolarType, dolarTypes, rates, exchangeRate, rateLoading, rateError, fechaActualizacion } = useCurrency();
     const queryClient = useQueryClient();
     const [draft, setDraft] = useState(null);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
+
+    // ── Delete Account State ──
+    const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+    const [deletingAccount, setDeletingAccount] = useState(false);
 
     // ── MFA State ──
     const [mfaFactors, setMfaFactors] = useState([]);
@@ -46,6 +51,10 @@ export default function SettingsPage() {
     const [identitiesLoading, setIdentitiesLoading] = useState(true);
     const [linkingGoogle, setLinkingGoogle] = useState(false);
 
+    // ── Navigation Interception State ──
+    const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+    const [pendingHref, setPendingHref] = useState(null);
+
     const { data: settings, isLoading: loading } = useQuery({
         queryKey: ['settings'],
         queryFn: async () => {
@@ -54,12 +63,12 @@ export default function SettingsPage() {
         }
     });
 
-    // Sync draft with settings when settings change
+    // Sync draft with settings when settings load initially or after explicit save
     useEffect(() => {
         if (settings) {
-            setDraft(settings);
+            setDraft((prev) => (prev ? prev : { ...settings, currency, dolarType }));
         }
-    }, [settings]);
+    }, [settings, currency, dolarType]);
 
     const mutationSave = useMutation({
         mutationFn: async (payload) => {
@@ -67,6 +76,8 @@ export default function SettingsPage() {
             return data;
         },
         onSuccess: (data) => {
+            setDraft({ ...data, currency: draft?.currency || currency, dolarType: draft?.dolarType || dolarType });
+            queryClient.setQueryData(['settings'], data);
             queryClient.invalidateQueries({ queryKey: ['settings'] });
             setSuccess("Configuración guardada correctamente.");
             setTimeout(() => setSuccess(null), 3000);
@@ -113,8 +124,41 @@ export default function SettingsPage() {
 
     const dirty = useMemo(() => {
         if (!settings || !draft) return false;
-        return JSON.stringify(settings) !== JSON.stringify(draft);
-    }, [settings, draft]);
+        const currentSaved = { ...settings, currency, dolarType };
+        return JSON.stringify(currentSaved) !== JSON.stringify(draft);
+    }, [settings, draft, currency, dolarType]);
+
+    // Intercept navigation when there are unsaved changes
+    useEffect(() => {
+        if (!dirty) return;
+
+        const handleBeforeUnload = (e) => {
+            e.preventDefault();
+            e.returnValue = "";
+        };
+
+        const handleAnchorClick = (e) => {
+            const anchor = e.target.closest("a");
+            if (!anchor) return;
+            const href = anchor.getAttribute("href");
+            if (!href) return;
+
+            if (href.startsWith("#") || href === window.location.pathname) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            setPendingHref(href);
+            setShowUnsavedModal(true);
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        document.addEventListener("click", handleAnchorClick, true);
+
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+            document.removeEventListener("click", handleAnchorClick, true);
+        };
+    }, [dirty]);
 
     const onToggle = (key) => {
         setDraft((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -127,6 +171,14 @@ export default function SettingsPage() {
     const handleGuardar = async () => {
         if (!draft) return;
         setError(null);
+
+        if (draft.currency && draft.currency !== currency) {
+            setCurrency(draft.currency);
+        }
+        if (draft.dolarType && draft.dolarType !== dolarType) {
+            setDolarType(draft.dolarType);
+        }
+
         const payload = {
             nombre: draft.nombre,
             apellido: draft.apellido,
@@ -143,7 +195,7 @@ export default function SettingsPage() {
 
     const handleDescartar = () => {
         if (!settings) return;
-        setDraft(settings);
+        setDraft({ ...settings, currency, dolarType });
         setSuccess(null);
         setError(null);
     };
@@ -197,6 +249,21 @@ export default function SettingsPage() {
             await fetchIdentities();
         } catch (e) {
             setError("No se pudo desvincular: " + (e?.message || "Necesitás al menos un método de inicio de sesión."));
+        }
+    };
+
+    const handleConfirmDeleteAccount = async () => {
+        setDeletingAccount(true);
+        setError(null);
+        try {
+            await apiClient.delete("/usuarios/me");
+            await supabase.auth.signOut();
+            window.location.href = "/login";
+        } catch (e) {
+            console.error("Error al eliminar cuenta:", e);
+            setError("No se pudo eliminar la cuenta: " + (e?.response?.data?.message || e?.message || "Error desconocido"));
+            setDeletingAccount(false);
+            setShowDeleteAccountModal(false);
         }
     };
 
@@ -346,10 +413,10 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between gap-3 mb-2">
                             <div className="flex items-center gap-2">
                                 <svg viewBox="0 0 24 24" className="w-4 h-4" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                                 </svg>
                                 <div>
                                     <p className="text-[14px] font-black text-gray-900 dark:text-gray-100">Google</p>
@@ -402,101 +469,108 @@ export default function SettingsPage() {
                 </section>
             </div>
 
-            {/* ── Alertas ── */}
-            <section className={`${CARD_CLASS} p-6`}>
-                <h3 className="text-[18px] font-black text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-4">
-                    <Bell size={18} className="text-[#a16207]" />
-                    Alertas y Notificaciones
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                    <ToggleRow title="Cambio climático inminente" subtitle="Detectar eventos climáticos críticos" enabled={!!draft.cambioClimaticoHabilitado} onChange={() => onToggle("cambioClimaticoHabilitado")} />
-                    <ToggleRow title="Stock de insumos" subtitle="Avisar cuando cruza umbral crítico" enabled={!!draft.stockInsumosHabilitado} onChange={() => onToggle("stockInsumosHabilitado")} />
-                    <ToggleRow title="Pronóstico del tiempo" subtitle="Resumen diario de condiciones" enabled={!!draft.pronosticoTiempoHabilitado} onChange={() => onToggle("pronosticoTiempoHabilitado")} />
-                    <ToggleRow title="Alertas de riego" subtitle="Recordatorios preventivos de humedad" enabled={!!draft.alertaRiegoHabilitada} onChange={() => onToggle("alertaRiegoHabilitada")} />
-                </div>
-            </section>
-
-            {/* ── Preferencias ── */}
-            <section className={`${CARD_CLASS} p-6`}>
-                <h3 className="text-[18px] font-black text-gray-900 dark:text-gray-100 flex items-center gap-2 mb-4">
+            {/* ── APARTADO ÚNICO: PREFERENCIAS (Alertas + Moneda) ── */}
+            <section className={`${CARD_CLASS} p-6 sm:p-7 flex flex-col justify-between space-y-4`}>
+                <h3 className="text-[17px] font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
                     <Coins size={18} className="text-[#2D6A4F]" />
                     Preferencias
                 </h3>
 
-                <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-[14px] font-black text-gray-900 dark:text-gray-100">Moneda</p>
-                            <p className="text-[12px] text-gray-500 font-medium">Moneda utilizada en todo el sistema para mostrar importes</p>
-                        </div>
-                        <div className="flex bg-gray-200 dark:bg-gray-700 rounded-xl p-1 gap-0.5">
-                            {Object.entries(CURRENCY_CONFIG).map(([code, cfg]) => (
-                                <button
-                                    key={code}
-                                    type="button"
-                                    onClick={() => setCurrency(code)}
-                                    className={`px-4 py-2 rounded-lg text-[12px] font-black uppercase tracking-wide transition-all ${
-                                        currency === code
-                                            ? "bg-[#2D6A4F] text-white shadow-md"
-                                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
-                                    }`}
-                                >
-                                    {code}
-                                </button>
-                            ))}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+                    {/* Alertas y Notificaciones (2x2 grid) */}
+                    <div className="lg:col-span-2 space-y-2.5 flex flex-col justify-between">
+                        <p className="text-[12px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                            Alertas y Notificaciones
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+                            <ToggleRow title="Cambio climático inminente" subtitle="Eventos climáticos críticos" enabled={!!draft.cambioClimaticoHabilitado} onChange={() => onToggle("cambioClimaticoHabilitado")} />
+                            <ToggleRow title="Stock de insumos" subtitle="Avisar en umbral crítico" enabled={!!draft.stockInsumosHabilitado} onChange={() => onToggle("stockInsumosHabilitado")} />
+                            <ToggleRow title="Pronóstico del tiempo" subtitle="Resumen diario de clima" enabled={!!draft.pronosticoTiempoHabilitado} onChange={() => onToggle("pronosticoTiempoHabilitado")} />
+                            <ToggleRow title="Alertas de riego" subtitle="Recordatorios de humedad" enabled={!!draft.alertaRiegoHabilitada} onChange={() => onToggle("alertaRiegoHabilitada")} />
                         </div>
                     </div>
-                    <p className="text-[10px] text-gray-400 mt-2">
-                        {currency === "ARS" ? "Peso Argentino ($)" : "Dólar Estadounidense (US$)"} — se aplica a finanzas, inventario, campañas y todo apartado monetario.
-                    </p>
-                    {/* Cotización del dólar blue */}
-                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                        {rateLoading ? (
-                            <div className="flex items-center gap-2 text-[11px] text-gray-400">
-                                <Loader2 size={12} className="animate-spin" />
-                                Obteniendo cotización del dólar blue…
-                            </div>
-                        ) : rateError ? (
-                            <div className="flex items-center gap-2 text-[11px] text-orange-500">
-                                <AlertTriangle size={12} />
-                                No se pudo obtener la cotización. Los valores en USD podrían no estar disponibles.
-                            </div>
-                        ) : exchangeRate ? (
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[11px] font-bold border border-blue-100 dark:border-blue-800">
-                                        Dólar Blue
-                                    </span>
-                                    <span className="text-[12px] font-black text-gray-900 dark:text-gray-100">
-                                        ${exchangeRate.toLocaleString("es-AR", { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                                {fechaActualizacion && (
-                                    <span className="text-[10px] text-gray-400">
-                                        Actualizado: {new Date(fechaActualizacion).toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "short" })}
-                                    </span>
-                                )}
-                            </div>
-                        ) : null}
+
+                    {/* Moneda */}
+                    <div className="lg:col-span-1 space-y-2.5 flex flex-col justify-between">
+                        <p className="text-[12px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                            Moneda
+                        </p>
+                        <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700/60 p-3.5 flex-1 flex flex-col justify-between gap-3">
+                            {(() => {
+                                const activeCurrency = draft?.currency ?? currency;
+                                const activeDolarType = draft?.dolarType ?? dolarType;
+                                const activeRate = (rates && rates[activeDolarType]) || (activeDolarType === dolarType ? exchangeRate : null);
+
+                                return (
+                                    <>
+                                        <div>
+                                            <div className="flex items-center justify-between gap-2 mb-2">
+                                                <span className="text-[13px] font-bold text-gray-900 dark:text-gray-100">Visualización</span>
+                                                <div className="flex bg-gray-200 dark:bg-gray-700/80 rounded-lg p-0.5 gap-0.5">
+                                                    {Object.entries(CURRENCY_CONFIG).map(([code]) => (
+                                                        <button
+                                                            key={code}
+                                                            type="button"
+                                                            onClick={() => onField("currency", code)}
+                                                            className={`px-3 py-1 rounded-md text-[11px] font-black uppercase tracking-wider transition-all ${activeCurrency === code
+                                                                ? "bg-[#2D6A4F] text-white shadow-sm"
+                                                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                                                }`}
+                                                        >
+                                                            {code}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs py-1">
+                                                <span className="text-gray-500 dark:text-gray-400 font-semibold">Cotización:</span>
+                                                <span className="font-black text-gray-900 dark:text-gray-100 text-sm">
+                                                    {rateLoading ? (
+                                                        <span className="text-[11px] text-gray-400 flex items-center gap-1 font-normal">
+                                                            <Loader2 size={12} className="animate-spin" /> Obteniendo…
+                                                        </span>
+                                                    ) : activeRate ? (
+                                                        `$${activeRate.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                    ) : (
+                                                        "—"
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Botones de selección de tipo de dólar */}
+                                        <div className="pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                {(dolarTypes || []).map((dt) => {
+                                                    const isSelected = activeDolarType === dt.id;
+                                                    return (
+                                                        <button
+                                                            key={dt.id}
+                                                            type="button"
+                                                            onClick={() => onField("dolarType", dt.id)}
+                                                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all ${isSelected
+                                                                ? "bg-[#2D6A4F] text-white shadow-sm"
+                                                                : "bg-gray-200/70 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+                                                                }`}
+                                                        >
+                                                            {dt.label}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </>
+                                );
+                            })()}
+                        </div>
                     </div>
                 </div>
             </section>
-            {/* ── Zona de Peligro (Baja del Servicio) ── */}
-            <section className={`${CARD_CLASS} overflow-hidden border-red-100 dark:border-red-900/30 mb-8 mt-12`}>
-                <div className="border-b border-gray-100 dark:border-gray-800 bg-red-50/50 dark:bg-red-900/10 px-6 py-4 flex items-center gap-3">
-                    <div className="bg-red-100 dark:bg-red-900/30 p-2 rounded-lg text-red-600 dark:text-red-400">
-                        <AlertTriangle size={18} />
-                    </div>
-                    <h2 className="text-[13px] font-black uppercase tracking-widest text-red-900 dark:text-red-400">
-                        Zona de Peligro (Baja del Servicio)
-                    </h2>
-                </div>
-                <div className="p-6">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                        De acuerdo con la Resolución 316/2018 de la Secretaría de Comercio de la República Argentina, usted puede solicitar la baja de su suscripción en cualquier momento. Al hacer clic en el botón, su suscripción se cancelará para el próximo ciclo de facturación y no se le realizarán más cobros.
-                    </p>
+
+            {/* ── Fila Inferior de Acciones ── */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+                {/* Izquierda: Dar de baja mi suscripción + Eliminar mi cuenta */}
+                <div className="flex flex-col min-[480px]:flex-row items-center gap-2.5 w-full sm:w-auto">
                     <button
                         type="button"
                         onClick={() => {
@@ -504,34 +578,74 @@ export default function SettingsPage() {
                                 alert("Su solicitud de baja ha sido procesada. Se le enviará un correo con la confirmación de la baja del servicio.");
                             }
                         }}
-                        className="inline-flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide transition-colors"
+                        className="w-full min-[480px]:w-auto inline-flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/20 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide transition-colors"
                     >
-                        <AlertTriangle size={14} /> Dar de Baja mi Suscripción
+                        <AlertTriangle size={15} />
+                        Dar de baja mi suscripción
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowDeleteAccountModal(true)}
+                        className="w-full min-[480px]:w-auto inline-flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60 px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide transition-colors"
+                    >
+                        <Trash2 size={15} />
+                        Eliminar mi cuenta
                     </button>
                 </div>
-            </section>
 
-            {/* ── Botones guardar/descartar ── */}
-            <div className="flex flex-col sm:flex-row items-center justify-end gap-3">
-                <button
-                    type="button"
-                    onClick={handleDescartar}
-                    disabled={!dirty || saving}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white dark:bg-[#1a1f25] border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide disabled:opacity-40"
-                >
-                    <RefreshCcw size={14} />
-                    Descartar cambios
-                </button>
+                {/* Derecha: Guardar preferencias */}
                 <button
                     type="button"
                     onClick={handleGuardar}
                     disabled={!dirty || saving}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2D6A4F] text-white px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide disabled:opacity-60"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2D6A4F] text-white px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wide disabled:opacity-60 shadow-md hover:bg-[#1B4332] transition-colors"
                 >
                     {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                     Guardar preferencias
                 </button>
             </div>
+
+            {/* ── Modal de Confirmación de Borrado de Cuenta ── */}
+            {showDeleteAccountModal && (
+                <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-red-200 dark:border-red-900/50 p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                                <Trash2 size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-gray-900 dark:text-gray-100">Eliminar cuenta permanentemente</h3>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+                            ¿Estás seguro de que deseas borrar de tu cuenta? Esta acción no se podra deshacer.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
+                            <button
+                                type="button"
+                                disabled={deletingAccount}
+                                onClick={() => setShowDeleteAccountModal(false)}
+                                className="w-full sm:w-auto flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
+                            >
+                                Cancelar
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={deletingAccount}
+                                onClick={handleConfirmDeleteAccount}
+                                className="w-full sm:w-auto flex-1 bg-red-600 text-white hover:bg-red-700 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-colors shadow-sm text-center flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {deletingAccount ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                Confirmar eliminación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── MFA Enrollment Modal ── */}
             {showEnrollModal && (
@@ -568,6 +682,64 @@ export default function SettingsPage() {
                                 className="flex-1 bg-red-600 text-white py-2.5 rounded-xl text-[12px] font-bold hover:bg-red-700 transition-colors"
                             >
                                 Confirmar desactivación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Modal de Cambios sin guardar al navegar ── */}
+            {showUnsavedModal && (
+                <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-200 dark:border-gray-700 p-6 w-full max-w-md shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                                <AlertTriangle size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-black text-gray-900 dark:text-gray-100">Cambios sin guardar</h3>
+                                <p className="text-xs text-gray-500 font-medium">Preferencias modificadas</p>
+                            </div>
+                        </div>
+
+                        <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold leading-relaxed">
+                            Hay cambios realizados que no se guardaron, ¿qué deseas hacer?
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    handleDescartar();
+                                    setShowUnsavedModal(false);
+                                    if (pendingHref) router.push(pendingHref);
+                                }}
+                                className="w-full sm:w-auto flex-1 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
+                            >
+                                Descartar
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setShowUnsavedModal(false);
+                                    await handleGuardar();
+                                    if (pendingHref) router.push(pendingHref);
+                                }}
+                                className="w-full sm:w-auto flex-1 bg-[#2D6A4F] text-white hover:bg-[#1B4332] px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-sm text-center"
+                            >
+                                Guardar
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowUnsavedModal(false);
+                                    setPendingHref(null);
+                                }}
+                                className="w-full sm:w-auto flex-1 border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
+                            >
+                                Cancelar y seguir editando
                             </button>
                         </div>
                     </div>
@@ -754,20 +926,20 @@ function FormField({ label, children }) {
 
 function ToggleRow({ title, subtitle, enabled, onChange }) {
     return (
-        <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between gap-3">
-            <div>
-                <p className="text-[14px] font-black text-gray-900 dark:text-gray-100">{title}</p>
-                <p className="text-[12px] text-gray-500 font-medium">{subtitle}</p>
+        <div className="bg-gray-50 dark:bg-[#151a20] rounded-xl border border-gray-200 dark:border-gray-700/60 px-3 py-2 flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+                <p className="text-[12px] font-bold text-gray-900 dark:text-gray-100 truncate">{title}</p>
+                <p className="text-[10px] text-gray-500 font-medium truncate">{subtitle}</p>
             </div>
             <button
                 type="button"
                 onClick={onChange}
-                className={`relative w-12 h-7 rounded-full transition-colors ${enabled ? "bg-[#2D6A4F]" : "bg-gray-300 dark:bg-gray-600"}`}
+                className={`relative w-10 h-6 rounded-full transition-colors shrink-0 ${enabled ? "bg-[#2D6A4F]" : "bg-gray-300 dark:bg-gray-600"}`}
                 aria-pressed={enabled}
                 aria-label={title}
             >
                 <span
-                    className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${enabled ? "translate-x-5" : "translate-x-0"}`}
+                    className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${enabled ? "translate-x-4" : "translate-x-0"}`}
                 />
             </button>
         </div>

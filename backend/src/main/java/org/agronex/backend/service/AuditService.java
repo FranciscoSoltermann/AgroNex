@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.entity.AccionAudit;
 import org.agronex.backend.entity.AuditLog;
 import org.agronex.backend.entity.EntidadAudit;
+import org.agronex.backend.entity.Usuario;
 import org.agronex.backend.repository.AuditLogRepository;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -60,16 +61,21 @@ public class AuditService {
     ) {
         try {
             UUID resolvedIdPropietario = idUsuario;
+            String resolvedEmailUsuario = emailUsuario;
+
             if (idUsuario != null) {
-                resolvedIdPropietario = usuarioRepository.findById(idUsuario)
-                        .map(u -> u.getIdPropietario() != null ? u.getIdPropietario() : u.getIdUsuario())
-                        .orElse(idUsuario);
+                var usuarioOpt = usuarioRepository.findById(idUsuario);
+                if (usuarioOpt.isPresent()) {
+                    Usuario u = usuarioOpt.get();
+                    resolvedIdPropietario = (u.getIdPropietario() != null) ? u.getIdPropietario() : u.getIdUsuario();
+                    resolvedEmailUsuario = u.getEmail();
+                }
             }
 
             AuditLog logEntity = AuditLog.builder()
                     .idUsuario(idUsuario)
                     .idPropietario(resolvedIdPropietario)
-                    .emailUsuario(emailUsuario)
+                    .emailUsuario(resolvedEmailUsuario)
                     .entidad(entidad)
                     .idEntidad(idEntidad)
                     .nombreEntidad(nombreEntidad)

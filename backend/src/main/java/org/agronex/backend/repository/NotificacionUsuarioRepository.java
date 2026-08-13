@@ -19,5 +19,9 @@ public interface NotificacionUsuarioRepository extends JpaRepository<Notificacio
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("update NotificacionUsuario n set n.leida = true where n.usuario.idUsuario = :idUsuario and n.leida = false")
     int marcarTodasComoLeidas(@Param("idUsuario") UUID idUsuario);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from NotificacionUsuario n where n.usuario.idUsuario = :idUsuario")
+    void deleteByUsuario_IdUsuario(@Param("idUsuario") UUID idUsuario);
 }
 

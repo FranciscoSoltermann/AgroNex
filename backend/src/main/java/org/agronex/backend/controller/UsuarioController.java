@@ -57,6 +57,18 @@ public class UsuarioController {
         return ResponseEntity.ok(Map.of("registrado", exists));
     }
 
+    @Operation(summary = "Eliminar mi cuenta", description = "Elimina permanentemente la cuenta y todos los datos del usuario en la base de datos.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "204", description = "Cuenta y correo eliminados exitosamente"),
+        @ApiResponse(responseCode = "401", description = "No autenticado")
+    })
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> eliminarMiCuenta(@AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        usuarioService.eliminarCuenta(idUsuario);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Obtener configuración", description = "Devuelve la configuración personalizada del usuario.")
     @GetMapping("/settings")
     public ResponseEntity<UsuarioSettingsResponse> obtenerSettings(@AuthenticationPrincipal Jwt jwt) {

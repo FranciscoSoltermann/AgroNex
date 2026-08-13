@@ -54,6 +54,30 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Disponibilidad validada."));
     }
 
+    /** Envía un código de verificación por correo tras comprobar la disponibilidad de los datos */
+    @Operation(summary = "Enviar Código de Verificación", description = "Valida disponibilidad y envía un código de 6 dígitos al correo electrónico proporcionado.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Código enviado con éxito"),
+        @ApiResponse(responseCode = "400", description = "Email, DNI o CUIT ya registrados o correo inválido")
+    })
+    @PostMapping("/registro/enviar-codigo")
+    public ResponseEntity<Map<String, String>> enviarCodigoRegistro(@RequestBody Map<String, String> body) {
+        authService.solicitarCodigoRegistro(body.get("email"), body.get("dni"), body.get("cuit"));
+        return ResponseEntity.ok(Map.of("message", "Código de verificación enviado al correo electrónico."));
+    }
+
+    /** Verifica el código ingresado por el usuario */
+    @Operation(summary = "Verificar Código de Registro", description = "Valida que el código ingresado por el usuario coincida con el enviado por email.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Código válido"),
+        @ApiResponse(responseCode = "400", description = "Código incorrecto o expirado")
+    })
+    @PostMapping("/registro/verificar-codigo")
+    public ResponseEntity<Map<String, Object>> verificarCodigoRegistro(@RequestBody Map<String, String> body) {
+        boolean valido = authService.validarCodigoRegistro(body.get("email"), body.get("codigo"));
+        return ResponseEntity.ok(Map.of("message", "Código verificado exitosamente.", "valid", valido));
+    }
+
     /**
      * Registro de Persona Física.
      * El supabaseId es extraído del JWT — no se acepta del path.

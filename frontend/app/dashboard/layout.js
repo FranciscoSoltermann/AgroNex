@@ -13,12 +13,13 @@ import { useState, useEffect } from "react";
 import { useTheme } from "@/app/components/ThemeProvider";
 import { toast } from "sonner";
 import NotificationBell from "@/components/shared/notifications/NotificationBell";
+import InvitacionesBanner from "@/components/shared/InvitacionesBanner";
 import { CurrencyProvider, useCurrency, CURRENCY_CONFIG } from "@/lib/currency-context";
 
 function CurrencySelector() {
     const { currency, setCurrency } = useCurrency();
     return (
-        <div className="flex bg-gray-100 dark:bg-gray-800/80 rounded-xl p-0.5 border border-gray-200/50 dark:border-gray-750/30 mr-1 sm:mr-2">
+        <div className="flex bg-gray-100 dark:bg-gray-800/80 rounded-xl p-0.5 border border-gray-200/50 dark:border-gray-750/30">
             {Object.keys(CURRENCY_CONFIG).map((code) => {
                 const isActive = currency === code;
                 return (
@@ -300,9 +301,8 @@ export default function DashboardLayout({ children }) {
                         )}
                     </div>
 
-                    {/* Derecha: Notificaciones + Bienvenido */}
+                    {/* Derecha: Tema + Notificaciones + Cambiador de moneda */}
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                        <CurrencySelector />
                         <button
                             type="button"
                             onClick={toggleTheme}
@@ -313,15 +313,14 @@ export default function DashboardLayout({ children }) {
                             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                         </button>
                         <NotificationBell />
-                        <p className="hidden md:block text-sm font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[140px] lg:max-w-[200px]">
-                            Hola, {userName}
-                        </p>
+                        <CurrencySelector />
                     </div>
                 </header>
 
                 {/* Página: scroll + ancho máximo en pantallas muy anchas */}
                 <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain dark:bg-[#0f1419] pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:pt-2 sm:pb-2 lg:px-8 xl:px-10">
                     <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto min-h-0 h-full">
+                        <InvitacionesBanner />
                         {children}
                     </div>
                 </main>

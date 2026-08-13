@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import {
@@ -43,6 +43,170 @@ const TIPO_ICONS = {
     OTRO: Box
 };
 
+const detectFormaFisica = (nombre = "") => {
+    const nom = (nombre || "").toLowerCase().trim();
+    if (!nom) return "AMBAS";
+
+    const solidKeywords = [
+        "granulado", "granulos", "gránulos", "polvo", "seco", "solido", "sólido",
+        "wg", "sg", "wdg", "df", "sp", "tab", "wp", "ws", "gr ", " 90%", " 80%", " 70%", "70 dg",
+        "turba", "cristales", "perlado"
+    ];
+
+    const liquidKeywords = [
+        "liquido", "líquido", "líquida", "liquida", "solucion", "solución",
+        "ec", "sl", "sc", "cs", "ew", "me", "fs", "uan", "sachet", "vejiga", "fertirriego"
+    ];
+
+    const hasSolidWord = solidKeywords.some(k => {
+        const regex = new RegExp(`\\b${k.trim()}\\b`, "i");
+        return regex.test(nom) || nom.includes(k);
+    });
+
+    const hasLiquidWord = liquidKeywords.some(k => {
+        const regex = new RegExp(`\\b${k.trim()}\\b`, "i");
+        return regex.test(nom) || nom.includes(k);
+    });
+
+    if (hasSolidWord && !hasLiquidWord) return "SOLIDO";
+    if (hasLiquidWord && !hasSolidWord) return "LIQUIDO";
+
+    return "AMBAS";
+};
+
+const getUnidadesDisponibles = (tipoArticulo, nombre = "", subtipo = "") => {
+    const text = `${nombre || ""} ${subtipo || ""}`;
+    const nom = text.toLowerCase().trim();
+    const forma = detectFormaFisica(text);
+
+    // Strictly SOLID products:
+    const isStrictlySolid = nom.includes("metsulfuron") || nom.includes("metsulfurón") ||
+        nom.includes("dap") || nom.includes("fosfato diamonico") || nom.includes("fosfato diamónico") ||
+        nom.includes("kcl") || nom.includes("cloruro de potasio");
+
+    // Strictly LIQUID products:
+    const isStrictlyLiquid = nom.includes("paraquat") ||
+        nom.includes("cletodim") || nom.includes("clethodim") ||
+        nom.includes("engeo");
+
+    if (isStrictlySolid) {
+        if (tipoArticulo === "FERTILIZANTE") {
+            return [
+                { value: "TONELADAS", label: "Toneladas" },
+                { value: "KILOGRAMOS", label: "Kilogramos" }
+            ];
+        }
+        return [
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "GRAMOS", label: "Gramos" }
+        ];
+    }
+
+    if (isStrictlyLiquid) {
+        return [
+            { value: "LITROS", label: "Litros" },
+            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
+        ];
+    }
+
+    if (tipoArticulo === "HERBICIDA") {
+        if (forma === "LIQUIDO") {
+            return [
+                { value: "LITROS", label: "Litros" },
+                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
+            ];
+        }
+        if (forma === "SOLIDO") {
+            return [
+                { value: "KILOGRAMOS", label: "Kilogramos" },
+                { value: "GRAMOS", label: "Gramos" }
+            ];
+        }
+        return [
+            { value: "LITROS", label: "Litros" },
+            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "GRAMOS", label: "Gramos" }
+        ];
+    }
+
+    if (tipoArticulo === "FERTILIZANTE") {
+        if (forma === "LIQUIDO") {
+            return [
+                { value: "LITROS", label: "Litros" },
+                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
+            ];
+        }
+        if (forma === "SOLIDO") {
+            return [
+                { value: "TONELADAS", label: "Toneladas" },
+                { value: "KILOGRAMOS", label: "Kilogramos" }
+            ];
+        }
+        return [
+            { value: "TONELADAS", label: "Toneladas" },
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "LITROS", label: "Litros" }
+        ];
+    }
+
+    if (tipoArticulo === "INSECTICIDA") {
+        if (forma === "SOLIDO") {
+            return [
+                { value: "KILOGRAMOS", label: "Kilogramos" },
+                { value: "GRAMOS", label: "Gramos" }
+            ];
+        }
+        if (forma === "LIQUIDO") {
+            return [
+                { value: "LITROS", label: "Litros" },
+                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
+            ];
+        }
+        return [
+            { value: "LITROS", label: "Litros" },
+            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "GRAMOS", label: "Gramos" }
+        ];
+    }
+
+    if (tipoArticulo === "INOCULANTE_CURASEMILLA") {
+        if (forma === "SOLIDO") {
+            return [
+                { value: "KILOGRAMOS", label: "Kilogramos" },
+                { value: "GRAMOS", label: "Gramos" }
+            ];
+        }
+        if (forma === "LIQUIDO") {
+            return [
+                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+                { value: "LITROS", label: "Litros" }
+            ];
+        }
+        return [
+            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+            { value: "LITROS", label: "Litros" },
+            { value: "KILOGRAMOS", label: "Kilogramos" },
+            { value: "GRAMOS", label: "Gramos" }
+        ];
+    }
+
+    if (tipoArticulo === "COMBUSTIBLE") {
+        return [
+            { value: "LITROS", label: "Litros" }
+        ];
+    }
+
+    return [
+        { value: "KILOGRAMOS", label: "Kilogramos" },
+        { value: "GRAMOS", label: "Gramos" },
+        { value: "LITROS", label: "Litros" },
+        { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
+        { value: "TONELADAS", label: "Toneladas" }
+    ];
+};
+
 const getSemillaType = (tipoArticulo, subtipo = "", nombre = "") => {
     if (tipoArticulo !== "SEMILLA") return null;
     const sub = (subtipo || "").toLowerCase();
@@ -68,82 +232,114 @@ const isSemillaPorUnidades = (tipoArticulo, subtipo = "", nombre = "") => {
 export default function InventarioPage() {
     const { currency, symbol: currSymbol, convertCurrency, exchangeRate } = useCurrency();
     const queryClient = useQueryClient();
+
+    const { data: insumos = [], isLoading: loadingInsumos } = useQuery({
+        queryKey: ['insumos'],
+        queryFn: async () => {
+            const res = await apiClient.get('/insumos');
+            return res.data || [];
+        }
+    });
+
+    const { data: campos = [], isLoading: loadingCampos } = useQuery({
+        queryKey: ['campos'],
+        queryFn: async () => {
+            try {
+                const res = await apiClient.get('/campos');
+                return res.data || [];
+            } catch {
+                return [];
+            }
+        }
+    });
+
+    const { data: campanias = [], isLoading: loadingCampanias } = useQuery({
+        queryKey: ['campanias'],
+        queryFn: async () => {
+            try {
+                const res = await apiClient.get('/campanias');
+                return res.data || [];
+            } catch {
+                return [];
+            }
+        }
+    });
+
+    const { data: actividades = [], isLoading: loadingActividades } = useQuery({
+        queryKey: ['actividades'],
+        queryFn: async () => {
+            try {
+                const res = await apiClient.get('/actividades');
+                return res.data || [];
+            } catch {
+                return [];
+            }
+        }
+    });
+
+    const loading = loadingInsumos || loadingCampos || loadingCampanias || loadingActividades;
+
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
-    
     const [filtroActivo, setFiltroActivo] = useState("Todos");
     const [filtroCampoId, setFiltroCampoId] = useState("Todos");
     const [filtroCampaniaId, setFiltroCampaniaId] = useState("Todos");
     const [searchTerm, setSearchTerm] = useState("");
 
     const [showModal, setShowModal] = useState(false);
+    const [lastModifiedIso, setLastModifiedIso] = useState(null);
+
+    const registrarModificacion = useCallback((iso = new Date().toISOString()) => {
+        try {
+            localStorage.setItem("agronex_last_modified_inventario", iso);
+        } catch {}
+        setLastModifiedIso(iso);
+    }, []);
+
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("agronex_last_modified_inventario");
+            if (saved) {
+                setLastModifiedIso(saved);
+            } else {
+                const now = new Date().toISOString();
+                localStorage.setItem("agronex_last_modified_inventario", now);
+                setLastModifiedIso(now);
+            }
+        } catch {}
+    }, []);
     const [editingId, setEditingId] = useState(null);
     const emptyForm = { nombre: "", tipoArticulo: "", subtipo: "", precioUnitario: "", monedaInput: "ARS", unidad: "", pesoBolsaKg: "", cantidad: "", idCampo: "", idCampania: "", semillaMode: "" };
     const [formInsumo, setFormInsumo] = useState(emptyForm);
 
-    const { data: queryData, isLoading: loading } = useQuery({
-        queryKey: ['inventario'],
-        queryFn: async () => {
-            const t = new Date().getTime();
-            const [insRes, camRes, campRes, actRes] = await Promise.all([
-                apiClient.get(`/insumos?t=${t}`),
-                apiClient.get(`/campos?t=${t}`).catch(() => ({ data: [] })),
-                apiClient.get(`/campanias?t=${t}`).catch(() => ({ data: [] })),
-                apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] }))
-            ]);
-            return {
-                insumos: insRes.data || [],
-                campos: camRes.data || [],
-                campanias: campRes.data || [],
-                actividades: actRes.data || []
-            };
-        }
-    });
-
-    const insumos = queryData?.insumos || [];
-    const campos = queryData?.campos || [];
-    const campanias = queryData?.campanias || [];
-    const actividades = queryData?.actividades || [];
-
-    const mutationSave = useMutation({
-        mutationFn: async (body) => {
-            if (editingId) {
-                return await apiClient.put(`/insumos/${editingId}`, body);
-            } else {
-                return await apiClient.post("/insumos", body);
+    const mutationGuardar = useMutation({
+        mutationFn: async ({ id, body }) => {
+            if (id) {
+                return await apiClient.put(`/insumos/${id}`, body);
             }
+            return await apiClient.post("/insumos", body);
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['inventario'] });
+            queryClient.invalidateQueries({ queryKey: ['insumos'] });
             setShowModal(false);
             setEditingId(null);
             setFormInsumo({ ...emptyForm, monedaInput: currency || "ARS" });
+            registrarModificacion();
         },
         onError: () => {
             alert("Error al registrar insumo. Verificá que todos los datos sean correctos.");
         }
     });
 
-    const mutationDelete = useMutation({
-        mutationFn: async (id) => {
-            return await apiClient.delete(`/insumos/${id}`);
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['inventario'] });
-            setConfirmModal({ isOpen: false, id: null });
-        },
-        onError: () => {
-            alert("Error al eliminar insumo.");
-            setConfirmModal({ isOpen: false, id: null });
-        }
-    });
-
-    const submitLoading = mutationSave.isPending;
-
-    const handleRegistrarInsumo = async (e) => {
+    const handleRegistrarInsumo = (e) => {
         e.preventDefault();
+        let precioEnARS = parseFloat(formInsumo.precioUnitario) || 0;
+        if (formInsumo.monedaInput === "USD" && exchangeRate) {
+            precioEnARS = precioEnARS * exchangeRate;
+        }
+
         const body = {
             nombre: formInsumo.nombre,
-            precioUnitario: parseFloat(formInsumo.precioUnitario),
+            precioUnitario: precioEnARS,
             unidad: formInsumo.unidad,
             cantidad: parseFloat(formInsumo.cantidad),
             idCampo: formInsumo.idCampo
@@ -155,8 +351,10 @@ export default function InventarioPage() {
         }
         if (formInsumo.idCampania) body.idCampania = formInsumo.idCampania;
         
-        mutationSave.mutate(body);
+        mutationGuardar.mutate({ id: editingId, body });
     };
+
+    const submitLoading = mutationGuardar.isPending;
 
     const handleEditar = (item) => {
         setEditingId(item.idInsumo);
@@ -196,8 +394,23 @@ export default function InventarioPage() {
         setConfirmModal({ isOpen: true, id });
     };
 
-    const confirmEliminar = async () => {
-        mutationDelete.mutate(confirmModal.id);
+    const mutationEliminar = useMutation({
+        mutationFn: async (id) => {
+            return await apiClient.delete(`/insumos/${id}`);
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['insumos'] });
+            registrarModificacion();
+            setConfirmModal({ isOpen: false, id: null });
+        },
+        onError: () => {
+            alert("Error al eliminar insumo.");
+            setConfirmModal({ isOpen: false, id: null });
+        }
+    });
+
+    const confirmEliminar = () => {
+        mutationEliminar.mutate(confirmModal.id);
     };
 
     // Campañas filtradas por campo seleccionado en el modal
@@ -211,14 +424,47 @@ export default function InventarioPage() {
         : campanias;
 
     // Mapeo de tabs a tipoArticulo enum
-    const FILTRO_TAB_TO_TIPO = { "Fertilizante": "FERTILIZANTE", "Semilla": "SEMILLA", "Herbicida": "HERBICIDA", "Insecticida": "INSECTICIDA", "Inoc./Curasem.": "INOCULANTE_CURASEMILLA" };
+    const FILTRO_TAB_TO_TIPO = {
+        "Fertilizantes": "FERTILIZANTE",
+        "Fertilizante": "FERTILIZANTE",
+        "Semillas": "SEMILLA",
+        "Semilla": "SEMILLA",
+        "Herbicidas": "HERBICIDA",
+        "Herbicida": "HERBICIDA",
+        "Insecticidas": "INSECTICIDA",
+        "Insecticida": "INSECTICIDA",
+        "Inoculantes / Curasemillas": "INOCULANTE_CURASEMILLA",
+        "Inoculantes/Curasemillas": "INOCULANTE_CURASEMILLA",
+        "Inoc./Curasem.": "INOCULANTE_CURASEMILLA",
+        "Combustibles": "COMBUSTIBLE",
+        "Combustible": "COMBUSTIBLE",
+        "Otros": "OTRO",
+        "Otro": "OTRO"
+    };
 
     const displayInsumos = insumos.filter(i => {
         if (filtroCampoId !== "Todos" && i.idCampo !== filtroCampoId) return false;
         if (filtroCampaniaId !== "Todos" && i.idCampania !== filtroCampaniaId) return false;
         if (filtroActivo !== "Todos") {
             const tipoEsperado = FILTRO_TAB_TO_TIPO[filtroActivo];
-            if (tipoEsperado && i.tipoArticulo !== tipoEsperado) return false;
+            if (tipoEsperado) {
+                const itemTipo = i.tipoArticulo || "";
+                const itemNombre = (i.nombre || "").toLowerCase();
+                const itemSubtipo = (i.subtipo || "").toLowerCase();
+
+                const matchesEnum = itemTipo === tipoEsperado;
+                const matchesKeyword = (
+                    (tipoEsperado === "FERTILIZANTE" && (itemNombre.includes("ferti") || itemSubtipo.includes("ferti"))) ||
+                    (tipoEsperado === "SEMILLA" && (itemNombre.includes("semilla") || itemSubtipo.includes("semilla"))) ||
+                    (tipoEsperado === "HERBICIDA" && (itemNombre.includes("herbicida") || itemNombre.includes("glifosato") || itemSubtipo.includes("herbicida"))) ||
+                    (tipoEsperado === "INSECTICIDA" && (itemNombre.includes("insecticida") || itemSubtipo.includes("insecticida"))) ||
+                    (tipoEsperado === "INOCULANTE_CURASEMILLA" && (itemNombre.includes("inoculante") || itemNombre.includes("curasemilla") || itemSubtipo.includes("curasemilla"))) ||
+                    (tipoEsperado === "COMBUSTIBLE" && (itemNombre.includes("combustible") || itemNombre.includes("gasoil") || itemNombre.includes("nafta") || itemSubtipo.includes("combustible"))) ||
+                    (tipoEsperado === "OTRO" && (itemTipo === "OTRO" || itemTipo === "REPUESTO"))
+                );
+
+                if (!matchesEnum && !matchesKeyword) return false;
+            }
         }
         if (searchTerm) return i.nombre.toLowerCase().includes(searchTerm.toLowerCase());
         return true;
@@ -264,13 +510,29 @@ export default function InventarioPage() {
         return true;
     });
 
+    const ultimaModificacionTexto = useMemo(() => {
+        if (!lastModifiedIso) return "Última modificación: Hoy";
+        const d = new Date(lastModifiedIso);
+        if (isNaN(d.getTime())) return "Última modificación: Hoy";
+
+        const fechaStr = d.toLocaleDateString("es-AR", {
+            day: "2-digit",
+            month: "short"
+        });
+        const horaStr = d.toLocaleTimeString("es-AR", {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+        return `Última modificación: ${fechaStr}, ${horaStr} hs`;
+    }, [lastModifiedIso]);
+
     return (
         <PermissionGuard requiredPermission="GESTION_INVENTARIO">
             <div className="space-y-6 animate-in fade-in duration-500 pb-10">
 
                 {/* Barra de Filtros y Búsqueda */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white dark:bg-[#1a1f25] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
-                    <div className="relative w-full max-w-sm">
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 lg:gap-4 bg-white dark:bg-[#1a1f25] p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+                    <div className="relative w-full lg:max-w-xs xl:max-w-sm">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                         <input
                             type="text" placeholder="Buscar artículo..."
@@ -279,20 +541,24 @@ export default function InventarioPage() {
                         />
                     </div>
 
-                    <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:block">Filtrar por Campo:</p>
-                        <select value={filtroCampoId} onChange={(e) => { setFiltroCampoId(e.target.value); setFiltroCampaniaId("Todos"); }}
-                            className="flex-1 md:flex-none min-w-[160px] bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all">
-                            <option value="Todos">Todos los campos</option>
-                            {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
-                        </select>
+                    <div className="flex flex-col sm:flex-row items-center justify-start lg:justify-end gap-3 lg:gap-4 w-full lg:w-auto">
+                        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 hidden sm:inline-block">Filtrar por Campo:</label>
+                            <select value={filtroCampoId} onChange={(e) => { setFiltroCampoId(e.target.value); setFiltroCampaniaId("Todos"); }}
+                                className="w-full sm:w-auto min-w-[150px] lg:min-w-[160px] bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all">
+                                <option value="Todos">Todos los campos</option>
+                                {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
+                            </select>
+                        </div>
 
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest hidden sm:block">Campaña:</p>
-                        <select value={filtroCampaniaId} onChange={(e) => setFiltroCampaniaId(e.target.value)}
-                            className="flex-1 md:flex-none min-w-[160px] bg-gray-50 border border-gray-100 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all">
-                            <option value="Todos">Todas las campañas</option>
-                            {campaniasParaFiltro.map(c => <option key={c.idCampania} value={c.idCampania}>{c.cultivo} ({c.nombreLote})</option>)}
-                        </select>
+                        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0 hidden sm:inline-block">Campaña:</label>
+                            <select value={filtroCampaniaId} onChange={(e) => setFiltroCampaniaId(e.target.value)}
+                                className="w-full sm:w-auto min-w-[150px] lg:min-w-[160px] bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[#2D6A4F]/10 transition-all">
+                                <option value="Todos">Todas las campañas</option>
+                                {campaniasParaFiltro.map(c => <option key={c.idCampania} value={c.idCampania}>{c.cultivo} ({c.nombreLote})</option>)}
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -301,7 +567,7 @@ export default function InventarioPage() {
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400 font-medium">
                         <span className="flex items-center gap-1.5"><Package size={14} className="text-[#2D6A4F] shrink-0" /> {displayInsumos.length} Artículos en vista</span>
                         <span className="hidden sm:inline w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" aria-hidden />
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Estado: Operativo</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">{ultimaModificacionTexto}</span>
                     </div>
                     <button type="button" onClick={handleOpenCreateModal}
                         className="w-full sm:w-auto justify-center bg-[#2D6A4F] hover:bg-[#1B4332] text-white px-5 py-3 sm:py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg shadow-green-900/20 flex items-center gap-2 min-h-11">
@@ -315,24 +581,28 @@ export default function InventarioPage() {
                     <>
                         {/* Stats */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden">
+                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
                                 <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Valor Total del Inventario</p>
-                                <p className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{currSymbol}{convertCurrency(valorTotal).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                <p className="text-2xl sm:text-3xl md:text-xl lg:text-2xl xl:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight truncate" title={`${currSymbol}${convertCurrency(valorTotal).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}>
+                                    {currSymbol}{convertCurrency(valorTotal).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
                                 <p className="text-[13px] font-bold text-green-600 mt-2 flex items-center gap-1"><TrendingUp size={16} /> Precio unitario × stock actual</p>
                             </div>
-                            <div className="bg-orange-50/50 rounded-2xl p-6 border border-orange-100 shadow-sm relative overflow-hidden">
-                                <div className="absolute right-[-20px] bottom-[-20px] opacity-10"><AlertTriangle size={120} className="text-orange-500" /></div>
-                                <p className="text-[10px] font-bold text-orange-800 uppercase tracking-widest mb-2">Stock Bajo / Sin Stock</p>
-                                <p className="text-4xl font-black text-orange-600 tracking-tight">{itemsConStockBajo}</p>
-                                <p className="text-[13px] font-medium text-orange-700 mt-2 flex items-center gap-1.5">
+                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm relative overflow-hidden flex flex-col justify-between">
+                                <div className="absolute right-[-20px] bottom-[-20px] opacity-[0.06]"><AlertTriangle size={120} className="text-[#2D6A4F]" /></div>
+                                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Stock Bajo / Sin Stock</p>
+                                <p className={`text-3xl md:text-2xl lg:text-3xl xl:text-4xl font-black tracking-tight ${itemsConStockBajo === 0 ? 'text-gray-900 dark:text-gray-100' : 'text-[#2D6A4F]'}`}>{itemsConStockBajo}</p>
+                                <p className={`text-[13px] font-bold mt-2 flex items-center gap-1.5 ${itemsConStockBajo === 0 ? 'text-green-600' : 'text-[#2D6A4F]'}`}>
                                     <AlertTriangle size={14} /> {itemsConStockBajo === 0 ? 'Sin alertas críticas' : `${itemsConStockBajo} artículo${itemsConStockBajo > 1 ? 's' : ''} requieren atención`}
                                 </p>
                             </div>
-                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
-                                <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Artículos Disponibles</p>
-                                <div className="flex items-baseline gap-2">
-                                    <p className="text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{itemsDisponibles}</p>
-                                    <p className="text-sm font-bold text-gray-400">/ {displayInsumos.length}</p>
+                            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between">
+                                <div>
+                                    <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Artículos Disponibles</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className="text-3xl md:text-2xl lg:text-3xl xl:text-4xl font-black text-gray-900 dark:text-gray-100 tracking-tight">{itemsDisponibles}</p>
+                                        <p className="text-sm font-bold text-gray-400">/ {displayInsumos.length}</p>
+                                    </div>
                                 </div>
                                 <div className="mt-4 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                                     <div className="h-full bg-[#2D6A4F] rounded-full transition-all duration-500"
@@ -343,11 +613,11 @@ export default function InventarioPage() {
 
                         {/* Tabla */}
                         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 gap-4">
-                                <div className="dashboard-scroll-x flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl overflow-x-auto w-full sm:w-auto">
-                                    {["Todos", "Fertilizante", "Semilla", "Herbicida", "Insecticida", "Inoc./Curasem."].map((tab) => (
+                            <div className="flex items-center justify-center p-4 border-b border-gray-100 dark:border-gray-800">
+                                <div className="flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl w-full sm:w-auto items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto">
+                                    {["Todos", "Semillas", "Herbicidas", "Fertilizantes", "Insecticidas", "Inoculantes/Curasemillas", "Combustibles", "Otros"].map((tab) => (
                                         <button key={tab} type="button" onClick={() => setFiltroActivo(tab)}
-                                            className={`shrink-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all min-h-10 ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
+                                            className={`shrink-0 px-2 sm:px-3 md:px-2.5 lg:px-4 py-2 rounded-lg text-[11px] sm:text-xs lg:text-sm font-bold transition-all min-h-9 ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                                             {tab}
                                         </button>
                                     ))}
@@ -363,7 +633,7 @@ export default function InventarioPage() {
                                             <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Unidad</th>
                                             <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Precio Unit.</th>
                                             <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Stock Actual</th>
-                                            <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Peso Total</th>
+                                            <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Peso Total/Cantidad</th>
                                             <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Valor Total</th>
                                             <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Campaña</th>
                                             <th className="p-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Estado</th>
@@ -403,12 +673,8 @@ export default function InventarioPage() {
                                                 <td className="p-4">
                                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
                                                         {(() => {
-                                                            const isPorUnidades = isSemillaPorUnidades(item.tipoArticulo, item.subtipo, item.nombre);
-                                                            if (item.unidad === 'BOLSAS' && item.pesoBolsaKg) {
-                                                                if (isPorUnidades) return `Bolsas de ${Number(item.pesoBolsaKg).toLocaleString("es-AR")} Semillas`;
-                                                                return `Bolsas de ${Number(item.pesoBolsaKg).toLocaleString("es-AR")} Kg`;
-                                                            }
-                                                            const UNIDAD_LABELS = { KILOGRAMOS: 'Kilogramos', GRAMOS: 'Gramos', LITROS: 'Litros', TONELADAS: 'Toneladas', CENTIMETROS_CUBICOS: 'cm³', BOLSAS: 'Bolsas' };
+                                                            if (item.unidad === 'BOLSAS') return 'Bolsas';
+                                                            const UNIDAD_LABELS = { KILOGRAMOS: 'Kilogramos', GRAMOS: 'Gramos', LITROS: 'Litros', TONELADAS: 'Toneladas', CENTIMETROS_CUBICOS: 'Centímetros Cúbicos', BOLSAS: 'Bolsas' };
                                                             return UNIDAD_LABELS[item.unidad] || item.unidad?.toLowerCase().replace('_', ' ') || '—';
                                                         })()}
                                                     </p>
@@ -429,23 +695,95 @@ export default function InventarioPage() {
                                                         )}
                                                     </div>
                                                 </td>
-                                                {/* Peso Total */}
+                                                {/* Peso Total / Cantidad */}
                                                 <td className="p-4 text-right">
                                                     {(() => {
                                                         const qty = Number(item.cantidad || 0);
                                                         const isPorUnidades = isSemillaPorUnidades(item.tipoArticulo, item.subtipo, item.nombre);
                                                         if (item.unidad === 'BOLSAS' && item.pesoBolsaKg) {
+                                                            const valBolsa = Number(item.pesoBolsaKg);
                                                             if (isPorUnidades) {
-                                                                const totalSemillas = qty * Number(item.pesoBolsaKg);
-                                                                return <div><p className="text-sm font-black text-gray-900 dark:text-gray-100">{totalSemillas.toLocaleString("es-AR")} Semillas</p><p className="text-[10px] text-gray-400">{qty} &times; {Number(item.pesoBolsaKg).toLocaleString("es-AR")} un.</p></div>;
+                                                                const totalSemillas = qty * valBolsa;
+                                                                return (
+                                                                    <div>
+                                                                        <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                            {totalSemillas.toLocaleString("es-AR")} Semillas
+                                                                        </p>
+                                                                        <p className="text-[10px] text-gray-400">
+                                                                            {valBolsa.toLocaleString("es-AR")} semillas / Bolsa
+                                                                        </p>
+                                                                    </div>
+                                                                );
                                                             }
-                                                            const pt = qty * Number(item.pesoBolsaKg);
-                                                            return <div><p className="text-sm font-black text-gray-900 dark:text-gray-100">{pt.toLocaleString("es-AR", { maximumFractionDigits: 2 })} Kg</p><p className="text-[10px] text-gray-400">{qty} &times; {item.pesoBolsaKg} Kg</p></div>;
+                                                            const pt = qty * valBolsa;
+                                                            return (
+                                                                <div>
+                                                                    <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                        {pt.toLocaleString("es-AR", { maximumFractionDigits: 2 })} Kg
+                                                                    </p>
+                                                                    <p className="text-[10px] text-gray-400">
+                                                                        {valBolsa.toLocaleString("es-AR")} Kg / Bolsa
+                                                                    </p>
+                                                                </div>
+                                                            );
                                                         }
-                                                        if (item.unidad === 'KILOGRAMOS' && qty >= 1000) return <div><p className="text-sm font-black text-gray-900 dark:text-gray-100">{(qty / 1000).toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} Tn</p><p className="text-[10px] text-gray-400">{qty.toLocaleString("es-AR")} Kg</p></div>;
-                                                        if (item.unidad === 'TONELADAS') return <p className="text-sm font-black text-gray-900 dark:text-gray-100">{(qty * 1000).toLocaleString("es-AR")} Kg</p>;
-                                                        if (item.unidad === 'KILOGRAMOS') return <p className="text-sm font-black text-gray-900 dark:text-gray-100">{qty.toLocaleString("es-AR")} Kg</p>;
-                                                        return <span className="text-[11px] text-gray-400">&mdash;</span>;
+                                                        if (item.unidad === 'LITROS') {
+                                                            return (
+                                                                <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                    {qty.toLocaleString("es-AR", { maximumFractionDigits: 2 })} Lts
+                                                                </p>
+                                                            );
+                                                        }
+                                                        if (item.unidad === 'CENTIMETROS_CUBICOS') {
+                                                            return (
+                                                                <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                    {qty.toLocaleString("es-AR", { maximumFractionDigits: 2 })} cc
+                                                                </p>
+                                                            );
+                                                        }
+                                                        if (item.unidad === 'GRAMOS') {
+                                                            return (
+                                                                <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                    {qty.toLocaleString("es-AR", { maximumFractionDigits: 2 })} g
+                                                                </p>
+                                                            );
+                                                        }
+                                                        if (item.unidad === 'TONELADAS') {
+                                                            return (
+                                                                <div>
+                                                                    <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                        {qty.toLocaleString("es-AR", { maximumFractionDigits: 2 })} Tn
+                                                                    </p>
+                                                                    <p className="text-[10px] text-gray-400">
+                                                                        {(qty * 1000).toLocaleString("es-AR")} Kg
+                                                                    </p>
+                                                                </div>
+                                                            );
+                                                        }
+                                                        if (item.unidad === 'KILOGRAMOS') {
+                                                            if (qty >= 1000) {
+                                                                return (
+                                                                    <div>
+                                                                        <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                            {(qty / 1000).toLocaleString("es-AR", { minimumFractionDigits: 1, maximumFractionDigits: 2 })} Tn
+                                                                        </p>
+                                                                        <p className="text-[10px] text-gray-400">
+                                                                            {qty.toLocaleString("es-AR")} Kg
+                                                                        </p>
+                                                                    </div>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                    {qty.toLocaleString("es-AR")} Kg
+                                                                </p>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+                                                                {qty.toLocaleString("es-AR")} {item.unidad || ""}
+                                                            </p>
+                                                        );
                                                     })()}
                                                 </td>
                                                 {/* Valor Total */}
@@ -489,9 +827,6 @@ export default function InventarioPage() {
                         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden mt-6">
                             <div className="p-4 border-b border-gray-100 dark:border-gray-800">
                                 <h3 className="font-black text-gray-900 dark:text-gray-100 text-[15px]">Historial de Consumo por Campaña</h3>
-                                <p className="text-[12px] text-gray-500 font-medium mt-1">
-                                    Detalle de insumos utilizados en las actividades, filtrados según los criterios superiores.
-                                </p>
                             </div>
                             <div className="dashboard-scroll-x overflow-x-auto">
                                 <table className="w-full min-w-[640px] text-left border-collapse">
@@ -552,7 +887,21 @@ export default function InventarioPage() {
                             <form onSubmit={handleRegistrarInsumo} className="space-y-4">
                                 <div>
                                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Nombre del Artículo</label>
-                                    <input required type="text" value={formInsumo.nombre} onChange={e => setFormInsumo(p => ({ ...p, nombre: e.target.value }))}
+                                    <input required type="text" value={formInsumo.nombre} onChange={e => {
+                                        const nuevoNombre = e.target.value;
+                                        setFormInsumo(p => {
+                                            const disponibles = getUnidadesDisponibles(p.tipoArticulo, nuevoNombre, p.subtipo);
+                                            let nuevaUnidad = p.unidad;
+                                            if (disponibles.length > 0 && !disponibles.some(u => u.value === p.unidad)) {
+                                                nuevaUnidad = disponibles[0].value;
+                                            }
+                                            return {
+                                                ...p,
+                                                nombre: nuevoNombre,
+                                                unidad: nuevaUnidad
+                                            };
+                                        });
+                                    }}
                                         className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] focus:bg-white outline-none transition-colors" placeholder="ej. Semilla de Maíz" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
@@ -561,11 +910,14 @@ export default function InventarioPage() {
                                         <select value={formInsumo.tipoArticulo} onChange={e => {
                                             const tipo = e.target.value;
                                             const isSemilla = tipo === "SEMILLA";
+                                            const disponibles = getUnidadesDisponibles(tipo, formInsumo.nombre, formInsumo.subtipo);
+                                            const defaultUnit = disponibles.length > 0 ? disponibles[0].value : "";
+
                                             setFormInsumo(p => ({
                                                 ...p,
                                                 tipoArticulo: tipo,
                                                 subtipo: tipo === "OTRO" ? "" : "",
-                                                unidad: isSemilla ? "" : "",
+                                                unidad: defaultUnit,
                                                 pesoBolsaKg: isSemilla ? p.pesoBolsaKg : "",
                                                 semillaMode: isSemilla ? "" : ""
                                             }));
@@ -708,9 +1060,9 @@ export default function InventarioPage() {
                                                 const UNIDAD_DISPLAY = {
                                                     KILOGRAMOS: 'Kg',
                                                     GRAMOS: 'g',
-                                                    LITROS: 'L',
+                                                    LITROS: 'Lts',
                                                     TONELADAS: 'Tn',
-                                                    CENTIMETROS_CUBICOS: 'cm³',
+                                                    CENTIMETROS_CUBICOS: 'cc',
                                                     BOLSAS: 'Bolsas'
                                                 };
                                                 if (formInsumo.unidad && UNIDAD_DISPLAY[formInsumo.unidad]) {
@@ -796,8 +1148,7 @@ export default function InventarioPage() {
                                                     )}
                                                     {/* Selector de unidad (solo si eligió Peso) */}
                                                     {formInsumo.semillaMode === "PESO" && (
-                                                        <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))}
-                                                            className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
+                                                        <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-[#2D6A4F] outline-none">
                                                             <option value="" disabled>-- Seleccionar unidad --</option>
                                                             <option value="KILOGRAMOS">Kilogramos</option>
                                                             <option value="GRAMOS">Gramos</option>
@@ -806,14 +1157,11 @@ export default function InventarioPage() {
                                                     )}
                                                 </div>
                                             ) : (
-                                                <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))}
-                                                    className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
-                                                    <option value="" disabled>-- Seleccionar --</option>
-                                                    <option value="KILOGRAMOS">Kilogramos</option>
-                                                    <option value="GRAMOS">Gramos</option>
-                                                    <option value="LITROS">Litros</option>
-                                                    <option value="CENTIMETROS_CUBICOS">Centímetros Cúbicos</option>
-                                                    <option value="TONELADAS">Toneladas</option>
+                                                <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-[#2D6A4F] outline-none">
+                                                    <option value="" disabled>-- Seleccionar unidad --</option>
+                                                    {getUnidadesDisponibles(formInsumo.tipoArticulo, formInsumo.nombre, formInsumo.subtipo).map(op => (
+                                                        <option key={op.value} value={op.value}>{op.label}</option>
+                                                    ))}
                                                 </select>
                                             )}
                                         </>
