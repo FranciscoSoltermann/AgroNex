@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Polygon, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -15,11 +15,15 @@ function MapFitter({ bounds }) {
 }
 
 export default function FieldMap({ field }) {
-    const { polygons, bounds } = useMemo(() => {
+    const [polygons, setPolygons] = useState([]);
+    const [bounds, setBounds] = useState([]);
+
+    useEffect(() => {
+        // Intentar parsear las boundaries de John Deere
         let parsedPolygons = [];
         let allPoints = [];
 
-        if (field?.boundaries && Array.isArray(field.boundaries)) {
+        if (field.boundaries && Array.isArray(field.boundaries)) {
             field.boundaries.forEach(boundary => {
                 if (boundary.multipolygons && Array.isArray(boundary.multipolygons)) {
                     boundary.multipolygons.forEach(mp => {
@@ -44,7 +48,10 @@ export default function FieldMap({ field }) {
             });
         }
 
-        return { polygons: parsedPolygons, bounds: allPoints };
+        setPolygons(parsedPolygons);
+        if (allPoints.length > 0) {
+            setBounds(allPoints);
+        }
     }, [field]);
 
     if (!polygons || polygons.length === 0) {
