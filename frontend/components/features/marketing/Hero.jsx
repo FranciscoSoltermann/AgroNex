@@ -226,77 +226,14 @@ export function Hero() {
           </ScrollReveal>
 
           <ScrollReveal delay={0.2}>
-            {/* MOCKUP MAPA Y LOTES */}
-            <div className="bg-[#E9F5EE] rounded-[2rem] p-4 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] max-w-6xl mx-auto text-left relative overflow-hidden border border-[#52B788]/20 flex flex-col lg:flex-row gap-6 transform hover:-translate-y-2 transition-all duration-500">
-              
-              {/* Panel Lotes */}
-              <div className="w-full lg:w-80 bg-white rounded-[1.5rem] p-5 border border-gray-100 flex flex-col gap-4 shadow-sm shrink-0">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="font-extrabold text-[#0A1612]">Tus Lotes</h3>
-                  <span className="px-2 py-1 bg-[#E9F5EE] text-[#2D6A4F] rounded text-[9px] font-black uppercase tracking-wider">4 Activos</span>
-                </div>
-                
-                <div className="relative">
-                  <input type="text" placeholder="Buscar lote..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-medium outline-none focus:border-[#52B788] transition-colors" />
-                  <svg className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                  {CAMPOS_LIST.map((campo, idx) => (
-                    <div key={idx} className={`p-3 rounded-xl border ${idx === 0 ? 'border-[#52B788] bg-[#E9F5EE]/30' : 'border-gray-100 bg-white'} cursor-pointer hover:border-[#52B788]/60 transition-colors`}>
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="font-bold text-[#0A1612] text-sm">{campo.name}</h4>
-                        <span className={`w-2 h-2 rounded-full mt-1.5 ${campo.status === 'Activo' ? 'bg-[#52B788] shadow-[0_0_8px_#52B788]' : 'bg-amber-400'}`}></span>
-                      </div>
-                      <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">
-                        <span>{campo.lotes} lotes</span>
-                        <span className="font-black text-[#2D6A4F]">{campo.hectareas} Ha</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mapa Satellite Mock */}
-              <div className="flex-1 bg-[#1B4332] rounded-[1.5rem] border border-gray-200 overflow-hidden relative min-h-[300px] lg:min-h-[500px] shadow-inner">
-                {/* Imagen satelital simulada de fondo */}
-                <img src="https://images.unsplash.com/photo-1592982537447-6f296d66e746?auto=format&fit=crop&q=80&w=1000" alt="Vista Satelital" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay" />
-                <div className="absolute inset-0 bg-[#2D6A4F]/20 mix-blend-multiply"></div>
-                
-                {/* Capa de lotes (Polígonos simulados) */}
-                <div className="absolute inset-0 p-8 flex items-center justify-center">
-                  <svg className="w-full h-full max-w-[500px]" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
-                    <polygon points="50,150 150,50 250,100 200,250 80,220" fill="rgba(82, 183, 136, 0.3)" stroke="#52B788" strokeWidth="2" className="hover:fill-[rgba(82,183,136,0.5)] transition-all cursor-pointer" />
-                    <polygon points="260,110 380,80 350,200 270,180" fill="rgba(255, 193, 7, 0.3)" stroke="#FFC107" strokeWidth="2" className="hover:fill-[rgba(255,193,7,0.5)] transition-all cursor-pointer" />
-                    <polygon points="220,270 330,220 380,350 250,380" fill="rgba(82, 183, 136, 0.3)" stroke="#52B788" strokeWidth="2" className="hover:fill-[rgba(82,183,136,0.5)] transition-all cursor-pointer" />
-                  </svg>
-                </div>
-                
-                {/* Puntos y Marcadores */}
-                <div className="absolute top-[40%] left-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                  <div className="bg-[#0A1612] text-white text-[9px] font-bold px-2 py-1 rounded shadow-lg mb-1 whitespace-nowrap">Lote 3 - Norte</div>
-                  <div className="w-3 h-3 bg-white rounded-full border-2 border-[#52B788] shadow-[0_0_10px_rgba(82,183,136,0.8)]"></div>
-                </div>
-                
-                {/* UI del mapa superior */}
-                <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
-                  <div className="bg-white/95 backdrop-blur rounded-xl px-4 py-2.5 shadow-lg border border-gray-100 flex gap-4 sm:gap-6">
-                    <div className="flex flex-col">
-                      <span className="text-[8px] sm:text-[9px] font-black text-gray-500 uppercase tracking-widest">NDVI Promedio</span>
-                      <span className="text-xs sm:text-sm font-black text-[#2D6A4F]">0.78 <span className="text-[#52B788] text-[9px] font-bold uppercase ml-1">(Alto)</span></span>
-                    </div>
-                    <div className="w-px bg-gray-200"></div>
-                    <div className="flex flex-col">
-                      <span className="text-[8px] sm:text-[9px] font-black text-gray-500 uppercase tracking-widest">Humedad Suelo</span>
-                      <span className="text-xs sm:text-sm font-black text-[#2D6A4F]">65%</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <button className="w-9 h-9 bg-white/95 backdrop-blur rounded-xl shadow-lg border border-gray-100 flex items-center justify-center text-gray-700 hover:text-[#52B788] hover:scale-105 transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></button>
-                    <button className="w-9 h-9 bg-white/95 backdrop-blur rounded-xl shadow-lg border border-gray-100 flex items-center justify-center text-gray-700 hover:text-[#52B788] hover:scale-105 transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4"></path></svg></button>
-                  </div>
-                </div>
-              </div>
+            {/* APP IMAGE: CAMPOS Y LOTES (SCREENSHOT) */}
+            <div className="relative max-w-6xl mx-auto rounded-[1rem] sm:rounded-[2rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-[#52B788]/30 transform hover:-translate-y-2 transition-transform duration-500 group">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
+              <img 
+                src="/mockups/campos-lotes.png" 
+                alt="AgroNex - Campos y Lotes" 
+                className="w-full h-auto object-cover"
+              />
             </div>
           </ScrollReveal>
         </div>
