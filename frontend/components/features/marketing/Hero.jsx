@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -66,11 +66,11 @@ const FENO_STAGES = [
   { stage: 'Cosecha',       icon: '🚜', status: 'pending'   },
 ];
 
-const CLIMATE_CHIPS = [
-  { icon: Thermometer, value: '24°C',  label: 'Temp.' },
-  { icon: Droplets,    value: '68%',   label: 'Humedad' },
-  { icon: Wind,        value: '12 km/h', label: 'Viento' },
-  { icon: Cloud,       value: '0 mm',  label: 'Lluvia' },
+const DEFAULT_CLIMATE_CHIPS = [
+  { id: 'temp', icon: Thermometer, value: '--°C',  label: 'Temp.' },
+  { id: 'hum', icon: Droplets,    value: '--%',   label: 'Humedad' },
+  { id: 'wind', icon: Wind,        value: '-- km/h', label: 'Viento' },
+  { id: 'rain', icon: Cloud,       value: '-- mm',  label: 'Lluvia' },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -78,6 +78,32 @@ const CLIMATE_CHIPS = [
 ═══════════════════════════════════════════════════════════════════════════ */
 
 export function Hero() {
+  const [climateChips, setClimateChips] = useState(DEFAULT_CLIMATE_CHIPS);
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-31.6333&longitude=-60.7&current=temperature_2m,relative_humidity_2m,precipitation,wind_speed_10m');
+        const data = await response.json();
+        
+        if (data.current) {
+          setClimateChips([
+            { id: 'temp', icon: Thermometer, value: `${Math.round(data.current.temperature_2m)}°C`, label: 'Temp.' },
+            { id: 'hum', icon: Droplets, value: `${Math.round(data.current.relative_humidity_2m)}%`, label: 'Humedad' },
+            { id: 'wind', icon: Wind, value: `${Math.round(data.current.wind_speed_10m)} km/h`, label: 'Viento' },
+            { id: 'rain', icon: Cloud, value: `${data.current.precipitation} mm`, label: 'Lluvia' },
+          ]);
+        }
+      } catch (error) {
+        console.error('Error fetching weather data:', error);
+      }
+    };
+
+    fetchWeather();
+    const interval = setInterval(fetchWeather, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     // Contenedor principal con fondo fijo
     <div className="bg-[#0A1612] text-white relative min-h-screen">
@@ -118,11 +144,11 @@ export function Hero() {
             </h1>
 
             <p className="text-base sm:text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto font-light leading-relaxed px-2">
-              Monitoreo satelital de cultivos, geolocalización de lotes y análisis climático en tiempo real. <strong className="text-white font-medium">Decisiones inteligentes basadas en datos.</strong>
+              Gestión agrícola integral. Centralizá tus lotes, controlá tu inventario, monitoreá el clima en tiempo real y optimizá cada ciclo productivo. <strong className="text-white font-medium">El sistema operativo del campo.</strong>
             </p>
 
             <div className="grid grid-cols-2 min-[500px]:flex min-[500px]:flex-wrap justify-center gap-2.5 sm:gap-4 mt-4 sm:mt-6 w-full max-w-2xl sm:max-w-none">
-              {CLIMATE_CHIPS.map((c, idx) => (
+              {climateChips.map((c, idx) => (
                 <div key={idx} className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 bg-[#E9F5EE]/10 hover:bg-[#E9F5EE]/20 backdrop-blur-lg border border-white/20 rounded-full px-3.5 sm:px-6 py-2.5 sm:py-3 transition-all duration-300 cursor-default group shadow-lg">
                   <c.icon className="w-4 h-4 sm:w-5 sm:h-5 text-[#74C69D] group-hover:text-white shrink-0" />
                   <span className="font-bold text-xs sm:text-base md:text-lg text-white">{c.value}</span>
@@ -322,35 +348,109 @@ export function Hero() {
           </ScrollReveal>
 
           <ScrollReveal delay={0.2}>
-            {/* CONTENEDOR CLARO */}
-            <div className="bg-[#E9F5EE]/10 backdrop-blur-3xl rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-12 md:p-16 border border-[#E9F5EE]/30 shadow-2xl hover:border-[#52B788]/50 transition-colors duration-700 max-w-6xl mx-auto">
-              <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-10 sm:mb-20 text-center">
-                Campaña Soja <span className="text-[#52B788]">2026</span>
-              </h3>
+            {/* CONTENEDOR MOCKUP DASHBOARD */}
+            <div className="bg-[#E9F5EE] rounded-[2rem] p-4 sm:p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] max-w-5xl mx-auto text-left relative overflow-hidden transform hover:-translate-y-2 transition-all duration-500 border border-[#52B788]/20">
               
-              <div className="relative pb-6 sm:pb-10">
-                <div className="absolute top-12 left-[10%] right-[10%] h-3 bg-white/10 rounded-full shadow-inner border border-white/5 hidden sm:block" />
-                <div className="absolute top-12 left-[10%] w-[40%] h-3 bg-gradient-to-r from-[#2D6A4F] via-[#52B788] to-[#74C69D] rounded-full shadow-[0_0_20px_#52B788] hidden sm:block" />
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 pb-6 border-b border-[#2D6A4F]/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#2D6A4F] flex items-center justify-center shadow-lg shadow-[#2D6A4F]/20">
+                    <Sprout className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-[#0A1612]">Progreso del ciclo</h3>
+                    <p className="text-[10px] font-black text-[#52B788] uppercase tracking-[0.2em] mt-1">Campaña Activa</p>
+                  </div>
+                </div>
+                <div className="mt-4 sm:mt-0 flex flex-wrap gap-3">
+                  <div className="px-4 py-2 bg-white rounded-lg text-xs font-bold text-[#0A1612] border border-gray-200 shadow-sm flex items-center">
+                    <MapPin className="w-3.5 h-3.5 mr-2 text-[#52B788]" /> Lote 3 – Norte
+                  </div>
+                  <div className="px-4 py-2 bg-[#2D6A4F] text-white rounded-lg text-xs font-black uppercase tracking-wider hover:bg-[#1B4332] transition-colors shadow-lg shadow-[#2D6A4F]/30 flex items-center cursor-pointer">
+                    <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Nueva campaña
+                  </div>
+                </div>
+              </div>
 
-                <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-5 gap-4 md:gap-6 relative z-10">
-                  {FENO_STAGES.map((phase, idx) => (
-                    <div key={idx} className="flex flex-col items-center text-center group cursor-default">
-                      <div className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl sm:rounded-3xl flex items-center justify-center text-3xl sm:text-4xl md:text-5xl mb-3 sm:mb-6 transition-all duration-500 group-hover:-translate-y-4 group-hover:scale-110 ${
-                        phase.status === 'completed' ? 'bg-[#52B788] border-2 border-[#74C69D] shadow-[0_10px_20px_rgba(82,183,136,0.4)]' :
-                        phase.status === 'current' ? 'bg-white ring-6 sm:ring-8 ring-white/30 shadow-[0_0_40px_rgba(255,255,255,0.6)] animate-pulse text-[#1B4332]' :
-                        'bg-white/10 border-2 border-white/20 opacity-80 group-hover:opacity-100 group-hover:border-white/40 group-hover:bg-white/20'
-                      }`}>
-                        {phase.icon}
+              {/* Progress Bar Mock */}
+              <div className="mb-10">
+                <div className="flex justify-between text-[8px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 px-1 sm:px-2">
+                  <span className="text-[#2D6A4F]">Barbecho</span>
+                  <span>Siembra</span>
+                  <span className="hidden sm:inline">Veg. Temprana</span>
+                  <span className="inline sm:hidden">Veg.</span>
+                  <span className="hidden sm:inline">Reproducción</span>
+                  <span className="inline sm:hidden">Repro.</span>
+                  <span>Cosecha</span>
+                </div>
+                <div className="h-8 bg-white border border-gray-200 rounded-lg flex overflow-hidden p-1 gap-1 shadow-inner">
+                  <div className="w-1/5 bg-[#2D6A4F] rounded-md flex items-center justify-center shadow-sm">
+                    <svg className="w-4 h-4 text-white animate-spin-slow" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  </div>
+                  <div className="w-1/5 bg-gray-100 rounded-md"></div>
+                  <div className="w-1/5 bg-gray-100 rounded-md"></div>
+                  <div className="w-1/5 bg-gray-100 rounded-md"></div>
+                  <div className="w-1/5 bg-gray-100 rounded-md"></div>
+                </div>
+              </div>
+
+              {/* Form Mock */}
+              <div className="bg-[#2D6A4F] rounded-[1.5rem] p-6 sm:p-8 text-white relative overflow-hidden shadow-2xl border border-[#2D6A4F]">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-[#52B788]/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"></div>
+                
+                <div className="relative z-10">
+                  <h4 className="text-lg sm:text-xl font-extrabold mb-1">Registrar Actividad</h4>
+                  <p className="text-[10px] sm:text-xs text-[#E9F5EE]/70 mb-6 font-medium">Dosis en unidad del insumo por hectárea. Si no cargás Ha tratadas, se asume todo el lote para el costo de insumos.</p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                    <div className="col-span-1 sm:col-span-2">
+                      <label className="block text-[9px] font-bold uppercase tracking-widest text-[#E9F5EE]/70 mb-2">Tipo</label>
+                      <div className="w-full bg-[#1B4332]/80 backdrop-blur border border-[#52B788]/30 rounded-xl px-4 py-3 text-xs font-bold flex justify-between items-center cursor-pointer hover:bg-[#1B4332] transition-colors">
+                        <span>Fertilización</span>
+                        <svg className="w-3 h-3 text-[#74C69D]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                       </div>
-                      <span className={`text-[10px] md:text-sm uppercase tracking-[0.15em] sm:tracking-[0.2em] font-black transition-colors ${
-                        phase.status === 'pending' ? 'text-gray-400 group-hover:text-white' : 
-                        phase.status === 'current' ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)] scale-110 block mt-1 sm:mt-2' :
-                        'text-[#74C69D]'
-                      }`}>
-                        {phase.stage}
-                      </span>
                     </div>
-                  ))}
+                    <div className="col-span-1">
+                      <label className="block text-[9px] font-bold uppercase tracking-widest text-[#E9F5EE]/70 mb-2">Fecha</label>
+                      <div className="w-full bg-[#1B4332]/80 backdrop-blur border border-[#52B788]/30 rounded-xl px-4 py-3 text-xs font-bold flex justify-between items-center cursor-pointer hover:bg-[#1B4332] transition-colors">
+                        <span>19/08/2026</span>
+                        <svg className="w-3 h-3 text-[#74C69D]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      </div>
+                    </div>
+                    <div className="col-span-1">
+                      <label className="block text-[9px] font-bold uppercase tracking-widest text-[#E9F5EE]/70 mb-2">Costo Servicio ($/HA)</label>
+                      <div className="w-full bg-[#1B4332]/80 backdrop-blur border border-[#52B788]/30 rounded-xl px-4 py-3 text-xs font-bold text-white/50">0</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="block text-[9px] font-bold uppercase tracking-widest text-[#E9F5EE]/70 mb-2">Insumos</label>
+                      <div className="w-full sm:w-2/3 bg-[#1B4332]/80 backdrop-blur border border-[#52B788]/30 rounded-xl px-4 py-2.5 text-xs flex items-center gap-3 mb-3 cursor-pointer hover:bg-[#1B4332] transition-colors">
+                        <div className="w-6 h-6 bg-[#52B788]/20 rounded-md flex items-center justify-center border border-[#52B788]/40 shrink-0">
+                          <Sprout className="w-3.5 h-3.5 text-[#74C69D]" />
+                        </div>
+                        <span className="font-bold text-white truncate">Seleccionar Insumo...</span>
+                        <svg className="w-3 h-3 text-[#74C69D] ml-auto shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                      </div>
+                      <div className="text-[9px] font-black uppercase tracking-widest text-[#74C69D] flex items-center gap-1.5 hover:text-white transition-colors border border-[#74C69D]/30 px-3 py-1.5 rounded-lg hover:border-white/50 bg-[#1B4332]/40 inline-flex cursor-pointer">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                        Añadir insumo
+                      </div>
+                    </div>
+                    <div className="col-span-1 flex flex-col justify-end">
+                      <label className="block text-[9px] font-bold uppercase tracking-widest text-[#E9F5EE]/70 mb-2">Notas</label>
+                      <div className="w-full h-[3.25rem] bg-[#1B4332]/80 backdrop-blur border border-[#52B788]/30 rounded-xl px-4 py-2.5 text-[10px] text-[#E9F5EE]/40 font-medium">
+                        Producto, lote, condiciones...
+                      </div>
+                      <div className="w-full mt-4 bg-[#E9F5EE] text-[#0A1612] py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white hover:-translate-y-0.5 hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)] transition-all cursor-pointer">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                        Guardar actividad
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
