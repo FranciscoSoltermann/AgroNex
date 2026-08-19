@@ -194,47 +194,70 @@ export function Hero() {
             </div>
           </ScrollReveal>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 mb-12 sm:mb-20">
-            {DASHBOARD_STATS.map((stat, idx) => (
-              <ScrollReveal key={idx} delay={idx * 0.1}>
-                {/* TARJETAS CLARAS SOBRE FONDO OSCURO */}
-                <div className="bg-[#E9F5EE]/10 backdrop-blur-2xl border border-[#E9F5EE]/30 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl hover:border-[#52B788] hover:bg-[#E9F5EE]/20 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(82,183,136,0.2)] transition-all duration-300 flex flex-col items-center md:items-start text-center md:text-left min-h-[160px] sm:min-h-[200px] justify-between group">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 flex items-center justify-center group-hover:bg-[#52B788] group-hover:border-[#52B788] transition-colors duration-500">
-                    <stat.icon className="w-6 h-6 sm:w-8 sm:h-8 text-[#74C69D] group-hover:text-white" />
+          <ScrollReveal delay={0.2}>
+            {/* APP MOCKUP: DASHBOARD */}
+            <div className="bg-[#E9F5EE] rounded-[2rem] p-4 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] max-w-6xl mx-auto text-left relative overflow-hidden border border-[#52B788]/20 flex flex-col md:flex-row gap-6 transform hover:-translate-y-2 transition-all duration-500">
+              
+              {/* Sidebar Mock */}
+              <div className="hidden md:flex flex-col w-64 bg-white rounded-[1.5rem] p-4 border border-gray-100 shrink-0 shadow-sm">
+                <div className="flex items-center gap-3 mb-8 px-2 mt-2">
+                  <div className="w-8 h-8 rounded-lg bg-[#2D6A4F] flex items-center justify-center shadow-md shadow-[#2D6A4F]/20">
+                    <Leaf className="w-4 h-4 text-white" />
                   </div>
-                  <div className="mt-3 sm:mt-0">
-                    <div className="text-3xl sm:text-5xl font-black text-white mb-1 sm:mb-2">{stat.value}</div>
-                    <div className="text-[#74C69D] text-[10px] sm:text-sm uppercase tracking-widest font-bold group-hover:text-white transition-colors">{stat.label}</div>
+                  <span className="font-black tracking-tighter text-[#0A1612] uppercase italic">AGRONEX</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-[#E9F5EE]/50 text-[#2D6A4F] rounded-xl font-extrabold text-xs border border-[#52B788]/20"><LayoutDashboard className="w-4 h-4" /> Dashboard</div>
+                  <div className="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-xl font-bold text-xs cursor-pointer transition-colors"><Map className="w-4 h-4" /> Lotes y Mapas</div>
+                  <div className="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-xl font-bold text-xs cursor-pointer transition-colors"><Sprout className="w-4 h-4" /> Ciclos Productivos</div>
+                  <div className="flex items-center gap-3 px-4 py-3 text-gray-500 hover:bg-gray-50 rounded-xl font-bold text-xs cursor-pointer transition-colors"><Cloud className="w-4 h-4" /> Clima</div>
+                </div>
+              </div>
+
+              {/* Main Content Mock */}
+              <div className="flex-1 flex flex-col gap-6 min-w-0">
+                {/* Top Nav Mock */}
+                <div className="flex justify-between items-center bg-white rounded-[1.5rem] p-4 border border-gray-100 shadow-sm">
+                  <h3 className="font-extrabold text-[#0A1612] ml-2">Resumen General</h3>
+                  <div className="flex items-center gap-3">
+                    <div className="hidden sm:block px-3 py-1.5 bg-[#E9F5EE] text-[#2D6A4F] rounded-lg text-[10px] font-black uppercase tracking-wider">Campaña 26/27</div>
+                    <div className="w-8 h-8 bg-gray-100 rounded-full border border-gray-200"></div>
                   </div>
                 </div>
-              </ScrollReveal>
-            ))}
-          </div>
 
-          <ScrollReveal delay={0.3}>
-            {/* CONTENEDOR CLARO */}
-            <div className="bg-[#E9F5EE]/10 backdrop-blur-3xl rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 md:p-12 border border-[#E9F5EE]/30 shadow-[0_20px_50px_rgba(0,0,0,0.3)] max-w-5xl mx-auto relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-[200px] sm:w-[300px] h-[200px] sm:h-[300px] bg-[#52B788]/20 blur-[80px] sm:blur-[100px]" />
-              
-              <h3 className="text-xl sm:text-3xl font-extrabold text-white mb-6 sm:mb-10 flex items-center gap-3 sm:gap-4 relative z-10">
-                <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-[#74C69D]" />
-                Actividades Recientes
-              </h3>
-              <div className="space-y-4 sm:space-y-6 relative z-10">
-                {RECENT_ACTIVITY.map((act, idx) => (
-                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-white/10 border border-white/20 rounded-2xl sm:rounded-3xl hover:bg-white/20 hover:border-[#74C69D] hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)] transition-all duration-300 cursor-pointer group">
-                    <div className="flex items-center gap-4 sm:gap-6">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 border border-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-[#52B788] transition-all shrink-0">
-                        <act.icon className="w-6 h-6 sm:w-8 sm:h-8 text-[#74C69D] group-hover:text-white" />
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {DASHBOARD_STATS.map((stat, idx) => (
+                    <div key={idx} className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 flex flex-col shadow-sm hover:border-[#52B788]/50 transition-colors cursor-default">
+                      <div className="flex items-center gap-2 mb-2">
+                        <stat.icon className="w-4 h-4 sm:w-5 sm:h-5 text-[#52B788]" />
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase text-gray-400 tracking-widest">{stat.label}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-white text-lg sm:text-xl truncate">{act.action}</h4>
-                        <p className="text-xs sm:text-sm font-medium text-gray-300 mt-0.5 sm:mt-1 truncate">{act.field}</p>
-                      </div>
+                      <span className="text-xl sm:text-2xl font-black text-[#0A1612]">{stat.value}</span>
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-[#1B4332] bg-[#E9F5EE] px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-[0_0_15px_rgba(233,245,238,0.3)] self-start sm:self-auto">{act.time}</div>
+                  ))}
+                </div>
+
+                {/* Table / Chart area */}
+                <div className="bg-white rounded-[1.5rem] p-5 sm:p-6 border border-gray-100 flex-1 shadow-sm">
+                  <h4 className="font-extrabold text-sm text-[#0A1612] mb-4">Actividades Recientes</h4>
+                  <div className="space-y-3">
+                    {RECENT_ACTIVITY.map((act, idx) => (
+                      <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 bg-gray-50/50 hover:bg-[#E9F5EE]/30 rounded-xl border border-gray-100 transition-colors cursor-pointer gap-2 sm:gap-0">
+                        <div className="flex items-center gap-3 sm:gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 text-[#2D6A4F] flex items-center justify-center shadow-sm shrink-0">
+                            <act.icon className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-[#0A1612]">{act.action}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{act.field}</p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-black text-[#52B788] uppercase bg-[#E9F5EE] px-3 py-1 rounded-md self-start sm:self-auto">{act.time}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </ScrollReveal>
@@ -258,73 +281,80 @@ export function Hero() {
             </div>
           </ScrollReveal>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-16 min-h-[500px]">
-            <ScrollReveal delay={0.2}>
-              {/* TARJETAS CLARAS */}
-              <div className="bg-[#E9F5EE]/10 backdrop-blur-2xl rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 md:p-12 border border-[#E9F5EE]/30 shadow-2xl h-full flex flex-col group hover:border-[#52B788] transition-colors">
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8 flex items-center gap-3">
-                  <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-[#74C69D]" />
-                  Mapa Interactivo
-                </h3>
-                <div className="flex-1 bg-[#0A1612]/50 rounded-2xl sm:rounded-3xl border border-white/10 flex items-center justify-center relative overflow-hidden group-hover:border-[#52B788]/50 transition-colors duration-500 min-h-[240px] sm:min-h-[300px]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#52B788]/10 to-transparent" />
-                  <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <pattern id="grid-map-dark" width="40" height="40" patternUnits="userSpaceOnUse">
-                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#74C69D" strokeWidth="1"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid-map-dark)" />
-                  </svg>
-                  <motion.div
-                    animate={{ y: [0, -15, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className="relative z-10"
-                  >
-                    <MapPin className="w-14 h-14 sm:w-20 sm:h-20 text-[#52B788] drop-shadow-[0_0_20px_rgba(82,183,136,0.5)]" />
-                  </motion.div>
-                  <div className="absolute inset-x-0 bottom-6 sm:bottom-8 text-center z-20 px-4">
-                    <span className="bg-[#52B788] px-6 sm:px-8 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-bold text-[#0A1612] shadow-[0_0_20px_rgba(82,183,136,0.4)] uppercase tracking-widest hover:bg-white transition-colors cursor-pointer inline-block">
-                      Abrir Visor Satelital
-                    </span>
-                  </div>
+          <ScrollReveal delay={0.2}>
+            {/* MOCKUP MAPA Y LOTES */}
+            <div className="bg-[#E9F5EE] rounded-[2rem] p-4 sm:p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] max-w-6xl mx-auto text-left relative overflow-hidden border border-[#52B788]/20 flex flex-col lg:flex-row gap-6 transform hover:-translate-y-2 transition-all duration-500">
+              
+              {/* Panel Lotes */}
+              <div className="w-full lg:w-80 bg-white rounded-[1.5rem] p-5 border border-gray-100 flex flex-col gap-4 shadow-sm shrink-0">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="font-extrabold text-[#0A1612]">Tus Lotes</h3>
+                  <span className="px-2 py-1 bg-[#E9F5EE] text-[#2D6A4F] rounded text-[9px] font-black uppercase tracking-wider">4 Activos</span>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-6 sm:mt-10">
-                  <div className="bg-white/10 backdrop-blur-md p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-white/20 transform hover:-translate-y-2 hover:bg-white/20 transition-all">
-                    <span className="block text-3xl sm:text-5xl font-black text-white mb-1 sm:mb-2">450</span>
-                    <span className="text-xs sm:text-sm text-[#74C69D] uppercase font-bold tracking-[0.2em]">Hectáreas</span>
-                  </div>
-                  <div className="bg-[#52B788]/20 backdrop-blur-md p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-[#52B788]/40 transform hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(82,183,136,0.3)] transition-all">
-                    <span className="block text-3xl sm:text-5xl font-black text-[#52B788] mb-1 sm:mb-2">85%</span>
-                    <span className="text-xs sm:text-sm text-white uppercase font-bold tracking-[0.2em]">En Producción</span>
-                  </div>
+                <div className="relative">
+                  <input type="text" placeholder="Buscar lote..." className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-xs font-medium outline-none focus:border-[#52B788] transition-colors" />
+                  <svg className="absolute right-3 top-2.5 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-              </div>
-            </ScrollReveal>
 
-            <ScrollReveal delay={0.4}>
-              {/* TARJETAS CLARAS */}
-              <div className="bg-[#E9F5EE]/10 backdrop-blur-2xl rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 md:p-12 border border-[#E9F5EE]/30 shadow-2xl h-full flex flex-col hover:border-[#52B788] transition-colors">
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8">Tus Lotes</h3>
-                <div className="space-y-4 sm:space-y-6 flex-1 flex flex-col justify-center">
+                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
                   {CAMPOS_LIST.map((campo, idx) => (
-                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 bg-white/10 border border-white/20 rounded-2xl sm:rounded-3xl hover:bg-white/20 hover:border-[#74C69D] hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)] hover:-translate-x-2 transition-all duration-300 cursor-pointer border-l-[6px] sm:border-l-[8px] border-l-[#52B788]">
-                      <div>
-                        <h4 className="font-extrabold text-white text-lg sm:text-2xl mb-1 sm:mb-2">{campo.name}</h4>
-                        <p className="text-xs sm:text-sm text-gray-200 font-bold bg-black/30 border border-white/10 inline-block px-3 py-1 rounded-lg">{campo.lotes} lotes • {campo.hectareas} Ha</p>
+                    <div key={idx} className={`p-3 rounded-xl border ${idx === 0 ? 'border-[#52B788] bg-[#E9F5EE]/30' : 'border-gray-100 bg-white'} cursor-pointer hover:border-[#52B788]/60 transition-colors`}>
+                      <div className="flex justify-between items-start mb-1">
+                        <h4 className="font-bold text-[#0A1612] text-sm">{campo.name}</h4>
+                        <span className={`w-2 h-2 rounded-full mt-1.5 ${campo.status === 'Activo' ? 'bg-[#52B788] shadow-[0_0_8px_#52B788]' : 'bg-amber-400'}`}></span>
                       </div>
-                      <span className={`mt-3 sm:mt-0 px-4 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-full shadow-sm self-start sm:self-auto border ${
-                        campo.status === 'Activo' ? 'bg-[#52B788]/20 text-[#74C69D] border-[#52B788]/50' : 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                      }`}>
-                        {campo.status}
-                      </span>
+                      <div className="flex justify-between items-center text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">
+                        <span>{campo.lotes} lotes</span>
+                        <span className="font-black text-[#2D6A4F]">{campo.hectareas} Ha</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </ScrollReveal>
-          </div>
+
+              {/* Mapa Satellite Mock */}
+              <div className="flex-1 bg-[#1B4332] rounded-[1.5rem] border border-gray-200 overflow-hidden relative min-h-[300px] lg:min-h-[500px] shadow-inner">
+                {/* Imagen satelital simulada de fondo */}
+                <img src="https://images.unsplash.com/photo-1592982537447-6f296d66e746?auto=format&fit=crop&q=80&w=1000" alt="Vista Satelital" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay" />
+                <div className="absolute inset-0 bg-[#2D6A4F]/20 mix-blend-multiply"></div>
+                
+                {/* Capa de lotes (Polígonos simulados) */}
+                <div className="absolute inset-0 p-8 flex items-center justify-center">
+                  <svg className="w-full h-full max-w-[500px]" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet">
+                    <polygon points="50,150 150,50 250,100 200,250 80,220" fill="rgba(82, 183, 136, 0.3)" stroke="#52B788" strokeWidth="2" className="hover:fill-[rgba(82,183,136,0.5)] transition-all cursor-pointer" />
+                    <polygon points="260,110 380,80 350,200 270,180" fill="rgba(255, 193, 7, 0.3)" stroke="#FFC107" strokeWidth="2" className="hover:fill-[rgba(255,193,7,0.5)] transition-all cursor-pointer" />
+                    <polygon points="220,270 330,220 380,350 250,380" fill="rgba(82, 183, 136, 0.3)" stroke="#52B788" strokeWidth="2" className="hover:fill-[rgba(82,183,136,0.5)] transition-all cursor-pointer" />
+                  </svg>
+                </div>
+                
+                {/* Puntos y Marcadores */}
+                <div className="absolute top-[40%] left-[30%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+                  <div className="bg-[#0A1612] text-white text-[9px] font-bold px-2 py-1 rounded shadow-lg mb-1 whitespace-nowrap">Lote 3 - Norte</div>
+                  <div className="w-3 h-3 bg-white rounded-full border-2 border-[#52B788] shadow-[0_0_10px_rgba(82,183,136,0.8)]"></div>
+                </div>
+                
+                {/* UI del mapa superior */}
+                <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+                  <div className="bg-white/95 backdrop-blur rounded-xl px-4 py-2.5 shadow-lg border border-gray-100 flex gap-4 sm:gap-6">
+                    <div className="flex flex-col">
+                      <span className="text-[8px] sm:text-[9px] font-black text-gray-500 uppercase tracking-widest">NDVI Promedio</span>
+                      <span className="text-xs sm:text-sm font-black text-[#2D6A4F]">0.78 <span className="text-[#52B788] text-[9px] font-bold uppercase ml-1">(Alto)</span></span>
+                    </div>
+                    <div className="w-px bg-gray-200"></div>
+                    <div className="flex flex-col">
+                      <span className="text-[8px] sm:text-[9px] font-black text-gray-500 uppercase tracking-widest">Humedad Suelo</span>
+                      <span className="text-xs sm:text-sm font-black text-[#2D6A4F]">65%</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button className="w-9 h-9 bg-white/95 backdrop-blur rounded-xl shadow-lg border border-gray-100 flex items-center justify-center text-gray-700 hover:text-[#52B788] hover:scale-105 transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg></button>
+                    <button className="w-9 h-9 bg-white/95 backdrop-blur rounded-xl shadow-lg border border-gray-100 flex items-center justify-center text-gray-700 hover:text-[#52B788] hover:scale-105 transition-all"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4"></path></svg></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
         </div>
       </section>
 
