@@ -101,11 +101,17 @@ public class JohnDeereAuthService {
      * no el userId directamente (VUL-C01).
      */
     public String buildAuthorizationUrl(String redirectUri, String stateNonce) {
+        String encodedRedirectUri = redirectUri;
+        try {
+            encodedRedirectUri = java.net.URLEncoder.encode(redirectUri, java.nio.charset.StandardCharsets.UTF_8.name());
+        } catch (java.io.UnsupportedEncodingException e) {
+            log.error("Error encoding redirect URI", e);
+        }
         return AUTHORIZE_URL
                 + "?client_id=" + config.getClientId()
                 + "&response_type=code"
                 + "&scope=" + USER_SCOPES.replace(" ", "%20")
-                + "&redirect_uri=" + redirectUri
+                + "&redirect_uri=" + encodedRedirectUri
                 + "&state=" + stateNonce;
     }
 
