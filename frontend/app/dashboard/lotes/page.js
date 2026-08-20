@@ -213,7 +213,7 @@ export default function CiclosPage() {
                 cultivo: campaniaEdit.cultivo,
                 fechaInicio: campaniaEdit.fechaInicio ? campaniaEdit.fechaInicio.slice(0, 10) : "",
                 fechaFin: campaniaEdit.fechaFin ? campaniaEdit.fechaFin.slice(0, 10) : "",
-                lotes: campaniaEdit.lotes?.map(l => ({ idLote: l.idLote, fechaInicioLote: l.fechaInicioLote ? l.fechaInicioLote.slice(0,10) : "" })) || []
+                lotes: campaniaEdit.lotes?.map(l => ({ idLote: l.idLote, fechaInicioLote: l.fechaInicioLote ? l.fechaInicioLote.slice(0, 10) : "" })) || []
             });
         } else {
             setIsEditMode(false);
@@ -331,7 +331,7 @@ export default function CiclosPage() {
                 setCampSuccess("Campaña creada.");
                 toast.success("¡Campaña iniciada!");
             }
-            
+
             invalidateDashboardBootstrapCache();
             setTimeout(() => {
                 setShowModalCampania(false);
@@ -427,378 +427,375 @@ export default function CiclosPage() {
     return (
         <PermissionGuard requiredPermission="LECTURA_CAMPOS">
             <div className="space-y-6 animate-in fade-in duration-500">
-            {error && (
-                <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
-                    <AlertCircle size={16} />
-                    {error}
-                </div>
-            )}
-
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end relative">
-                <div className="flex-1 min-w-[200px]">
-                    <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                            <MapPin size={10} className="inline mr-1" />
-                            Lote
-                        </label>
-                    </div>
-                    <select
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
-                        value={idLoteSeleccionado}
-                        onChange={(e) => setIdLoteSeleccionado(e.target.value)}
-                    >
-                        {lotes.length === 0 ? (
-                            <option value="">Sin lotes</option>
-                        ) : (
-                            lotes.map((l) => (
-                                <option key={l.idLote} value={l.idLote}>
-                                    {l.nombre} — {l.superficie} Ha · {l.nombreCampo}
-                                </option>
-                            ))
-                        )}
-                    </select>
-                </div>
-                <div className="flex-1 min-w-[220px]">
-                    <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest">
-                            Campaña en este lote
-                        </label>
-                        {idCampaniaActiva && (
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => handleOpenModalCampania(campanias.find(c => c.idCampania === idCampaniaActiva))}
-                                    className="text-[10px] text-blue-400 hover:text-blue-500 font-bold flex items-center gap-1 transition-colors"
-                                    title="Editar campaña"
-                                >
-                                    <ClipboardList size={10} /> Editar
-                                </button>
-                                <button
-                                    onClick={() => handleEliminarCampania(idCampaniaActiva)}
-                                    className="text-[10px] text-red-400 hover:text-red-500 font-bold flex items-center gap-1 transition-colors"
-                                    title="Eliminar campaña"
-                                >
-                                    <Trash2 size={10} /> Eliminar
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    <select
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
-                        value={idCampaniaActiva}
-                        onChange={(e) => {
-                            const v = e.target.value;
-                            setIdCampaniaActiva(v);
-                            setFormAct((p) => ({ ...p, idCampania: v }));
-                        }}
-                    >
-                        {campaniasDelLote.length === 0 ? (
-                            <option value="">Sin campañas en este lote</option>
-                        ) : (
-                            campaniasDelLote.map((c) => (
-                                <option key={c.idCampania} value={c.idCampania}>
-                                    {c.cultivo}
-                                    {c.estado === "CERRADA" ? " (cerrada)" : ""} ·{" "}
-                                    {c.fechaInicio?.slice?.(0, 10) || c.fechaInicio}
-                                </option>
-                            ))
-                        )}
-                    </select>
-                </div>
-                {loteActual && (
-                    <div className="text-[12px] text-gray-600 bg-[#EBF3EF] rounded-xl px-4 py-2.5 border border-[#2D6A4F]/15">
-                        <span className="font-black text-[#2D6A4F]">{loteActual.superficie} Ha</span> superficie del lote
-                        {campaniaActual?.superficieLoteHa != null && (
-                            <span className="block text-[10px] text-gray-500 mt-0.5">
-                                Referencia económica: misma superficie para costeos si no indicás Ha en la aplicación.
-                            </span>
-                        )}
+                {error && (
+                    <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+                        <AlertCircle size={16} />
+                        {error}
                     </div>
                 )}
-            </div>
 
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
-                    <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Progreso del ciclo</h2>
-                    <button
-                        type="button"
-                        onClick={() => handleOpenModalCampania()}
-                        className="flex w-full sm:w-auto items-center justify-center gap-2 bg-[#2D6A4F] text-white px-4 py-3 sm:py-2.5 rounded-xl text-[10px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/5 min-h-11 shrink-0"
-                    >
-                        <Plus size={14} /> Nueva campaña
-                    </button>
-                </div>
-                <div className="relative dashboard-scroll-x overflow-x-auto -mx-1 px-1">
-                    <div className="min-w-[520px] sm:min-w-0">
-                        <div className="flex gap-1 h-10 rounded-xl overflow-hidden">
-                            {FASES.map((fase, i) => (
-                                <div
-                                    key={fase}
-                                    className={`flex-1 min-w-0 flex items-center justify-center transition-all ${i <= faseActual ? "bg-[#2D6A4F]" : "bg-gray-100 dark:bg-gray-800"
-                                        }`}
-                                >
-                                    {i === faseActual && (
-                                        <RefreshCw size={14} className="text-white animate-spin" style={{ animationDuration: "3s" }} />
-                                    )}
-                                </div>
-                            ))}
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-end relative">
+                    <div className="flex-1 min-w-[200px]">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                <MapPin size={10} className="inline mr-1" />
+                                Lote
+                            </label>
                         </div>
-                        <div className="flex mt-2">
-                            {FASES.map((fase) => (
-                                <div key={fase} className="flex-1 min-w-0 text-center px-0.5">
-                                    <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight leading-tight break-words">{fase}</p>
+                        <select
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
+                            value={idLoteSeleccionado}
+                            onChange={(e) => setIdLoteSeleccionado(e.target.value)}
+                        >
+                            {lotes.length === 0 ? (
+                                <option value="">Sin lotes</option>
+                            ) : (
+                                lotes.map((l) => (
+                                    <option key={l.idLote} value={l.idLote}>
+                                        {l.nombre} — {l.superficie} Ha · {l.nombreCampo}
+                                    </option>
+                                ))
+                            )}
+                        </select>
+                    </div>
+                    <div className="flex-1 min-w-[220px]">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                                Campaña en este lote
+                            </label>
+                            {idCampaniaActiva && (
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        onClick={() => handleOpenModalCampania(campanias.find(c => c.idCampania === idCampaniaActiva))}
+                                        className="text-[10px] text-blue-400 hover:text-blue-500 font-bold flex items-center gap-1 transition-colors"
+                                        title="Editar campaña"
+                                    >
+                                        <ClipboardList size={10} /> Editar
+                                    </button>
+                                    <button
+                                        onClick={() => handleEliminarCampania(idCampaniaActiva)}
+                                        className="text-[10px] text-red-400 hover:text-red-500 font-bold flex items-center gap-1 transition-colors"
+                                        title="Eliminar campaña"
+                                    >
+                                        <Trash2 size={10} /> Eliminar
+                                    </button>
                                 </div>
-                            ))}
+                            )}
                         </div>
+                        <select
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-[13px] font-bold text-gray-900"
+                            value={idCampaniaActiva}
+                            onChange={(e) => {
+                                const v = e.target.value;
+                                setIdCampaniaActiva(v);
+                                setFormAct((p) => ({ ...p, idCampania: v }));
+                            }}
+                        >
+                            {campaniasDelLote.length === 0 ? (
+                                <option value="">Sin campañas en este lote</option>
+                            ) : (
+                                campaniasDelLote.map((c) => (
+                                    <option key={c.idCampania} value={c.idCampania}>
+                                        {c.cultivo}
+                                        {c.estado === "CERRADA" ? " (cerrada)" : ""} ·{" "}
+                                        {c.fechaInicio?.slice?.(0, 10) || c.fechaInicio}
+                                    </option>
+                                ))
+                            )}
+                        </select>
                     </div>
-                </div>
-            </div>
-
-
-            {/* Registrar Actividad — Horizontal */}
-            <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg">
-                <div className="flex items-center justify-between mb-3">
-                    <div>
-                        <h3 className="font-black text-[15px]">{editingActividad ? '✏️ Editando Actividad' : 'Registrar Actividad'}</h3>
-                        <p className="text-[10px] text-green-100/90 leading-relaxed">
-                            {editingActividad ? 'Modificá los datos y guardá los cambios.' : 'Dosis en unidad del insumo por hectárea. Si no cargás Ha tratadas, se asume todo el lote para el costo de insumos.'}
-                        </p>
-                    </div>
-                    {editingActividad && (
-                        <button type="button" onClick={handleCancelarEdicion} className="text-[11px] font-bold text-red-200 hover:text-white bg-red-500/20 hover:bg-red-500/40 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
-                            <X size={12} /> Cancelar edición
-                        </button>
+                    {loteActual && (
+                        <div className="text-[12px] text-gray-600 bg-[#EBF3EF] rounded-xl px-4 py-2.5 border border-[#2D6A4F]/15">
+                            <span className="font-black text-[#2D6A4F]">{loteActual.superficie} Ha</span> superficie del lote
+                            {campaniaActual?.superficieLoteHa != null && (
+                                <span className="block text-[10px] text-gray-500 mt-0.5">
+                                    Referencia económica: misma superficie para costeos si no indicás Ha en la aplicación.
+                                </span>
+                            )}
+                        </div>
                     )}
                 </div>
-                <form onSubmit={handleRegistrarActividad} className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Tipo</label>
-                            <select value={formAct.tipoActv} onChange={(e) => setFormAct((p) => ({ ...p, tipoActv: e.target.value }))} className={SELECT_GREEN}>
-                                {TIPO_ACTIVIDAD.map((t) => (<option key={t} value={t}>{t}</option>))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Fecha</label>
-                            <input type="date" required value={formAct.fecha} onChange={(e) => setFormAct((p) => ({ ...p, fecha: e.target.value }))} className={INPUT_GREEN} />
-                        </div>
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Costo servicio ({symbol}/Ha)</label>
-                            <input type="number" step="0.01" min="0" value={formAct.costoServicio} onChange={(e) => setFormAct((p) => ({ ...p, costoServicio: e.target.value }))} className={INPUT_GREEN} placeholder="0" />
-                        </div>
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Ha tratadas (opcional)</label>
-                            <input type="number" step="0.01" min="0" max={loteActual?.superficie != null ? loteActual.superficie : undefined} value={formAct.hectareasTratadas} onChange={(e) => setFormAct((p) => ({ ...p, hectareasTratadas: e.target.value }))} className={INPUT_GREEN} placeholder={`Máx. ${loteActual?.superficie ?? "—"} Ha`} />
-                        </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 items-end">
-                        <div>
-                            <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Insumos{TIPOS_CON_DOSIS.includes(formAct.tipoActv) ? ' / dosis (por Ha)' : ''}</label>
-                            <div className="flex flex-wrap gap-2">
-                                {formAct.insumos.map((row, idx) => (
-                                    <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 w-full sm:w-[240px]">
-                                        {formAct.insumos.length > 1 && (
-                                            <button type="button" onClick={() => removeInsumoRow(idx)} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100" aria-label="Quitar insumo">
-                                                <X size={12} strokeWidth={3} />
-                                            </button>
-                                        )}
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-6 h-6 rounded-md bg-[#2D6A4F] flex items-center justify-center text-green-200 shrink-0"><FlaskConical size={12} /></div>
-                                            <select value={row.idInsumo} onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)} className={`w-full bg-transparent border-none text-[12px] font-black text-white focus:outline-none focus:ring-0 [&>option]:text-gray-900 px-1`}>
-                                                <option value="" disabled>Seleccionar insumo...</option>
-                                                {insumos
-                                                    .filter(ins => !ins.idCampania || ins.idCampania === (formAct.idCampania || idCampaniaActiva))
-                                                    .map((ins) => (
-                                                    <option key={ins.idInsumo} value={ins.idInsumo}>
-                                                        {ins.nombre} — {getUnidadLabel(ins.unidad)}{ins.cantidad != null ? ` (Stock: ${ins.cantidad})` : ''}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        {TIPOS_CON_DOSIS.includes(formAct.tipoActv) && (
-                                            <div className="flex items-center justify-between gap-3 pl-8">
-                                                <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
-                                                <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
-                                                    <input type="number" step="0.0001" min="0" placeholder="0.00" value={row.dosisHa} onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)} className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20" />
-                                                    <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all" style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}>
-                                                        {row.idInsumo ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad) : 'kg'}
-                                                    </span>
-                                                </div>
-                                            </div>
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
+                        <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Progreso del ciclo</h2>
+                        <button
+                            type="button"
+                            onClick={() => handleOpenModalCampania()}
+                            className="flex w-full sm:w-auto items-center justify-center gap-2 bg-[#2D6A4F] text-white px-4 py-3 sm:py-2.5 rounded-xl text-[10px] font-bold hover:bg-[#1B4332] transition-all shadow-lg shadow-green-900/5 min-h-11 shrink-0"
+                        >
+                            <Plus size={14} /> Nueva campaña
+                        </button>
+                    </div>
+                    <div className="relative dashboard-scroll-x overflow-x-auto -mx-1 px-1">
+                        <div className="min-w-[520px] sm:min-w-0">
+                            <div className="flex gap-1 h-10 rounded-xl overflow-hidden">
+                                {FASES.map((fase, i) => (
+                                    <div
+                                        key={fase}
+                                        className={`flex-1 min-w-0 flex items-center justify-center transition-all ${i <= faseActual ? "bg-[#2D6A4F]" : "bg-gray-100 dark:bg-gray-800"
+                                            }`}
+                                    >
+                                        {i === faseActual && (
+                                            <RefreshCw size={14} className="text-white animate-spin" style={{ animationDuration: "3s" }} />
                                         )}
                                     </div>
                                 ))}
                             </div>
-                            <button type="button" onClick={addInsumoRow} className="mt-2.5 text-[11px] font-black text-white bg-white/15 hover:bg-white/25 border border-white/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">
-                                <Plus size={14} /> Añadir insumo
-                            </button>
-                            {insumos.length === 0 && loteActual && (
-                                <p className="text-[9px] text-amber-200/90 mt-1">No hay insumos en el catálogo de este campo. Cargalos en Inventario.</p>
-                            )}
-                        </div>
-                        <div className="flex flex-col gap-2 min-w-[200px]">
-                            <div>
-                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Notas</label>
-                                <textarea rows={2} value={formAct.notas} onChange={(e) => setFormAct((p) => ({ ...p, notas: e.target.value }))} className={`${INPUT_GREEN} resize-none`} placeholder="Producto, lote comercial, condiciones, etc." />
+                            <div className="flex mt-2">
+                                {FASES.map((fase) => (
+                                    <div key={fase} className="flex-1 min-w-0 text-center px-0.5">
+                                        <p className="text-[8px] sm:text-[9px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-tight leading-tight break-words">{fase}</p>
+                                    </div>
+                                ))}
                             </div>
-                            {submitError && (
-                                <div className="text-[10px] bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg p-2">{submitError}</div>
-                            )}
-                            {submitSuccess && (
-                                <div className="text-[10px] bg-green-500/20 border border-green-400/30 text-green-100 rounded-lg p-2 flex items-center gap-1"><CheckCircle2 size={11} />{submitSuccess}</div>
-                            )}
-                            <button type="submit" disabled={submitLoading || campaniasDelLote.length === 0} className="w-full bg-white text-[#2D6A4F] py-2.5 rounded-xl font-black text-[12px] hover:bg-green-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
-                                {submitLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                                {editingActividad ? 'Guardar cambios' : 'Guardar actividad'}
-                            </button>
                         </div>
-                    </div>
-                </form>
-            </div>
-
-            {/* Actividades de la campaña seleccionada */}
-            <div className="space-y-3">
-                <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Actividades de la campaña seleccionada</h2>
-                {actividadesFiltradas.length === 0 ? (
-                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 p-8 text-center text-gray-400 text-sm shadow-sm">
-                        <Leaf size={28} className="mx-auto mb-2 text-gray-300" />
-                        No hay actividades para esta campaña.
-                    </div>
-                ) : (
-                    actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} onEliminar={handleEliminarActividad} onEditar={handleEditarActividad} />)
-                )}
-            </div>
-
-            {showModalCampania && (
-                <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
-                    <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[min(92dvh,92vh)] overflow-y-auto p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between mb-5">
-                            <h3 className="font-black text-[16px] text-gray-900 dark:text-gray-100">{isEditMode ? "Editar campaña" : "Nueva campaña"}</h3>
-                            <button
-                                type="button"
-                                onClick={() => setShowModalCampania(false)}
-                                className="w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-400"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <form onSubmit={handleCrearCampania} className="space-y-4">
-                            <FormField label="Cultivo" required>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formCampania.cultivo}
-                                    onChange={(e) => setFormCampania((p) => ({ ...p, cultivo: e.target.value }))}
-                                    className={INPUT_CLASS}
-                                    placeholder="ej. Soja, Maíz…"
-                                />
-                            </FormField>
-                            <FormField label="Lotes asignados" required>
-                                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-2 bg-gray-50 dark:bg-[#15191e] dark:border-gray-800">
-                                    {lotes.map(lote => {
-                                        const selectedLote = formCampania.lotes.find(l => l.idLote === lote.idLote);
-                                        const isSelected = !!selectedLote;
-                                        return (
-                                            <div key={lote.idLote} className="flex flex-col gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        id={`lote-${lote.idLote}`}
-                                                        checked={isSelected}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) {
-                                                                setFormCampania(p => ({ ...p, lotes: [...p.lotes, { idLote: lote.idLote, fechaInicioLote: p.fechaInicio || "" }] }));
-                                                            } else {
-                                                                setFormCampania(p => ({ ...p, lotes: p.lotes.filter(l => l.idLote !== lote.idLote) }));
-                                                            }
-                                                        }}
-                                                        className="w-4 h-4 text-[#2D6A4F] rounded border-gray-300 focus:ring-[#2D6A4F]"
-                                                    />
-                                                    <label htmlFor={`lote-${lote.idLote}`} className="text-[12px] font-semibold cursor-pointer text-gray-800 dark:text-gray-200 select-none">
-                                                        {lote.nombre} ({lote.superficie} Ha) <span className="text-gray-400 font-normal">— {lote.nombreCampo}</span>
-                                                    </label>
-                                                </div>
-                                                {isSelected && (
-                                                    <div className="pl-6 pt-1 flex items-center gap-2">
-                                                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Inicio (opcional):</span>
-                                                        <input 
-                                                            type="date"
-                                                            value={selectedLote.fechaInicioLote}
-                                                            onChange={(e) => {
-                                                                const newDate = e.target.value;
-                                                                setFormCampania(p => ({
-                                                                    ...p,
-                                                                    lotes: p.lotes.map(l => l.idLote === lote.idLote ? { ...l, fechaInicioLote: newDate } : l)
-                                                                }));
-                                                            }}
-                                                            className="text-[11px] px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:border-[#2D6A4F] bg-white"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </FormField>
-                            <div className="grid grid-cols-2 gap-3">
-                                <FormField label="Inicio" required>
-                                    <input
-                                        type="date"
-                                        required
-                                        value={formCampania.fechaInicio}
-                                        onChange={(e) => {
-                                            const newDate = e.target.value;
-                                            setFormCampania((p) => ({
-                                                ...p,
-                                                fechaInicio: newDate,
-                                                lotes: p.lotes.map(l => ({ ...l, fechaInicioLote: newDate }))
-                                            }));
-                                        }}
-                                        className={INPUT_CLASS}
-                                    />
-                                </FormField>
-                                <FormField label="Fin (opc.)">
-                                    <input
-                                        type="date"
-                                        value={formCampania.fechaFin}
-                                        onChange={(e) => setFormCampania((p) => ({ ...p, fechaFin: e.target.value }))}
-                                        className={INPUT_CLASS}
-                                    />
-                                </FormField>
-                            </div>
-                            {campError && (
-                                <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-[12px] font-semibold">
-                                    <AlertCircle size={14} />
-                                    {campError}
-                                </div>
-                            )}
-                            {campSuccess && (
-                                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl p-3 text-green-700 text-[12px] font-semibold">
-                                    <CheckCircle2 size={14} />
-                                    {campSuccess}
-                                </div>
-                            )}
-                            <button
-                                type="submit"
-                                disabled={campLoading}
-                                className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#1B4332] transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg"
-                            >
-                                {campLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
-                                {isEditMode ? "Guardar cambios" : "Crear campaña"}
-                            </button>
-                        </form>
                     </div>
                 </div>
-            )}
-            
-            <ConfirmModal
-                isOpen={confirmModal.isOpen}
-                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                onConfirm={confirmModal.onConfirm}
-                title={confirmModal.title}
-                message={confirmModal.message}
-                confirmText="Eliminar"
-            />
+
+
+                {/* Registrar Actividad — Horizontal */}
+                <div className="bg-[#2D6A4F] rounded-2xl p-5 text-white shadow-lg">
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 className="font-black text-[15px]">{editingActividad ? '✏️ Editando Actividad' : 'Registrar Actividad'}</h3>
+                        </div>
+                        {editingActividad && (
+                            <button type="button" onClick={handleCancelarEdicion} className="text-[11px] font-bold text-red-200 hover:text-white bg-red-500/20 hover:bg-red-500/40 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+                                <X size={12} /> Cancelar edición
+                            </button>
+                        )}
+                    </div>
+                    <form onSubmit={handleRegistrarActividad} className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                            <div>
+                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Tipo</label>
+                                <select value={formAct.tipoActv} onChange={(e) => setFormAct((p) => ({ ...p, tipoActv: e.target.value }))} className={SELECT_GREEN}>
+                                    {TIPO_ACTIVIDAD.map((t) => (<option key={t} value={t}>{t}</option>))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Fecha</label>
+                                <input type="date" required value={formAct.fecha} onChange={(e) => setFormAct((p) => ({ ...p, fecha: e.target.value }))} className={INPUT_GREEN} />
+                            </div>
+                            <div>
+                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Costo servicio ({symbol}/Ha)</label>
+                                <input type="number" step="0.01" min="0" value={formAct.costoServicio} onChange={(e) => setFormAct((p) => ({ ...p, costoServicio: e.target.value }))} className={INPUT_GREEN} placeholder="0" />
+                            </div>
+                            <div>
+                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Ha tratadas (opcional)</label>
+                                <input type="number" step="0.01" min="0" max={loteActual?.superficie != null ? loteActual.superficie : undefined} value={formAct.hectareasTratadas} onChange={(e) => setFormAct((p) => ({ ...p, hectareasTratadas: e.target.value }))} className={INPUT_GREEN} placeholder={`Máx. ${loteActual?.superficie ?? "—"} Ha`} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 items-end">
+                            <div>
+                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Insumos{TIPOS_CON_DOSIS.includes(formAct.tipoActv) ? ' / dosis (por Ha)' : ''}</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {formAct.insumos.map((row, idx) => (
+                                        <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 w-full sm:w-[240px]">
+                                            {formAct.insumos.length > 1 && (
+                                                <button type="button" onClick={() => removeInsumoRow(idx)} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100" aria-label="Quitar insumo">
+                                                    <X size={12} strokeWidth={3} />
+                                                </button>
+                                            )}
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-md bg-[#2D6A4F] flex items-center justify-center text-green-200 shrink-0"><FlaskConical size={12} /></div>
+                                                <select value={row.idInsumo} onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)} className={`w-full bg-transparent border-none text-[12px] font-black text-white focus:outline-none focus:ring-0 [&>option]:text-gray-900 px-1`}>
+                                                    <option value="" disabled>Seleccionar insumo...</option>
+                                                    {insumos
+                                                        .filter(ins => !ins.idCampania || ins.idCampania === (formAct.idCampania || idCampaniaActiva))
+                                                        .map((ins) => (
+                                                            <option key={ins.idInsumo} value={ins.idInsumo}>
+                                                                {ins.nombre} — {getUnidadLabel(ins.unidad)}{ins.cantidad != null ? ` (Stock: ${ins.cantidad})` : ''}
+                                                            </option>
+                                                        ))}
+                                                </select>
+                                            </div>
+                                            {TIPOS_CON_DOSIS.includes(formAct.tipoActv) && (
+                                                <div className="flex items-center justify-between gap-3 pl-8">
+                                                    <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
+                                                    <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
+                                                        <input type="number" step="0.0001" min="0" placeholder="0.00" value={row.dosisHa} onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)} className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20" />
+                                                        <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all" style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}>
+                                                            {row.idInsumo ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad) : 'kg'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <button type="button" onClick={addInsumoRow} className="mt-2.5 text-[11px] font-black text-white bg-white/15 hover:bg-white/25 border border-white/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">
+                                    <Plus size={14} /> Añadir insumo
+                                </button>
+                                {insumos.length === 0 && loteActual && (
+                                    <p className="text-[9px] text-amber-200/90 mt-1">No hay insumos en el catálogo de este campo. Cargalos en Inventario.</p>
+                                )}
+                            </div>
+                            <div className="flex flex-col gap-2 min-w-[200px]">
+                                <div>
+                                    <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Notas</label>
+                                    <textarea rows={2} value={formAct.notas} onChange={(e) => setFormAct((p) => ({ ...p, notas: e.target.value }))} className={`${INPUT_GREEN} resize-none`} placeholder="Producto, lote comercial, condiciones, etc." />
+                                </div>
+                                {submitError && (
+                                    <div className="text-[10px] bg-red-500/20 border border-red-400/30 text-red-100 rounded-lg p-2">{submitError}</div>
+                                )}
+                                {submitSuccess && (
+                                    <div className="text-[10px] bg-green-500/20 border border-green-400/30 text-green-100 rounded-lg p-2 flex items-center gap-1"><CheckCircle2 size={11} />{submitSuccess}</div>
+                                )}
+                                <button type="submit" disabled={submitLoading || campaniasDelLote.length === 0} className="w-full bg-white text-[#2D6A4F] py-2.5 rounded-xl font-black text-[12px] hover:bg-green-50 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+                                    {submitLoading ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                                    {editingActividad ? 'Guardar cambios' : 'Guardar actividad'}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Actividades de la campaña seleccionada */}
+                <div className="space-y-3">
+                    <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Actividades de la campaña seleccionada</h2>
+                    {actividadesFiltradas.length === 0 ? (
+                        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 p-8 text-center text-gray-400 text-sm shadow-sm">
+                            <Leaf size={28} className="mx-auto mb-2 text-gray-300" />
+                            No hay actividades para esta campaña.
+                        </div>
+                    ) : (
+                        actividadesFiltradas.map((act) => <ActividadCard key={act.idActividad} actividad={act} onEliminar={handleEliminarActividad} onEditar={handleEditarActividad} />)
+                    )}
+                </div>
+
+                {showModalCampania && (
+                    <div className="fixed inset-0 z-[1100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+                        <div className="bg-white dark:bg-[#1a1f25] rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md max-h-[min(92dvh,92vh)] overflow-y-auto p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+                            <div className="flex items-center justify-between mb-5">
+                                <h3 className="font-black text-[16px] text-gray-900 dark:text-gray-100">{isEditMode ? "Editar campaña" : "Nueva campaña"}</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModalCampania(false)}
+                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-center text-gray-400"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+                            <form onSubmit={handleCrearCampania} className="space-y-4">
+                                <FormField label="Cultivo" required>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formCampania.cultivo}
+                                        onChange={(e) => setFormCampania((p) => ({ ...p, cultivo: e.target.value }))}
+                                        className={INPUT_CLASS}
+                                        placeholder="ej. Soja, Maíz…"
+                                    />
+                                </FormField>
+                                <FormField label="Lotes asignados" required>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-2 bg-gray-50 dark:bg-[#15191e] dark:border-gray-800">
+                                        {lotes.map(lote => {
+                                            const selectedLote = formCampania.lotes.find(l => l.idLote === lote.idLote);
+                                            const isSelected = !!selectedLote;
+                                            return (
+                                                <div key={lote.idLote} className="flex flex-col gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            id={`lote-${lote.idLote}`}
+                                                            checked={isSelected}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setFormCampania(p => ({ ...p, lotes: [...p.lotes, { idLote: lote.idLote, fechaInicioLote: p.fechaInicio || "" }] }));
+                                                                } else {
+                                                                    setFormCampania(p => ({ ...p, lotes: p.lotes.filter(l => l.idLote !== lote.idLote) }));
+                                                                }
+                                                            }}
+                                                            className="w-4 h-4 text-[#2D6A4F] rounded border-gray-300 focus:ring-[#2D6A4F]"
+                                                        />
+                                                        <label htmlFor={`lote-${lote.idLote}`} className="text-[12px] font-semibold cursor-pointer text-gray-800 dark:text-gray-200 select-none">
+                                                            {lote.nombre} ({lote.superficie} Ha) <span className="text-gray-400 font-normal">— {lote.nombreCampo}</span>
+                                                        </label>
+                                                    </div>
+                                                    {isSelected && (
+                                                        <div className="pl-6 pt-1 flex items-center gap-2">
+                                                            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Inicio (opcional):</span>
+                                                            <input
+                                                                type="date"
+                                                                value={selectedLote.fechaInicioLote}
+                                                                onChange={(e) => {
+                                                                    const newDate = e.target.value;
+                                                                    setFormCampania(p => ({
+                                                                        ...p,
+                                                                        lotes: p.lotes.map(l => l.idLote === lote.idLote ? { ...l, fechaInicioLote: newDate } : l)
+                                                                    }));
+                                                                }}
+                                                                className="text-[11px] px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:border-[#2D6A4F] bg-white"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </FormField>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <FormField label="Inicio" required>
+                                        <input
+                                            type="date"
+                                            required
+                                            value={formCampania.fechaInicio}
+                                            onChange={(e) => {
+                                                const newDate = e.target.value;
+                                                setFormCampania((p) => ({
+                                                    ...p,
+                                                    fechaInicio: newDate,
+                                                    lotes: p.lotes.map(l => ({ ...l, fechaInicioLote: newDate }))
+                                                }));
+                                            }}
+                                            className={INPUT_CLASS}
+                                        />
+                                    </FormField>
+                                    <FormField label="Fin (opc.)">
+                                        <input
+                                            type="date"
+                                            value={formCampania.fechaFin}
+                                            onChange={(e) => setFormCampania((p) => ({ ...p, fechaFin: e.target.value }))}
+                                            className={INPUT_CLASS}
+                                        />
+                                    </FormField>
+                                </div>
+                                {campError && (
+                                    <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-[12px] font-semibold">
+                                        <AlertCircle size={14} />
+                                        {campError}
+                                    </div>
+                                )}
+                                {campSuccess && (
+                                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl p-3 text-green-700 text-[12px] font-semibold">
+                                        <CheckCircle2 size={14} />
+                                        {campSuccess}
+                                    </div>
+                                )}
+                                <button
+                                    type="submit"
+                                    disabled={campLoading}
+                                    className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-[13px] hover:bg-[#1B4332] transition-all flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg"
+                                >
+                                    {campLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                                    {isEditMode ? "Guardar cambios" : "Crear campaña"}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmModal.onConfirm}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    confirmText="Eliminar"
+                />
             </div>
         </PermissionGuard>
     );

@@ -4,7 +4,7 @@ import { OAuthRedirectHandler } from '@/components/shared/OAuthRedirectHandler';
 
 export default function Home() {
   return (
-      <main className="min-h-screen bg-white selection:bg-green-200 selection:text-green-900">
+      <main className="min-h-screen bg-[#0A1612] selection:bg-[#2D6A4F] selection:text-white">
         <OAuthRedirectHandler />
         <Navbar />
         <Hero />
