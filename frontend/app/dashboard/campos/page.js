@@ -7,10 +7,11 @@ import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import dynamic from "next/dynamic";
 const LoteDrawer = dynamic(() => import('@/components/features/dashboard/campos/LoteDrawer'), { ssr: false });
+const ShapefileUploader = dynamic(() => import('@/components/features/dashboard/campos/ShapefileUploader'), { ssr: false });
 import {
     Plus, MapPin, Loader2, AlertCircle, MoreVertical,
     LayoutGrid, List, CheckCircle2, AlertTriangle, X, Scan,
-    Pencil, Trash2, Ruler, Map
+    Pencil, Trash2, Ruler, Map, Upload, Tractor
 } from "lucide-react";
 const CampoLoteMapViewer = dynamic(() => import('@/components/features/dashboard/campos/CampoLoteMapViewer'), { ssr: false });
 import PermissionGuard from "@/components/shared/PermissionGuard";
@@ -19,15 +20,13 @@ const IMAGES = [
     // Campos de soja / cultivos en hileras — sin personas
     "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?q=80&w=600&auto=format&fit=crop",
     // Vista aérea de hectáreas cultivadas
-    "https://images.unsplash.com/photo-1464226184884-fa280b87c399?q=80&w=600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&q=80&w=600",
     // Campo de trigo dorado al atardecer
     "https://images.unsplash.com/photo-1543257580-7269da773bf5?q=80&w=600&auto=format&fit=crop",
     // Hectáreas verdes desde el aire
     "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=600&auto=format&fit=crop",
     // Cultivo de maíz en hileras
-    "https://images.unsplash.com/photo-1595187064843-2c8b5c0c4720?q=80&w=600&auto=format&fit=crop",
-    // Llanura agrícola al amanecer
-    "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?q=80&w=600&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920",
 ];
 
 export default function CamposPage() {
@@ -72,6 +71,8 @@ export default function CamposPage() {
     const [loteInitialCenter, setLoteInitialCenter] = useState(null);
     const [resolvingCenter, setResolvingCenter] = useState(false);
     const [editingLoteGeoId, setEditingLoteGeoId] = useState(null);
+    const [loteInputMethod, setLoteInputMethod] = useState('draw');
+    const [bulkLotes, setBulkLotes] = useState(null);
 
     const resolveCampoCenter = useCallback(async (campo) => {
         if (!campo) return null;
@@ -248,11 +249,53 @@ export default function CamposPage() {
         }
     };
 
+    const handleCrearLotesBulk = async (e) => {
+        e.preventDefault();
+        if (!bulkLotes || bulkLotes.length === 0) return;
+
+        setSubmitLoading(true);
+        setSubmitError(null);
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const lote of bulkLotes) {
+            try {
+                await apiClient.post("/lotes", {
+                    nombre: lote.nombre,
+                    superficie: parseFloat(lote.superficie),
+                    coordenadasGeoJson: lote.coordenadasGeoJson,
+                    idCampo: campoSeleccionado.idCampo
+                });
+                successCount++;
+            } catch (err) {
+                console.error("Error al crear lote bulk:", err);
+                failCount++;
+            }
+        }
+
+        invalidateDashboardBootstrapCache();
+        await fetchData(userId, { forceRefresh: true });
+
+        if (failCount === 0) {
+            setSubmitSuccess(`¡Se importaron ${successCount} lotes exitosamente!`);
+            toast.success(`¡Se importaron ${successCount} lotes exitosamente!`);
+            setTimeout(() => {
+                setShowModalLote(false);
+                setBulkLotes(null);
+                setSubmitSuccess(null);
+            }, 1000);
+        } else {
+            setSubmitError(`Se importaron ${successCount} lotes. Hubo ${failCount} errores.`);
+        }
+        setSubmitLoading(false);
+    };
+
     const handleCrearLote = async (e) => {
         e.preventDefault();
 
         if (!formLote.coordenadasGeoJson) {
-            setSubmitError("Debes dibujar el polígono del lote en el mapa.");
+            setSubmitError("Debes definir el polígono del lote en el mapa.");
             return;
         }
 
@@ -435,418 +478,510 @@ export default function CamposPage() {
     return (
         <PermissionGuard requiredPermission="LECTURA_CAMPOS">
             <div className="space-y-6 animate-in fade-in duration-500">
-            {/* Error global */}
-            {error && (
-                <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
-                    <AlertCircle size={16} className="flex-shrink-0" />
-                    {error}
-                </div>
-            )}
-
-            {/* Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Superficie Total</p>
-                    <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{Number(stats.totalHa).toLocaleString("es-AR", { maximumFractionDigits: 1 })} <span className="text-lg font-semibold text-gray-400">Ha</span></p>
-                    <div className="mt-3 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-[#2D6A4F] rounded-full" style={{ width: `${stats.capacidadRatio}%` }} />
-                    </div>
-                    <p className="text-[10px] text-gray-400 mt-1.5 font-medium">{stats.capacidadRatio}% de la capacidad en producción</p>
-                </div>
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Campos Activos</p>
-                    <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{stats.camposActivos}</p>
-                    <p className="text-[11px] text-green-600 font-bold mt-2 flex items-center gap-1">
-                        <CheckCircle2 size={11} /> Todos los sistemas normales
-                    </p>
-                </div>
-                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Lotes de Producción</p>
-                    <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{stats.lotesTotales}</p>
-                    <p className="text-[11px] text-gray-400 font-medium mt-2">Del total de campos registrados</p>
-                </div>
-            </div>
-
-            {/* Campos list */}
-            <div>
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Campos de Cultivo Activos</h2>
-                    <div className="flex items-center gap-2">
-                        {/* Editar Campos toggle */}
-                        <button
-                            onClick={() => setEditMode(prev => !prev)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${editMode
-                                ? "bg-amber-50 border-amber-200 text-amber-700 shadow-sm"
-                                : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                            }`}
-                        >
-                            <Pencil size={12} />
-                            {editMode ? "Listo" : "Editar Campos"}
-                        </button>
-                        <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
-                            <button onClick={() => setVista("grid")} className={`p-1.5 rounded-md transition-all ${vista === "grid" ? "bg-white dark:bg-gray-700 shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><LayoutGrid size={14} /></button>
-                            <button onClick={() => setVista("lista")} className={`p-1.5 rounded-md transition-all ${vista === "lista" ? "bg-white dark:bg-gray-700 shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><List size={14} /></button>
-                        </div>
-                    </div>
-                </div>
-
-                {campos.length === 0 ? (
-                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-12 text-center">
-                        <p className="text-gray-400 font-medium text-sm">No tenés campos registrados todavía.</p>
-                        <button onClick={() => setShowModalCampo(true)} className="mt-4 text-[#2D6A4F] font-bold text-sm hover:underline">+ Crear tu primer campo</button>
-                    </div>
-                ) : (
-                    <div className={vista === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
-                        {campos.map((campo, i) => (
-                            <CampoCard
-                                key={campo.idCampo}
-                                campo={campo}
-                                imagen={IMAGES[i % IMAGES.length]}
-                                vista={vista}
-                                editMode={editMode}
-                                onClickDetalle={() => handleOpenDetalle(campo)}
-                                onEliminarCampo={handleEliminarCampo}
-                                onEditarCampo={() => handleOpenEditCampo(campo)}
-                                onGestionarLotes={() => handleOpenGestionLotes(campo)}
-                            />
-                        ))}
-
-                        {/* Card "Definir nuevo territorio" solo en grid */}
-                        {vista === "grid" && (
-                            <button
-                                onClick={() => { setShowModalCampo(true); setSubmitError(null); setSubmitSuccess(null); }}
-                                className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 flex flex-col items-center justify-center gap-3 hover:border-[#2D6A4F] hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-all group h-full min-h-[210px]"
-                            >
-                                <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                                    <Plus size={22} className="text-[#2D6A4F]" />
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-[13px] font-bold text-gray-700 dark:text-gray-300">Definir Nuevo Territorio</p>
-                                    <p className="text-[11px] text-gray-400 mt-1">Registrá un nuevo límite de campo y perfil de suelo.</p>
-                                </div>
-                            </button>
-                        )}
+                {/* Error global */}
+                {error && (
+                    <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+                        <AlertCircle size={16} className="flex-shrink-0" />
+                        {error}
                     </div>
                 )}
-            </div>
 
-            {/* Modal: Nuevo Campo */}
-            {showModalCampo && (
-                <Modal titulo="Registro de Campo" onClose={() => setShowModalCampo(false)}>
-                    <form onSubmit={handleCrearCampo} className="space-y-4">
-                        <FormField label="Nombre del campo" required>
-                            <input type="text" required value={formCampo.nombre} onChange={e => setFormCampo(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Sunset Ridge" />
-                        </FormField>
-                        <FormField label="Referencia de ubicación">
-                            <SelectorUbicacion
-                                onSelect={(data) => {
-                                    setFormCampo(p => ({
-                                        ...p,
-                                        ubicacion: data.nombre,
-                                        latitud: data.lat,
-                                        longitud: data.lon
-                                    }));
-                                }}
-                            />
-                            {/* Un pequeño indicador visual (opcional) para dar confianza */}
-                            {formCampo.latitud && (
-                                <div className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
-                                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden />
-                                    UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
-                                </div>
-                            )}
-                            {/* Feedback visual para el usuario */}
-                            {formCampo.latitud && (
-                                <div className="flex items-center gap-1 mt-1 text-green-600 animate-in fade-in slide-in-from-top-1">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
-                                </div>
-                            )}
-                        </FormField>
-                        <FormField label="Superficie total (Ha)" required>
-                            <div className="relative">
-                                <input type="number" step="0.01" min="0.01" required value={formCampo.superficieTotal} onChange={e => setFormCampo(p => ({ ...p, superficieTotal: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="0.00" />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
+                {/* Stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Superficie Total</p>
+                        <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{Number(stats.totalHa).toLocaleString("es-AR", { maximumFractionDigits: 1 })} <span className="text-lg font-semibold text-gray-400">Ha</span></p>
+                        <div className="mt-3 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#2D6A4F] rounded-full" style={{ width: `${stats.capacidadRatio}%` }} />
+                        </div>
+                        <p className="text-[10px] text-gray-400 mt-1.5 font-medium">{stats.capacidadRatio}% de la capacidad en producción</p>
+                    </div>
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Cantidad de Campos</p>
+                        <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{stats.camposActivos}</p>
+                        <p className="text-[11px] text-gray-400 font-medium mt-2">Campos con campañas activas</p>
+                    </div>
+                    <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-sm">
+                        <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Cantidad de Lotes</p>
+                        <p className="text-3xl font-black text-gray-900 dark:text-gray-100">{stats.lotesTotales}</p>
+                        <p className="text-[11px] text-gray-400 font-medium mt-2">Del total de campos registrados</p>
+                    </div>
+                </div>
+
+                {/* Campos list */}
+                <div>
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Campos Registrados</h2>
+                        <div className="flex items-center gap-2">
+                            {/* Editar Campos toggle */}
+                            <button
+                                onClick={() => setEditMode(prev => !prev)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all border ${editMode
+                                    ? "bg-amber-50 border-amber-200 text-amber-700 shadow-sm"
+                                    : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                                    }`}
+                            >
+                                <Pencil size={12} />
+                                {editMode ? "Listo" : "Editar Campos"}
+                            </button>
+                            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
+                                <button onClick={() => setVista("grid")} className={`p-1.5 rounded-md transition-all ${vista === "grid" ? "bg-white dark:bg-gray-700 shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><LayoutGrid size={14} /></button>
+                                <button onClick={() => setVista("lista")} className={`p-1.5 rounded-md transition-all ${vista === "lista" ? "bg-white dark:bg-gray-700 shadow-sm text-[#2D6A4F]" : "text-gray-400"}`}><List size={14} /></button>
                             </div>
-                        </FormField>
-                        {submitError && <ErrorMsg msg={submitError} />}
-                        {submitSuccess && <SuccessMsg msg={submitSuccess} />}
-                        <SubmitBtn loading={submitLoading} text="Confirmar Registro" />
-                        <p className="text-[10px] text-gray-400 text-center">Definir un campo crea automáticamente un ciclo de cultivo predeterminado para asignación inmediata.</p>
-                    </form>
-                </Modal>
-            )}
+                        </div>
+                    </div>
 
-            {/* Modal: Editar Campo */}
-            {showModalEditCampo && editingCampo && (
-                <Modal titulo={`Editar Campo: ${editingCampo.nombre}`} onClose={() => setShowModalEditCampo(false)}>
-                    <form onSubmit={handleEditarCampo} className="space-y-4">
-                        <FormField label="Nombre del campo" required>
-                            <input
-                                type="text"
-                                required
-                                value={formEditCampo.nombre}
-                                onChange={e => setFormEditCampo(p => ({ ...p, nombre: e.target.value }))}
-                                className={INPUT_CLASS}
-                                placeholder="ej. Sunset Ridge"
-                            />
-                        </FormField>
-                        <FormField label="Referencia de ubicación">
-                            <SelectorUbicacion
-                                initialValue={formEditCampo.ubicacion}
-                                onSelect={(data) => {
-                                    setFormEditCampo(p => ({
-                                        ...p,
-                                        ubicacion: data.nombre,
-                                        latitud: data.lat,
-                                        longitud: data.lon
-                                    }));
-                                }}
-                            />
-                            {formEditCampo.latitud && (
-                                <div className="flex items-center gap-1 mt-2 text-green-600">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                    <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
-                                </div>
-                            )}
-                        </FormField>
-                        <FormField label="Superficie total (Ha)" required>
-                            <div className="relative">
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0.01"
-                                    required
-                                    value={formEditCampo.superficieTotal}
-                                    onChange={e => setFormEditCampo(p => ({ ...p, superficieTotal: e.target.value }))}
-                                    className={`${INPUT_CLASS} pr-10`}
-                                    placeholder="0.00"
+                    {campos.length === 0 ? (
+                        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-12 text-center">
+                            <p className="text-gray-400 font-medium text-sm">No tenés campos registrados todavía.</p>
+                            <button onClick={() => setShowModalCampo(true)} className="mt-4 text-[#2D6A4F] font-bold text-sm hover:underline">+ Crear tu primer campo</button>
+                        </div>
+                    ) : (
+                        <div className={vista === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
+                            {campos.map((campo, i) => (
+                                <CampoCard
+                                    key={campo.idCampo}
+                                    campo={campo}
+                                    imagen={IMAGES[i % IMAGES.length]}
+                                    vista={vista}
+                                    editMode={editMode}
+                                    onClickDetalle={() => handleOpenDetalle(campo)}
+                                    onEliminarCampo={handleEliminarCampo}
+                                    onEditarCampo={() => handleOpenEditCampo(campo)}
+                                    onGestionarLotes={() => handleOpenGestionLotes(campo)}
                                 />
-                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
-                            </div>
-                        </FormField>
-                        {submitError && <ErrorMsg msg={submitError} />}
-                        {submitSuccess && <SuccessMsg msg={submitSuccess} />}
-                        <SubmitBtn loading={submitLoading} text="Guardar Cambios" />
-                    </form>
-                </Modal>
-            )}
+                            ))}
 
-            {/* Modal: Nuevo Lote / Editar Lote Mapeo */}
-            {showModalLote && campoSeleccionado && (
-                <Modal titulo={editingLoteGeoId ? "Editar Mapeo del Lote" : "Agregar Lote"} onClose={() => { setShowModalLote(false); setEditingLoteGeoId(null); }}>
-                    <p className="text-[12px] text-gray-500 mb-4">Campo: <strong>{campoSeleccionado.nombre}</strong></p>
-                    <form onSubmit={handleCrearLote} className="space-y-4">
-                        <FormField label="Nombre del lote" required>
-                            <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
-                        </FormField>
+                            {/* Card "Definir nuevo territorio" solo en grid */}
+                            {vista === "grid" && (
+                                <button
+                                    onClick={() => { setShowModalCampo(true); setSubmitError(null); setSubmitSuccess(null); }}
+                                    className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 flex flex-col items-center justify-center gap-3 hover:border-[#2D6A4F] hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-all group h-full min-h-[210px]"
+                                >
+                                    <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                                        <Plus size={22} className="text-[#2D6A4F]" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-[13px] font-bold text-gray-700 dark:text-gray-300">Definir Nuevo Territorio</p>
+                                    </div>
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
 
-                        {(!formLote.coordenadasGeoJson || editingLoteGeoId) ? (
-                            <FormField label="Dibujá el lote en el mapa">
-                                <LoteDrawer
-                                    key={`${campoSeleccionado?.idCampo}-map-${editingLoteGeoId || 'new'}`}
-                                    initialCenter={loteInitialCenter}
-                                    initialGeoJson={editingLoteGeoId ? formLote.coordenadasGeoJson : null}
-                                    onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
-                                        setFormLote(p => ({
+                {/* Modal: Nuevo Campo */}
+                {showModalCampo && (
+                    <Modal titulo="Registro de Campo" onClose={() => setShowModalCampo(false)}>
+                        <form onSubmit={handleCrearCampo} className="space-y-4">
+                            <FormField label="Nombre del campo" required>
+                                <input type="text" required value={formCampo.nombre} onChange={e => setFormCampo(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Sunset Ridge" />
+                            </FormField>
+                            <FormField label="Referencia de ubicación">
+                                <SelectorUbicacion
+                                    onSelect={(data) => {
+                                        setFormCampo(p => ({
                                             ...p,
-                                            coordenadasGeoJson: geoJsonOrMarker || "",
-                                            superficie: haOrCoords || "1"
+                                            ubicacion: data.nombre,
+                                            latitud: data.lat,
+                                            longitud: data.lon
                                         }));
                                     }}
                                 />
+                                {/* Un pequeño indicador visual (opcional) para dar confianza */}
+                                {formCampo.latitud && (
+                                    <div className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden />
+                                        UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
+                                    </div>
+                                )}
+                                {/* Feedback visual para el usuario */}
+                                {formCampo.latitud && (
+                                    <div className="flex items-center gap-1 mt-1 text-green-600 animate-in fade-in slide-in-from-top-1">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
+                                    </div>
+                                )}
                             </FormField>
-                        ) : (
-                            <div className="bg-green-50 text-green-700 text-xs font-bold p-3 rounded-lg border border-green-200 flex justify-between items-center">
-                                <span>✓ Lote delimitado correctamente en el mapa.</span>
-                                <button type="button" onClick={() => setFormLote(p => ({ ...p, coordenadasGeoJson: "" }))} className="text-green-800 underline hover:text-green-900 transition-colors">Volver a dibujar</button>
-                            </div>
-                        )}
-
-                        <div className="grid grid-cols-2 gap-3 items-end">
-                            <FormField label="Superficie (Ha)" required>
+                            <FormField label="Superficie total (Ha)" required>
                                 <div className="relative">
-                                    <input 
-                                        type="number" 
+                                    <input type="number" step="0.01" min="0.01" required value={formCampo.superficieTotal} onChange={e => setFormCampo(p => ({ ...p, superficieTotal: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="0.00" />
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
+                                </div>
+                            </FormField>
+                            {submitError && <ErrorMsg msg={submitError} />}
+                            {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                            <SubmitBtn loading={submitLoading} text="Confirmar Registro" />
+                            <p className="text-[10px] text-gray-400 text-center">Definir un campo crea automáticamente un ciclo de cultivo predeterminado para asignación inmediata.</p>
+                        </form>
+                    </Modal>
+                )}
+
+                {/* Modal: Editar Campo */}
+                {showModalEditCampo && editingCampo && (
+                    <Modal titulo={`Editar Campo: ${editingCampo.nombre}`} onClose={() => setShowModalEditCampo(false)}>
+                        <form onSubmit={handleEditarCampo} className="space-y-4">
+                            <FormField label="Nombre del campo" required>
+                                <input
+                                    type="text"
+                                    required
+                                    value={formEditCampo.nombre}
+                                    onChange={e => setFormEditCampo(p => ({ ...p, nombre: e.target.value }))}
+                                    className={INPUT_CLASS}
+                                    placeholder="ej. Sunset Ridge"
+                                />
+                            </FormField>
+                            <FormField label="Referencia de ubicación">
+                                <SelectorUbicacion
+                                    initialValue={formEditCampo.ubicacion}
+                                    onSelect={(data) => {
+                                        setFormEditCampo(p => ({
+                                            ...p,
+                                            ubicacion: data.nombre,
+                                            latitud: data.lat,
+                                            longitud: data.lon
+                                        }));
+                                    }}
+                                />
+                                {formEditCampo.latitud && (
+                                    <div className="flex items-center gap-1 mt-2 text-green-600">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
+                                    </div>
+                                )}
+                            </FormField>
+                            <FormField label="Superficie total (Ha)" required>
+                                <div className="relative">
+                                    <input
+                                        type="number"
                                         step="0.01"
                                         min="0.01"
-                                        value={formLote.superficie} 
-                                        onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} 
-                                        className={`${INPUT_CLASS} pr-10 text-[#2D6A4F] font-black`} 
+                                        required
+                                        value={formEditCampo.superficieTotal}
+                                        onChange={e => setFormEditCampo(p => ({ ...p, superficieTotal: e.target.value }))}
+                                        className={`${INPUT_CLASS} pr-10`}
                                         placeholder="0.00"
                                     />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#2D6A4F] font-bold">Ha</span>
+                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
                                 </div>
                             </FormField>
-                            <div>
-                                <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight mb-3">Calculada automáticamente al dibujar, pero podés ajustarla si es necesario.</p>
-                            </div>
-                        </div>
-                        {submitError && <ErrorMsg msg={submitError} />}
-                        {submitSuccess && <SuccessMsg msg={submitSuccess} />}
-                        <SubmitBtn loading={submitLoading} text="Confirmar Lote" />
-                    </form>
-                </Modal>
-            )}
+                            {submitError && <ErrorMsg msg={submitError} />}
+                            {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                            <SubmitBtn loading={submitLoading} text="Guardar Cambios" />
+                        </form>
+                    </Modal>
+                )}
 
-            {/* Popup: Detalle del Campo */}
-            {campoDetalle && (
-                <Modal titulo={campoDetalle.nombre} onClose={() => setCampoDetalle(null)}>
-                    <div className="space-y-4">
-                        {campoDetalle.ubicacion && (
-                            <p className="text-[11px] text-gray-400 flex items-center gap-1"><MapPin size={11} />{campoDetalle.ubicacion}</p>
+                {/* Modal: Nuevo Lote / Editar Lote Mapeo */}
+                {showModalLote && campoSeleccionado && (
+                    <Modal titulo={editingLoteGeoId ? "Editar Mapeo del Lote" : (bulkLotes ? `Importar ${bulkLotes.length} Lotes` : "Agregar Lote")} onClose={() => { setShowModalLote(false); setEditingLoteGeoId(null); setLoteInputMethod('draw'); setBulkLotes(null); }}>
+                        <p className="text-[12px] text-gray-500 mb-4">Campo: <strong>{campoSeleccionado.nombre}</strong></p>
+
+                        {/* ── MODO MASIVO: formulario simplificado ─────────────── */}
+                        {bulkLotes && bulkLotes.length > 0 ? (
+                            <form onSubmit={handleCrearLotesBulk} className="space-y-4">
+                                {loteInputMethod === 'upload' && (
+                                    <ShapefileUploader
+                                        initialCenter={loteInitialCenter}
+                                        onGeoJsonReady={(geojsonStr, areaHa) => {
+                                            setBulkLotes(null);
+                                            setFormLote(p => ({ ...p, coordenadasGeoJson: geojsonStr || "", superficie: areaHa || "" }));
+                                        }}
+                                        onBulkReady={(items) => { if (items) setBulkLotes(items); else setBulkLotes(null); }}
+                                    />
+                                )}
+                                {loteInputMethod === 'john-deere' && (
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 text-center flex flex-col items-center justify-center min-h-[300px]">
+                                        <div className="w-16 h-16 bg-[#367C2B]/10 rounded-full flex items-center justify-center mb-4">
+                                            <Tractor size={32} className="text-[#367C2B]" />
+                                        </div>
+                                        <h4 className="text-gray-800 dark:text-gray-100 font-bold mb-2">Integración con John Deere</h4>
+                                        <p className="text-sm text-gray-500 max-w-sm">Próximamente podrás sincronizar tus lotes directamente desde el Operations Center de John Deere.</p>
+                                        <span className="mt-4 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">Próximamente</span>
+                                    </div>
+                                )}
+                                {submitError && <ErrorMsg msg={submitError} />}
+                                {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                                <SubmitBtn loading={submitLoading} text={`Importar ${bulkLotes.length} lote${bulkLotes.length > 1 ? 's' : ''}`} />
+                            </form>
+                        ) : (
+                            /* ── MODO SIMPLE: formulario completo ─────────────────── */
+                            <form onSubmit={handleCrearLote} className="space-y-4">
+                                <FormField label="Nombre del lote" required>
+                                    <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
+                                </FormField>
+
+                                {(!formLote.coordenadasGeoJson || editingLoteGeoId) ? (
+                                    <>
+                                        {/* ── Tabs: método de entrada ─────────────────────── */}
+                                        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setLoteInputMethod('draw'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
+                                                    loteInputMethod === 'draw'
+                                                        ? 'bg-white dark:bg-gray-700 text-[#2D6A4F] shadow-sm'
+                                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                                }`}
+                                            >
+                                                <Pencil size={12} /> Dibujar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setLoteInputMethod('upload'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
+                                                    loteInputMethod === 'upload'
+                                                        ? 'bg-white dark:bg-gray-700 text-[#2D6A4F] shadow-sm'
+                                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                                }`}
+                                            >
+                                                <Upload size={12} /> Subir archivo
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setLoteInputMethod('john-deere'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
+                                                    loteInputMethod === 'john-deere'
+                                                        ? 'bg-white dark:bg-gray-700 text-[#367C2B] shadow-sm'
+                                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                                }`}
+                                            >
+                                                <Tractor size={12} /> John Deere
+                                            </button>
+                                        </div>
+
+                                        {/* ── Contenido del tab activo ────────────────────── */}
+                                        {loteInputMethod === 'draw' && (
+                                            <LoteDrawer
+                                                key={`${campoSeleccionado?.idCampo}-map-${editingLoteGeoId || 'new'}`}
+                                                initialCenter={loteInitialCenter}
+                                                initialGeoJson={editingLoteGeoId ? formLote.coordenadasGeoJson : null}
+                                                onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
+                                                    setFormLote(p => ({
+                                                        ...p,
+                                                        coordenadasGeoJson: geoJsonOrMarker || "",
+                                                        superficie: haOrCoords || "1"
+                                                    }));
+                                                }}
+                                            />
+                                        )}
+                                        {loteInputMethod === 'upload' && (
+                                            <ShapefileUploader
+                                                initialCenter={loteInitialCenter}
+                                                onGeoJsonReady={(geojsonStr, areaHa) => {
+                                                    setBulkLotes(null);
+                                                    setFormLote(p => ({
+                                                        ...p,
+                                                        coordenadasGeoJson: geojsonStr || "",
+                                                        superficie: areaHa || ""
+                                                    }));
+                                                }}
+                                                onBulkReady={(items) => { if (items) setBulkLotes(items); }}
+                                            />
+                                        )}
+                                        {loteInputMethod === 'john-deere' && (
+                                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 text-center flex flex-col items-center justify-center min-h-[300px]">
+                                                <div className="w-16 h-16 bg-[#367C2B]/10 rounded-full flex items-center justify-center mb-4">
+                                                    <Tractor size={32} className="text-[#367C2B]" />
+                                                </div>
+                                                <h4 className="text-gray-800 dark:text-gray-100 font-bold mb-2">Integración con John Deere</h4>
+                                                <p className="text-sm text-gray-500 max-w-sm">Próximamente podrás sincronizar tus lotes directamente desde el Operations Center de John Deere.</p>
+                                                <span className="mt-4 px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-bold rounded-full">Próximamente</span>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="bg-green-50 text-green-700 text-xs font-bold p-3 rounded-lg border border-green-200 flex justify-between items-center">
+                                        <span>✓ Lote delimitado correctamente.</span>
+                                        <button type="button" onClick={() => { setFormLote(p => ({ ...p, coordenadasGeoJson: "" })); setLoteInputMethod('draw'); }} className="text-green-800 underline hover:text-green-900 transition-colors">Volver a definir</button>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-3 items-end">
+                                    <FormField label="Superficie (Ha)" required>
+                                        <div className="relative">
+                                            <input 
+                                                type="number" 
+                                                step="0.01"
+                                                min="0.01"
+                                                value={formLote.superficie} 
+                                                onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} 
+                                                className={`${INPUT_CLASS} pr-10 text-[#2D6A4F] font-black`} 
+                                                placeholder="0.00"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#2D6A4F] font-bold">Ha</span>
+                                        </div>
+                                    </FormField>
+                                    <div>
+                                        <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight mb-3">Calculada automáticamente, pero podés ajustarla si es necesario.</p>
+                                    </div>
+                                </div>
+                                {submitError && <ErrorMsg msg={submitError} />}
+                                {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                                <SubmitBtn loading={submitLoading} text="Confirmar Lote" />
+                            </form>
                         )}
-                        {/* Map */}
-                        <div className="h-[220px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                            {campoDetalle.latitud && campoDetalle.longitud && !loadingLotes ? (
-                                <CampoLoteMapViewer
-                                    center={[parseFloat(campoDetalle.latitud), parseFloat(campoDetalle.longitud)]}
-                                    lotes={lotesDelCampo}
-                                />
+                    </Modal>
+                )}
+
+                {/* Popup: Detalle del Campo */}
+                {campoDetalle && (
+                    <Modal titulo={campoDetalle.nombre} onClose={() => setCampoDetalle(null)}>
+                        <div className="space-y-4">
+                            {campoDetalle.ubicacion && (
+                                <p className="text-[11px] text-gray-400 flex items-center gap-1"><MapPin size={11} />{campoDetalle.ubicacion}</p>
+                            )}
+                            {/* Map */}
+                            <div className="h-[220px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+                                {campoDetalle.latitud && campoDetalle.longitud && !loadingLotes ? (
+                                    <CampoLoteMapViewer
+                                        center={[parseFloat(campoDetalle.latitud), parseFloat(campoDetalle.longitud)]}
+                                        lotes={lotesDelCampo}
+                                    />
+                                ) : (
+                                    <div className="h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-sm gap-2">
+                                        {loadingLotes ? <Loader2 size={20} className="animate-spin" /> : <MapPin size={20} />}
+                                        {loadingLotes ? "Cargando mapa..." : "Sin coordenadas disponibles"}
+                                    </div>
+                                )}
+                            </div>
+                            {/* Totals */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 border border-green-100 dark:border-green-800">
+                                    <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Total Hectáreas</p>
+                                    <p className="text-xl font-black text-green-700 dark:text-green-400">{Number(campoDetalle.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
+                                </div>
+                                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-800">
+                                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Total Lotes</p>
+                                    <p className="text-xl font-black text-blue-700 dark:text-blue-400">{campoDetalle.cantidadLotes || 0}</p>
+                                </div>
+                            </div>
+                            {/* Lotes list */}
+                            {loadingLotes ? (
+                                <div className="flex justify-center p-4"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
+                            ) : lotesDelCampo.length === 0 ? (
+                                <p className="text-[12px] text-gray-400 text-center py-3">No hay lotes registrados en este campo.</p>
                             ) : (
-                                <div className="h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-sm gap-2">
-                                    {loadingLotes ? <Loader2 size={20} className="animate-spin" /> : <MapPin size={20} />}
-                                    {loadingLotes ? "Cargando mapa..." : "Sin coordenadas disponibles"}
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hectáreas por lote</p>
+                                    {lotesDelCampo.map(lote => (
+                                        <div key={lote.idLote} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2.5 border border-gray-100 dark:border-gray-700">
+                                            <span className="text-[12px] font-bold text-gray-700 dark:text-gray-200">{lote.nombre}</span>
+                                            <span className="text-[12px] font-black text-[#2D6A4F]">{Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</span>
+                                        </div>
+                                    ))}
                                 </div>
                             )}
-                        </div>
-                        {/* Totals */}
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 border border-green-100 dark:border-green-800">
-                                <p className="text-[9px] font-black text-green-600 uppercase tracking-widest">Total Hectáreas</p>
-                                <p className="text-xl font-black text-green-700 dark:text-green-400">{Number(campoDetalle.superficieTotal).toLocaleString("es-AR", { maximumFractionDigits: 1 })} Ha</p>
+
+                            {/* Botón para agregar un lote al campo actual */}
+                            <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                <span className="text-[11px] text-gray-400 dark:text-gray-500">¿Querés añadir más subdivisiones?</span>
+                                <button
+                                    onClick={() => {
+                                        setResolvingCenter(true);
+                                        resolveCampoCenter(campoDetalle).then(center => {
+                                            setResolvingCenter(false);
+                                            setLoteInitialCenter(center || [-34.6, -63.5]);
+                                            setCampoSeleccionado(campoDetalle);
+                                            setFormLote({ nombre: "", superficie: "10", coordenadasGeoJson: "" });
+                                            setEditingLoteGeoId(null);
+                                            setCampoDetalle(null);
+                                            setShowModalLote(true);
+                                        });
+                                    }}
+                                    disabled={resolvingCenter}
+                                    className="flex items-center gap-1 bg-[#2D6A4F] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#1B4332] transition-all disabled:opacity-60 shadow"
+                                >
+                                    {resolvingCenter ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                                    Agregar Lote
+                                </button>
                             </div>
-                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 border border-blue-100 dark:border-blue-800">
-                                <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">Total Lotes</p>
-                                <p className="text-xl font-black text-blue-700 dark:text-blue-400">{campoDetalle.cantidadLotes || 0}</p>
-                            </div>
                         </div>
-                        {/* Lotes list */}
-                        {loadingLotes ? (
-                            <div className="flex justify-center p-4"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
-                        ) : lotesDelCampo.length === 0 ? (
-                            <p className="text-[12px] text-gray-400 text-center py-3">No hay lotes registrados en este campo.</p>
+                    </Modal>
+                )}
+
+                {/* Modal: Gestionar Lotes */}
+                {showGestionLotes && (
+                    <Modal titulo={`Lotes — ${showGestionLotes.nombre}`} onClose={() => { setShowGestionLotes(null); setEditingLote(null); }}>
+                        {loadingGestion ? (
+                            <div className="flex justify-center p-6"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
+                        ) : lotesGestion.length === 0 ? (
+                            <p className="text-[12px] text-gray-400 text-center py-6">No hay lotes en este campo.</p>
                         ) : (
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hectáreas por lote</p>
-                                {lotesDelCampo.map(lote => (
-                                    <div key={lote.idLote} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2.5 border border-gray-100 dark:border-gray-700">
-                                        <span className="text-[12px] font-bold text-gray-700 dark:text-gray-200">{lote.nombre}</span>
-                                        <span className="text-[12px] font-black text-[#2D6A4F]">{Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</span>
+                            <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                                {lotesGestion.map(lote => (
+                                    <div key={lote.idLote} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[13px] font-bold text-gray-800 dark:text-gray-100">{lote.nombre}</p>
+                                                <p className="text-[11px] text-gray-400">{Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</p>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => { setEditingLote(lote.idLote); setEditLoteForm({ superficie: String(lote.superficie) }); }}
+                                                    title="Editar tamaño"
+                                                    className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 transition-colors"
+                                                >
+                                                    <Ruler size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setResolvingCenter(true);
+                                                        resolveCampoCenter(showGestionLotes).then(center => {
+                                                            setResolvingCenter(false);
+                                                            setLoteInitialCenter(center || [-34.6, -63.5]);
+                                                            setCampoSeleccionado(showGestionLotes);
+                                                            setFormLote({ nombre: lote.nombre, superficie: String(lote.superficie), coordenadasGeoJson: lote.coordenadasGeoJson || "" });
+                                                            setEditingLoteGeoId(lote.idLote);
+                                                            setShowGestionLotes(null);
+                                                            setShowModalLote(true);
+                                                        });
+                                                    }}
+                                                    title="Editar mapeo"
+                                                    className="p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-400 hover:text-green-600 transition-colors"
+                                                >
+                                                    <Map size={14} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEliminarLote(lote)}
+                                                    title="Eliminar lote"
+                                                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {/* Inline edit superficie */}
+                                        {editingLote === lote.idLote && (
+                                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600 flex items-end gap-2 animate-in slide-in-from-top-1">
+                                                <div className="flex-1">
+                                                    <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Nueva superficie (Ha)</label>
+                                                    <input
+                                                        type="number" step="0.01" min="0.01"
+                                                        value={editLoteForm.superficie}
+                                                        onChange={e => setEditLoteForm({ superficie: e.target.value })}
+                                                        className={INPUT_CLASS + " !py-2 !text-[12px]"}
+                                                    />
+                                                </div>
+                                                <button
+                                                    onClick={() => handleEditarLoteSuperficie(lote)}
+                                                    disabled={editLoteLoading || !editLoteForm.superficie}
+                                                    className="bg-[#2D6A4F] text-white px-3 py-2 rounded-xl text-[11px] font-bold hover:bg-[#1B4332] transition-all disabled:opacity-60 flex items-center gap-1"
+                                                >
+                                                    {editLoteLoading ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                                    Guardar
+                                                </button>
+                                                <button onClick={() => setEditingLote(null)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                                                    <X size={14} />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         )}
-
-                        {/* Botón para agregar un lote al campo actual */}
-                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-                            <span className="text-[11px] text-gray-400 dark:text-gray-500">¿Querés añadir más subdivisiones?</span>
-                            <button
-                                onClick={() => {
-                                    setResolvingCenter(true);
-                                    resolveCampoCenter(campoDetalle).then(center => {
-                                        setResolvingCenter(false);
-                                        setLoteInitialCenter(center || [-34.6, -63.5]);
-                                        setCampoSeleccionado(campoDetalle);
-                                        setFormLote({ nombre: "", superficie: "10", coordenadasGeoJson: "" });
-                                        setEditingLoteGeoId(null);
-                                        setCampoDetalle(null);
-                                        setShowModalLote(true);
-                                    });
-                                }}
-                                disabled={resolvingCenter}
-                                className="flex items-center gap-1 bg-[#2D6A4F] text-white px-3 py-1.5 rounded-lg text-[11px] font-bold hover:bg-[#1B4332] transition-all disabled:opacity-60 shadow"
-                            >
-                                {resolvingCenter ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-                                Agregar Lote
-                            </button>
-                        </div>
-                    </div>
-                </Modal>
-            )}
-
-            {/* Modal: Gestionar Lotes */}
-            {showGestionLotes && (
-                <Modal titulo={`Lotes — ${showGestionLotes.nombre}`} onClose={() => { setShowGestionLotes(null); setEditingLote(null); }}>
-                    {loadingGestion ? (
-                        <div className="flex justify-center p-6"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
-                    ) : lotesGestion.length === 0 ? (
-                        <p className="text-[12px] text-gray-400 text-center py-6">No hay lotes en este campo.</p>
-                    ) : (
-                        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-                            {lotesGestion.map(lote => (
-                                <div key={lote.idLote} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-[13px] font-bold text-gray-800 dark:text-gray-100">{lote.nombre}</p>
-                                            <p className="text-[11px] text-gray-400">{Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</p>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                onClick={() => { setEditingLote(lote.idLote); setEditLoteForm({ superficie: String(lote.superficie) }); }}
-                                                title="Editar tamaño"
-                                                className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 transition-colors"
-                                            >
-                                                <Ruler size={14} />
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setResolvingCenter(true);
-                                                    resolveCampoCenter(showGestionLotes).then(center => {
-                                                        setResolvingCenter(false);
-                                                        setLoteInitialCenter(center || [-34.6, -63.5]);
-                                                        setCampoSeleccionado(showGestionLotes);
-                                                        setFormLote({ nombre: lote.nombre, superficie: String(lote.superficie), coordenadasGeoJson: lote.coordenadasGeoJson || "" });
-                                                        setEditingLoteGeoId(lote.idLote);
-                                                        setShowGestionLotes(null);
-                                                        setShowModalLote(true);
-                                                    });
-                                                }}
-                                                title="Editar mapeo"
-                                                className="p-1.5 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-400 hover:text-green-600 transition-colors"
-                                            >
-                                                <Map size={14} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleEliminarLote(lote)}
-                                                title="Eliminar lote"
-                                                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors"
-                                            >
-                                                <Trash2 size={14} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* Inline edit superficie */}
-                                    {editingLote === lote.idLote && (
-                                        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600 flex items-end gap-2 animate-in slide-in-from-top-1">
-                                            <div className="flex-1">
-                                                <label className="block text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Nueva superficie (Ha)</label>
-                                                <input
-                                                    type="number" step="0.01" min="0.01"
-                                                    value={editLoteForm.superficie}
-                                                    onChange={e => setEditLoteForm({ superficie: e.target.value })}
-                                                    className={INPUT_CLASS + " !py-2 !text-[12px]"}
-                                                />
-                                            </div>
-                                            <button
-                                                onClick={() => handleEditarLoteSuperficie(lote)}
-                                                disabled={editLoteLoading || !editLoteForm.superficie}
-                                                className="bg-[#2D6A4F] text-white px-3 py-2 rounded-xl text-[11px] font-bold hover:bg-[#1B4332] transition-all disabled:opacity-60 flex items-center gap-1"
-                                            >
-                                                {editLoteLoading ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                                Guardar
-                                            </button>
-                                            <button onClick={() => setEditingLote(null)} className="text-gray-400 hover:text-gray-600 p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </Modal>
-            )}
+                    </Modal>
+                )}
             </div>
         </PermissionGuard>
     );

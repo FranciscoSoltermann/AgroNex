@@ -9,30 +9,31 @@ export const Navbar = () => {
 
     return (
         <>
-            <nav className="flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4 bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm border-b">
+            <nav className="flex items-center justify-between px-6 sm:px-12 py-3.5 sm:py-4 bg-[#060E0B]/85 backdrop-blur-md sticky top-0 z-50 border-b border-white/[0.06] transition-colors">
                 {/* LOGO */}
                 <Link
                     href="/"
-                    className="flex items-center gap-2 text-xl sm:text-2xl font-bold text-green-800 tracking-tight hover:opacity-80 transition-opacity"
+                    className="flex items-center gap-2.5 text-lg sm:text-xl font-black tracking-tight hover:opacity-90 transition-opacity select-none"
                 >
-                    <Leaf className="h-5 w-5 sm:h-6 sm:w-6" />
-                    <span>Agronex</span>
+                    <Leaf className="h-5 w-5 text-[#52B788]" />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-white from-25% via-[#D8F3DC] via-60% to-[#74C69D]">
+                        AGRONEX
+                    </span>
                 </Link>
 
-                {/* DESKTOP — botones derechos */}
+                {/* DESKTOP — BOTÓN INGRESAR */}
                 <div className="hidden sm:flex items-center gap-4">
-
                     <Link
                         href="/login"
-                        className="border border-green-800 text-green-800 hover:bg-green-50 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
+                        className="border border-white/25 hover:border-white/60 bg-white/[0.03] hover:bg-white/[0.08] text-white px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm active:scale-95"
                     >
                         Ingresar
                     </Link>
                 </div>
 
-                {/* MOBILE — hamburger */}
+                {/* MOBILE — HAMBURGER */}
                 <button
-                    className="sm:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700"
+                    className="sm:hidden p-2 rounded-lg hover:bg-white/10 transition-colors text-white"
                     onClick={() => setOpen(true)}
                     aria-label="Abrir menú"
                 >
@@ -45,27 +46,28 @@ export const Navbar = () => {
                 <div className="fixed inset-0 z-[100] flex sm:hidden">
                     {/* Backdrop */}
                     <div
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
                         onClick={() => setOpen(false)}
                     />
                     {/* Panel */}
-                    <div className="relative ml-auto w-72 h-full bg-white shadow-2xl flex flex-col p-6 animate-in slide-in-from-right duration-200">
+                    <div className="relative ml-auto w-72 h-full bg-[#060E0B] border-l border-white/10 shadow-2xl flex flex-col p-6 animate-in slide-in-from-right duration-200">
                         <div className="flex items-center justify-between mb-8">
-                            <Link href="/" className="flex items-center gap-2 text-xl font-bold text-green-800" onClick={() => setOpen(false)}>
-                                <Leaf className="h-5 w-5" />
-                                <span>Agronex</span>
+                            <Link href="/" className="flex items-center gap-2 text-lg font-black tracking-tight" onClick={() => setOpen(false)}>
+                                <Leaf className="h-5 w-5 text-[#52B788]" />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white from-25% via-[#D8F3DC] via-60% to-[#74C69D]">
+                                    AGRONEX
+                                </span>
                             </Link>
-                            <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500">
+                            <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-white/10 text-gray-400">
                                 <X size={20} />
                             </button>
                         </div>
 
                         <nav className="flex flex-col gap-3 flex-1">
-
                             <Link
                                 href="/login"
                                 onClick={() => setOpen(false)}
-                                className="border border-green-800 text-green-800 px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-widest text-center"
+                                className="border border-white/25 hover:border-white/60 bg-white/[0.03] text-white px-5 py-3 rounded-xl text-sm font-bold uppercase tracking-wider text-center hover:bg-white/10 transition-all"
                             >
                                 Ingresar
                             </Link>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -15,22 +15,60 @@ import {
   Droplets,
   Wind,
   Thermometer,
+  Package,
+  TrendingUp,
+  BarChart3,
+  Box,
+  AlertTriangle,
+  ChevronRight,
+  MoreHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HELPERS
+   HELPERS & SUBCOMPONENTS
 ═══════════════════════════════════════════════════════════════════════════ */
 
 function ScrollReveal({ children, delay = 0 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 50 }}
+      initial={{ opacity: 0, y: 40 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay, ease: "easeOut" }}
-      viewport={{ once: true, margin: '-100px' }}
+      viewport={{ once: true, margin: '-80px' }}
     >
       {children}
     </motion.div>
+  );
+}
+
+function ScrollDownArrow({ targetId, label = "Ver siguiente apartado" }) {
+  const handleClick = (e) => {
+    e.preventDefault();
+    const elem = document.getElementById(targetId);
+    if (elem) {
+      elem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  return (
+    <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center">
+      <a
+        href={`#${targetId}`}
+        onClick={handleClick}
+        aria-label={label}
+        className="group flex flex-col items-center gap-1.5 focus:outline-none"
+      >
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-[#52B788]/25 border border-white/20 hover:border-[#52B788]/50 backdrop-blur-md flex items-center justify-center text-white/80 hover:text-white transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.4)] group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(82,183,136,0.5)]">
+          <motion.div
+            animate={{ y: [0, 4, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <ChevronDown className="w-5 h-5 text-[#74C69D] group-hover:text-white transition-colors" />
+          </motion.div>
+        </div>
+      </a>
+    </div>
   );
 }
 
@@ -38,39 +76,9 @@ function ScrollReveal({ children, delay = 0 }) {
    DATA
 ═══════════════════════════════════════════════════════════════════════════ */
 
-const DASHBOARD_STATS = [
-  { label: 'Hectáreas Totales',   value: '2,450', icon: Map       },
-  { label: 'Campos Activos',      value: '12',    icon: MapPin    },
-  { label: 'Gastos Acumulados',   value: '$348K', icon: DollarSign },
-  { label: 'Ciclos Activos',      value: '8',     icon: Activity  },
-];
-
-const RECENT_ACTIVITY = [
-  { action: 'Siembra de Soja',       field: 'Campo Norte – Lote 3', time: 'Hace 2 hs',  icon: Sprout   },
-  { action: 'Aplicación Herbicida',  field: 'Campo Sur – Lote 1',   time: 'Hace 5 hs',  icon: Activity },
-  { action: 'Riego programado',      field: 'Campo Este – Lote 2',  time: 'Hace 8 hs',  icon: Droplets },
-];
-
-const CAMPOS_LIST = [
-  { name: 'Campo Norte', lotes: 4, hectareas: 450, status: 'Activo'        },
-  { name: 'Campo Sur',   lotes: 3, hectareas: 320, status: 'Activo'        },
-  { name: 'Campo Este',  lotes: 5, hectareas: 580, status: 'En preparación' },
-  { name: 'Campo Oeste', lotes: 2, hectareas: 180, status: 'Activo'        },
-];
-
-const FENO_STAGES = [
-  { stage: 'Barbecho',      icon: '🌱', status: 'completed' },
-  { stage: 'Siembra',       icon: '🌾', status: 'completed' },
-  { stage: 'Veg. Temprana', icon: '🌿', status: 'current'   },
-  { stage: 'Reproducción',  icon: '🌻', status: 'pending'   },
-  { stage: 'Cosecha',       icon: '🚜', status: 'pending'   },
-];
-
-const CLIMATE_CHIPS = [
-  { icon: Thermometer, value: '24°C',  label: 'Temp.' },
-  { icon: Droplets,    value: '68%',   label: 'Humedad' },
-  { icon: Wind,        value: '12 km/h', label: 'Viento' },
-  { icon: Cloud,       value: '0 mm',  label: 'Lluvia' },
+const FEATURE_HIGHLIGHTS = [
+  { text: 'Control total de insumos, seguimiento de costos por campaña y proyección de flujo de caja en tiempo real.' },
+  { text: 'Datos meteorológicos, pronósticos precisos, alertas tempranas de heladas o sequías y registros de lluvias.' },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -79,292 +87,466 @@ const CLIMATE_CHIPS = [
 
 export function Hero() {
   return (
-    // Contenedor principal con fondo fijo
-    <div className="bg-[#0A1612] text-white relative min-h-screen">
-      
-      {/* ══════════════════════════════════════════════════════════════════
-          FONDO AGRÍCOLA FIJO EN TODO EL HERO (PARALLAX CONTENIDO)
-      ══════════════════════════════════════════════════════════════════ */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
-          alt="Fondo agrícola"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0A1612]/75 via-[#0A1612]/80 to-[#0A1612]/90" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(82,183,136,0.25)_0%,transparent_70%)]" />
-      </div>
+    <div className="bg-[#0A1612] text-white relative snap-y snap-proximity scroll-smooth">
 
       {/* ══════════════════════════════════════════════════════════════════
-          § 1 — HERO PRINCIPAL
+          § 1 — HERO PRINCIPAL (Stitch: Impacto Visual)
+          Layout 2 columnas: Texto izquierda + Laptop mockup derecha
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="relative z-10 min-h-screen flex items-center justify-center pt-24 sm:pt-28 pb-16 sm:pb-32">
-        <div className="container mx-auto px-4 sm:px-6 text-center pb-8 sm:pb-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="flex flex-col items-center gap-6 sm:gap-8"
-          >
-            {/* Badge Glow */}
-            <div className="inline-flex items-center gap-2.5 px-4 sm:px-6 py-2 sm:py-2.5 bg-[#52B788]/20 border border-[#52B788]/40 rounded-full backdrop-blur-md shadow-[0_0_20px_rgba(82,183,136,0.4)]">
-              <Leaf className="w-4 h-4 sm:w-5 sm:h-5 text-[#74C69D] animate-pulse" />
-              <span className="uppercase tracking-widest text-xs sm:text-sm font-bold text-[#E9F5EE]">Cultivador Digital</span>
-            </div>
-
-            <h1 className="text-4xl sm:text-7xl md:text-8xl lg:text-[8rem] font-extrabold tracking-tighter leading-none mb-1 sm:mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white via-[#E9F5EE] to-[#74C69D] drop-shadow-2xl">
-              AGRONEX
-            </h1>
-
-            <p className="text-base sm:text-xl md:text-2xl text-gray-300 max-w-4xl mx-auto font-light leading-relaxed px-2">
-              Monitoreo satelital de cultivos, geolocalización de lotes y análisis climático en tiempo real. <strong className="text-white font-medium">Decisiones inteligentes basadas en datos.</strong>
-            </p>
-
-            <div className="grid grid-cols-2 min-[500px]:flex min-[500px]:flex-wrap justify-center gap-2.5 sm:gap-4 mt-4 sm:mt-6 w-full max-w-2xl sm:max-w-none">
-              {CLIMATE_CHIPS.map((c, idx) => (
-                <div key={idx} className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 bg-[#E9F5EE]/10 hover:bg-[#E9F5EE]/20 backdrop-blur-lg border border-white/20 rounded-full px-3.5 sm:px-6 py-2.5 sm:py-3 transition-all duration-300 cursor-default group shadow-lg">
-                  <c.icon className="w-4 h-4 sm:w-5 sm:h-5 text-[#74C69D] group-hover:text-white shrink-0" />
-                  <span className="font-bold text-xs sm:text-base md:text-lg text-white">{c.value}</span>
-                  <span className="text-gray-300 text-[9px] sm:text-[11px] md:text-xs uppercase tracking-widest font-semibold">{c.label}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-8 sm:mt-12 w-full sm:w-auto px-4 sm:px-0">
-              <Link
-                href="/login"
-                className="w-full sm:w-auto px-8 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-[#2D6A4F] to-[#52B788] text-white text-base sm:text-lg font-extrabold rounded-2xl shadow-[0_10px_30px_rgba(82,183,136,0.4)] hover:shadow-[0_15px_40px_rgba(82,183,136,0.6)] hover:-translate-y-1 transition-all duration-300 uppercase tracking-widest text-center"
-              >
-                Comenzar Gratis
-              </Link>
-              <a
-                href="#dashboard"
-                className="w-full sm:w-auto px-8 sm:px-12 py-4 sm:py-5 bg-[#E9F5EE]/10 backdrop-blur-md border border-white/20 text-white text-base sm:text-lg font-bold rounded-2xl hover:bg-[#E9F5EE]/20 hover:-translate-y-1 transition-all duration-300 uppercase tracking-widest text-center"
-              >
-                Explorar Plataforma
-              </a>
-            </div>
-          </motion.div>
+      <section id="hero" className="relative min-h-[calc(100vh-80px)] flex flex-col justify-center overflow-hidden snap-start py-12 sm:py-20">
+        {/* Fondo agrícola */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
+            alt="Fondo agrícola"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0A1612]/90 via-[#0A1612]/70 to-[#0A1612]/40" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A1612]/80 via-transparent to-[#0A1612]/30" />
         </div>
+
+        <div className="container relative z-10 mx-auto px-6 sm:px-8 lg:px-12 pb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+
+            {/* Columna Izquierda — Texto */}
+            <motion.div
+              initial={{ opacity: 0, x: -40 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.9, ease: "easeOut" }}
+              className="flex flex-col gap-5 sm:gap-6"
+            >
+              <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.2rem] xl:text-[5.8rem] font-black tracking-tight leading-[0.95] text-transparent bg-clip-text bg-gradient-to-r from-white from-20% via-[#D8F3DC] via-55% to-[#74C69D] drop-shadow-lg select-none">
+                AGRONEX
+              </h1>
+              <h2 className="text-xl min-[420px]:text-2xl sm:text-3xl md:text-4xl lg:text-[1.85rem] xl:text-[2.35rem] font-bold text-white/95 whitespace-nowrap tracking-tight">
+                El Sistema Operativo de tu Campo
+              </h2>
+              <p className="text-base sm:text-lg md:text-xl text-[#74C69D] font-semibold">
+                Gestión agrícola integral.
+              </p>
+              <p className="text-sm sm:text-base text-gray-300/90 max-w-lg leading-relaxed font-light">
+                Centralizá tus lotes, controlá tu inventario, monitoreá y optimizá cada ciclo productivo.
+                La plataforma definitiva para el agro moderno.
+              </p>
+
+              {/* Botón CTA Único */}
+              <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                <Link
+                  href="/login"
+                  className="px-8 py-3.5 bg-[#2D6A4F] hover:bg-[#52B788] text-white text-sm font-black uppercase tracking-widest rounded-lg transition-all duration-300 shadow-lg shadow-[#2D6A4F]/30 hover:shadow-[#52B788]/40 hover:-translate-y-0.5 text-center"
+                >
+                  Comenzar Gratis
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Columna Derecha — Laptop Mockup con Dashboard (Fiel a Stitch) */}
+            {/* Columna Derecha — Laptop Mockup con Dashboard (Fiel a Stitch) */}
+            <motion.div
+              initial={{ opacity: 0, x: 40, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+              className="hidden lg:block"
+            >
+              <div className="relative w-full max-w-[560px] xl:max-w-[640px] mx-auto">
+                {/* Glow ambiental verde sutil detrás */}
+                <div className="absolute -inset-10 bg-[#52B788]/15 rounded-[4rem] blur-[80px] pointer-events-none" />
+
+                {/* LAPTOP CONTAINER */}
+                <div className="relative flex flex-col items-center">
+
+                  {/* 1. Tapa / Pantalla (Lid) con bisel y notch idéntico a Stitch */}
+                  <div className="w-[94%] relative bg-[#0f1012] rounded-t-[20px] p-[8px] pb-0 border border-[#2b2d30] shadow-[0_-5px_30px_rgba(0,0,0,0.6)]">
+
+                    {/* Pantalla Dashboard */}
+                    <div className="rounded-t-[12px] overflow-hidden bg-white aspect-[1600/900] relative shadow-inner">
+                      {/* Notch MacBook en la parte superior central */}
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 w-24 h-[16px] bg-[#0f1012] rounded-b-[10px] flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-[#050505] border border-[#2a2c30]" />
+                      </div>
+
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src="/mockups/dashboard.png"
+                        alt="AgroNex Dashboard"
+                        className="w-full h-full object-fill select-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2. Bisagra de conexión (Hinge) */}
+                  <div className="w-[88%] h-[3px] bg-[#1c1c1f] shadow-[inset_0_1px_2px_rgba(0,0,0,0.8)]" />
+
+                  {/* 3. Base de aluminio (Silver MacBook Chassis) */}
+                  <div className="relative w-full">
+                    {/* Parte superior de la base con brillo metálico */}
+                    <div className="w-full h-[12px] bg-gradient-to-r from-[#9aa0a6] via-[#e2e5e9] via-50% to-[#9aa0a6] rounded-t-sm border-t border-white/80 shadow-[0_1px_3px_rgba(255,255,255,0.5)_inset]">
+                      {/* Muesca central para abrir (Thumb notch) */}
+                      <div className="mx-auto w-20 h-[6px] bg-gradient-to-b from-[#63686e] to-[#7f858c] rounded-b-[5px] shadow-inner" />
+                    </div>
+
+                    {/* Borde inferior redondeado de la base */}
+                    <div className="w-full h-[8px] bg-gradient-to-b from-[#adb2b8] via-[#8f949a] to-[#5b5f65] rounded-b-[14px] shadow-[0_4px_10px_rgba(0,0,0,0.4)]" />
+                  </div>
+
+                  {/* 4. Sombra proyectada en la superficie */}
+                  <div className="w-[98%] h-[18px] bg-black/60 blur-[14px] rounded-full mt-[-3px] pointer-events-none" />
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Mobile: Imagen del dashboard visible solo en mobile */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="lg:hidden"
+            >
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#52B788]/30 bg-[#0d0d0e] p-2">
+                <div className="rounded-xl overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/mockups/dashboard.png"
+                    alt="AgroNex Dashboard"
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Flecha indicadora de scroll */}
+        <ScrollDownArrow targetId="campos-lotes" label="Ir a Gestión de Campos y Lotes" />
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          § 2 — DASHBOARD
+          § 2 — GESTIÓN DE CAMPOS Y LOTES (Stitch: Funcionalidades)
       ══════════════════════════════════════════════════════════════════ */}
-      <section id="dashboard" className="py-16 sm:py-32 relative z-10 bg-transparent">
-        <div className="absolute top-1/4 left-0 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-[#52B788]/10 rounded-full blur-[100px] sm:blur-[150px] pointer-events-none" />
+      <section id="campos-lotes" className="relative min-h-screen flex flex-col justify-center py-20 sm:py-28 overflow-hidden snap-start">
+        {/* Fondo agrícola sección */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
+            alt="Campos agrícolas"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#0A1612]/60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0A1612] via-transparent to-[#0A1612]" />
+        </div>
 
-        <div className="container relative z-10 mx-auto px-4 sm:px-6 max-w-[1400px]">
+        <div className="container relative z-10 mx-auto px-6 sm:px-8 max-w-[1200px] pb-12">
           <ScrollReveal>
-            <div className="flex flex-col items-center text-center gap-4 sm:gap-5 mb-12 sm:mb-20">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#E9F5EE]/10 border border-[#52B788]/40 backdrop-blur-md rounded-2xl sm:rounded-3xl shadow-[0_0_30px_rgba(82,183,136,0.2)] flex items-center justify-center transform hover:rotate-6 hover:scale-110 transition-all">
-                <LayoutDashboard className="w-8 h-8 sm:w-10 sm:h-10 text-[#74C69D]" />
+            {/* Título con ícono */}
+            <div className="flex flex-col items-center text-center gap-4 mb-10 sm:mb-12">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#52B788]/20 backdrop-blur-md border border-[#52B788]/30 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(82,183,136,0.3)]">
+                <Map className="w-8 h-8 sm:w-10 sm:h-10 text-[#52B788]" />
               </div>
-              <div>
-                <h2 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white mb-2 sm:mb-3">Dashboard Principal</h2>
-                <p className="text-[#74C69D] uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm font-bold">Resumen Operativo Inteligente</p>
-              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
+                Gestión de Campos y Lotes
+              </h2>
             </div>
           </ScrollReveal>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 mb-12 sm:mb-20">
-            {DASHBOARD_STATS.map((stat, idx) => (
-              <ScrollReveal key={idx} delay={idx * 0.1}>
-                {/* TARJETAS CLARAS SOBRE FONDO OSCURO */}
-                <div className="bg-[#E9F5EE]/10 backdrop-blur-2xl border border-[#E9F5EE]/30 rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-2xl hover:border-[#52B788] hover:bg-[#E9F5EE]/20 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(82,183,136,0.2)] transition-all duration-300 flex flex-col items-center md:items-start text-center md:text-left min-h-[160px] sm:min-h-[200px] justify-between group">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 rounded-xl sm:rounded-2xl border border-white/20 flex items-center justify-center group-hover:bg-[#52B788] group-hover:border-[#52B788] transition-colors duration-500">
-                    <stat.icon className="w-6 h-6 sm:w-8 sm:h-8 text-[#74C69D] group-hover:text-white" />
+          <ScrollReveal delay={0.2}>
+            {/* Card principal con glassmorphism */}
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
+              {/* Stats superiores */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/15">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Superficie Total</p>
+                  <p className="text-3xl sm:text-4xl font-black text-white">2376 <span className="text-lg font-bold text-[#74C69D]">Ha</span></p>
+                  <p className="text-xs text-white/70 font-medium mt-1">En 96 lotes productivos activos</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/15">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Campos Activos</p>
+                  <p className="text-3xl sm:text-4xl font-black text-white">6</p>
+                  <p className="text-xs text-white/70 font-medium mt-1">Todos los sistemas conectados</p>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-5 border border-white/15">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Lotes de Producción</p>
+                  <p className="text-3xl sm:text-4xl font-black text-white">25</p>
+                  <p className="text-xs text-white/70 font-medium mt-1">Total de campos registrados</p>
+                </div>
+              </div>
+
+              {/* Título sección campos */}
+              <p className="text-xs font-extrabold uppercase tracking-widest text-white/90 mb-4 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-[#52B788]" />
+                Campos de Cultivo Activos
+              </p>
+
+              {/* Cards de campos */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Campo 1 */}
+                <div className="group relative rounded-xl overflow-hidden border border-white/15 hover:border-[#52B788]/60 transition-all duration-300 cursor-pointer">
+                  <div className="h-32 sm:h-36 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&q=80&w=600"
+                      alt="Don Ramón"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <p className="text-[10px] text-white/85 font-semibold truncate tracking-wide">SANTA FE, DEPARTAMENTO LA CAPITAL, ARGENTINA</p>
+                      <p className="text-sm font-bold text-white">Don Ramón</p>
+                    </div>
                   </div>
-                  <div className="mt-3 sm:mt-0">
-                    <div className="text-3xl sm:text-5xl font-black text-white mb-1 sm:mb-2">{stat.value}</div>
-                    <div className="text-[#74C69D] text-[10px] sm:text-sm uppercase tracking-widest font-bold group-hover:text-white transition-colors">{stat.label}</div>
+                  <div className="flex items-center justify-between px-3 py-2.5 bg-white/10">
+                    <span className="text-xs font-bold text-white">413 Ha</span>
+                    <span className="text-xs text-white/80 font-semibold">5 Unidades</span>
                   </div>
                 </div>
-              </ScrollReveal>
-            ))}
-          </div>
 
-          <ScrollReveal delay={0.3}>
-            {/* CONTENEDOR CLARO */}
-            <div className="bg-[#E9F5EE]/10 backdrop-blur-3xl rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 md:p-12 border border-[#E9F5EE]/30 shadow-[0_20px_50px_rgba(0,0,0,0.3)] max-w-5xl mx-auto relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-[200px] sm:w-[300px] h-[200px] sm:h-[300px] bg-[#52B788]/20 blur-[80px] sm:blur-[100px]" />
-              
-              <h3 className="text-xl sm:text-3xl font-extrabold text-white mb-6 sm:mb-10 flex items-center gap-3 sm:gap-4 relative z-10">
-                <Activity className="w-6 h-6 sm:w-8 sm:h-8 text-[#74C69D]" />
-                Actividades Recientes
-              </h3>
-              <div className="space-y-4 sm:space-y-6 relative z-10">
-                {RECENT_ACTIVITY.map((act, idx) => (
-                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 p-4 sm:p-6 bg-white/10 border border-white/20 rounded-2xl sm:rounded-3xl hover:bg-white/20 hover:border-[#74C69D] hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)] transition-all duration-300 cursor-pointer group">
-                    <div className="flex items-center gap-4 sm:gap-6">
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/10 border border-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center group-hover:bg-[#52B788] transition-all shrink-0">
-                        <act.icon className="w-6 h-6 sm:w-8 sm:h-8 text-[#74C69D] group-hover:text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-white text-lg sm:text-xl truncate">{act.action}</h4>
-                        <p className="text-xs sm:text-sm font-medium text-gray-300 mt-0.5 sm:mt-1 truncate">{act.field}</p>
-                      </div>
+                {/* Campo 2 */}
+                <div className="group relative rounded-xl overflow-hidden border border-white/15 hover:border-[#52B788]/60 transition-all duration-300 cursor-pointer">
+                  <div className="h-32 sm:h-36 relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=600"
+                      alt="La Delfina"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                      <p className="text-[10px] text-white/85 font-semibold truncate tracking-wide">SAN JUSTO, SANTA FE, ARGENTINA</p>
+                      <p className="text-sm font-bold text-white">La Delfina</p>
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-[#1B4332] bg-[#E9F5EE] px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-[0_0_15px_rgba(233,245,238,0.3)] self-start sm:self-auto">{act.time}</div>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2.5 bg-white/10">
+                    <span className="text-xs font-bold text-white">648 Ha</span>
+                    <span className="text-xs text-white/80 font-semibold">7 Unidades</span>
+                  </div>
+                </div>
+
+                {/* Card añadir nuevo */}
+                <div className="group relative rounded-xl overflow-hidden border border-dashed border-white/30 hover:border-[#52B788]/60 transition-all duration-300 cursor-pointer flex flex-col items-center justify-center min-h-[180px] bg-white/5 hover:bg-[#52B788]/10">
+                  <div className="w-12 h-12 rounded-full bg-white/10 border border-white/25 flex items-center justify-center mb-3 group-hover:bg-[#52B788]/20 group-hover:border-[#52B788]/50 transition-all">
+                    <svg className="w-5 h-5 text-white/80 group-hover:text-[#52B788]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                  </div>
+                  <p className="text-sm font-bold text-white">Definir Nuevo Territorio</p>
+                  <p className="text-xs text-white/75 mt-1 text-center px-4 font-normal">Registrá un nuevo lote de campo y definí su uso</p>
+                </div>
+              </div>
+            </div>
+          </ScrollReveal>
+        </div>
+
+        {/* Flecha indicadora de scroll hacia Finanzas */}
+        <ScrollDownArrow targetId="finanzas" label="Ir a Gestión Financiera" />
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          § 3 — GESTIÓN FINANCIERA (Stitch: Funcionalidades)
+      ══════════════════════════════════════════════════════════════════ */}
+      <section id="finanzas" className="relative min-h-screen flex flex-col justify-center py-20 sm:py-28 overflow-hidden snap-start">
+        {/* Fondo agrícola */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
+            alt="Campos de cultivo"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#0A1612]/65" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0A1612] via-transparent to-[#0A1612]" />
+        </div>
+
+        <div className="container relative z-10 mx-auto px-6 sm:px-8 max-w-[1200px] pb-12">
+          <ScrollReveal>
+            {/* Título con ícono */}
+            <div className="flex flex-col items-center text-center gap-4 mb-10 sm:mb-12">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#52B788]/20 backdrop-blur-md border border-[#52B788]/30 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(82,183,136,0.3)]">
+                <DollarSign className="w-8 h-8 sm:w-10 sm:h-10 text-[#52B788]" />
+              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
+                Gestión Financiera
+              </h2>
+            </div>
+          </ScrollReveal>
+
+          <ScrollReveal delay={0.2}>
+            {/* Card principal financiera */}
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 pb-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="w-5 h-5 text-[#52B788]" />
+                  <h3 className="text-lg font-bold text-white">Rentabilidad por Campo</h3>
+                </div>
+              </div>
+
+              {/* Campo nombre + ROI */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
+                <h4 className="text-xl sm:text-2xl font-bold text-white">Don Ramon</h4>
+                <div className="mt-2 sm:mt-0 inline-flex items-center gap-2 px-4 py-2 bg-[#52B788]/20 border border-[#52B788]/40 rounded-full">
+                  <TrendingUp className="w-4 h-4 text-[#52B788]" />
+                  <span className="text-sm font-black text-[#52B788]">ROI: +25%</span>
+                </div>
+              </div>
+
+              {/* Stats financieros */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Ingresos Totales</p>
+                  <p className="text-lg sm:text-xl font-black text-white">$150,000.00</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Gasto Operativo (Var)</p>
+                  <p className="text-lg sm:text-xl font-black text-[#52B788]">$50,000.00</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Costo Estructural (Fijo)</p>
+                  <p className="text-lg sm:text-xl font-black text-[#52B788]">$50,000.00</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Margen Bruto</p>
+                  <p className="text-lg sm:text-xl font-black text-white">$50,000.00</p>
+                </div>
+              </div>
+
+              {/* Gráfico placeholder */}
+              <div className="h-24 sm:h-32 flex items-end justify-center gap-1 sm:gap-1.5 mb-8 px-4">
+                {[40, 55, 35, 65, 50, 75, 60, 80, 70, 85, 90, 95].map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 max-w-4 bg-gradient-to-t from-[#2D6A4F] to-[#52B788] rounded-t-sm transition-all duration-300 hover:opacity-80"
+                    style={{ height: `${h}%` }}
+                  />
+                ))}
+              </div>
+
+              {/* Features highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-white/10">
+                {FEATURE_HIGHLIGHTS.map((f, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-1 h-full min-h-[40px] bg-[#52B788]/40 rounded-full shrink-0" />
+                    <p className="text-xs text-white/80 leading-relaxed">{f.text}</p>
                   </div>
                 ))}
               </div>
             </div>
           </ScrollReveal>
         </div>
+
+        {/* Flecha indicadora de scroll hacia Inventario */}
+        <ScrollDownArrow targetId="inventario" label="Ir a Gestión de Inventario" />
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          § 3 — CAMPOS Y LOTES
+          § 4 — GESTIÓN DE INVENTARIO (Stitch: Funcionalidades)
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="py-16 sm:py-32 relative z-10 bg-transparent">
-        <div className="container mx-auto px-4 sm:px-6 max-w-[1400px] relative z-10">
-          <ScrollReveal>
-            <div className="flex flex-col items-center text-center gap-4 sm:gap-5 mb-12 sm:mb-20">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#E9F5EE]/10 backdrop-blur-md border border-[#52B788]/30 rounded-2xl sm:rounded-3xl shadow-lg flex items-center justify-center hover:scale-110 transition-transform">
-                <Map className="w-8 h-8 sm:w-10 sm:h-10 text-[#74C69D]" />
-              </div>
-              <div>
-                <h2 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white mb-2 sm:mb-4">Campos y Lotes</h2>
-                <p className="text-[#74C69D] uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm font-bold">Gestión del Territorio Inteligente</p>
-              </div>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-16 min-h-[500px]">
-            <ScrollReveal delay={0.2}>
-              {/* TARJETAS CLARAS */}
-              <div className="bg-[#E9F5EE]/10 backdrop-blur-2xl rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 md:p-12 border border-[#E9F5EE]/30 shadow-2xl h-full flex flex-col group hover:border-[#52B788] transition-colors">
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8 flex items-center gap-3">
-                  <MapPin className="w-6 h-6 sm:w-8 sm:h-8 text-[#74C69D]" />
-                  Mapa Interactivo
-                </h3>
-                <div className="flex-1 bg-[#0A1612]/50 rounded-2xl sm:rounded-3xl border border-white/10 flex items-center justify-center relative overflow-hidden group-hover:border-[#52B788]/50 transition-colors duration-500 min-h-[240px] sm:min-h-[300px]">
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#52B788]/10 to-transparent" />
-                  <svg className="absolute inset-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <pattern id="grid-map-dark" width="40" height="40" patternUnits="userSpaceOnUse">
-                        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#74C69D" strokeWidth="1"/>
-                      </pattern>
-                    </defs>
-                    <rect width="100%" height="100%" fill="url(#grid-map-dark)" />
-                  </svg>
-                  <motion.div
-                    animate={{ y: [0, -15, 0] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    className="relative z-10"
-                  >
-                    <MapPin className="w-14 h-14 sm:w-20 sm:h-20 text-[#52B788] drop-shadow-[0_0_20px_rgba(82,183,136,0.5)]" />
-                  </motion.div>
-                  <div className="absolute inset-x-0 bottom-6 sm:bottom-8 text-center z-20 px-4">
-                    <span className="bg-[#52B788] px-6 sm:px-8 py-2.5 sm:py-3 rounded-full text-xs sm:text-sm font-bold text-[#0A1612] shadow-[0_0_20px_rgba(82,183,136,0.4)] uppercase tracking-widest hover:bg-white transition-colors cursor-pointer inline-block">
-                      Abrir Visor Satelital
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 sm:gap-6 mt-6 sm:mt-10">
-                  <div className="bg-white/10 backdrop-blur-md p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-white/20 transform hover:-translate-y-2 hover:bg-white/20 transition-all">
-                    <span className="block text-3xl sm:text-5xl font-black text-white mb-1 sm:mb-2">450</span>
-                    <span className="text-xs sm:text-sm text-[#74C69D] uppercase font-bold tracking-[0.2em]">Hectáreas</span>
-                  </div>
-                  <div className="bg-[#52B788]/20 backdrop-blur-md p-5 sm:p-8 rounded-2xl sm:rounded-[2rem] border border-[#52B788]/40 transform hover:-translate-y-2 hover:shadow-[0_10px_30px_rgba(82,183,136,0.3)] transition-all">
-                    <span className="block text-3xl sm:text-5xl font-black text-[#52B788] mb-1 sm:mb-2">85%</span>
-                    <span className="text-xs sm:text-sm text-white uppercase font-bold tracking-[0.2em]">En Producción</span>
-                  </div>
-                </div>
-              </div>
-            </ScrollReveal>
-
-            <ScrollReveal delay={0.4}>
-              {/* TARJETAS CLARAS */}
-              <div className="bg-[#E9F5EE]/10 backdrop-blur-2xl rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 md:p-12 border border-[#E9F5EE]/30 shadow-2xl h-full flex flex-col hover:border-[#52B788] transition-colors">
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8">Tus Lotes</h3>
-                <div className="space-y-4 sm:space-y-6 flex-1 flex flex-col justify-center">
-                  {CAMPOS_LIST.map((campo, idx) => (
-                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 bg-white/10 border border-white/20 rounded-2xl sm:rounded-3xl hover:bg-white/20 hover:border-[#74C69D] hover:shadow-[0_10px_20px_rgba(0,0,0,0.3)] hover:-translate-x-2 transition-all duration-300 cursor-pointer border-l-[6px] sm:border-l-[8px] border-l-[#52B788]">
-                      <div>
-                        <h4 className="font-extrabold text-white text-lg sm:text-2xl mb-1 sm:mb-2">{campo.name}</h4>
-                        <p className="text-xs sm:text-sm text-gray-200 font-bold bg-black/30 border border-white/10 inline-block px-3 py-1 rounded-lg">{campo.lotes} lotes • {campo.hectareas} Ha</p>
-                      </div>
-                      <span className={`mt-3 sm:mt-0 px-4 sm:px-5 py-2 sm:py-2.5 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-full shadow-sm self-start sm:self-auto border ${
-                        campo.status === 'Activo' ? 'bg-[#52B788]/20 text-[#74C69D] border-[#52B788]/50' : 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                      }`}>
-                        {campo.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </ScrollReveal>
-          </div>
+      <section id="inventario" className="relative min-h-screen flex flex-col justify-center py-20 sm:py-28 overflow-hidden snap-start">
+        {/* Fondo agrícola */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
+            alt="Campos verdes"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-[#0A1612]/60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0A1612] via-transparent to-[#0A1612]" />
         </div>
-      </section>
 
-      {/* ══════════════════════════════════════════════════════════════════
-          § 4 — CICLOS DE PRODUCCIÓN
-      ══════════════════════════════════════════════════════════════════ */}
-      <section className="py-16 sm:py-32 relative overflow-hidden bg-transparent min-h-[600px] sm:min-h-[800px] flex items-center z-10">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[800px] h-[400px] sm:h-[800px] bg-[#52B788]/10 rounded-full blur-[100px] sm:blur-[200px] pointer-events-none" />
-
-        <div className="container mx-auto px-4 sm:px-6 max-w-[1400px] relative z-10">
+        <div className="container relative z-10 mx-auto px-6 sm:px-8 max-w-[1200px] pb-12">
           <ScrollReveal>
-            <div className="flex flex-col items-center text-center gap-4 sm:gap-5 mb-12 sm:mb-24">
-              <div className="w-16 h-16 sm:w-24 sm:h-24 bg-[#E9F5EE]/10 backdrop-blur-md border border-[#52B788]/40 rounded-2xl sm:rounded-[2rem] shadow-[0_0_40px_rgba(82,183,136,0.3)] flex items-center justify-center hover:scale-110 hover:border-[#52B788] transition-all">
-                <Sprout className="w-8 h-8 sm:w-12 sm:h-12 text-[#52B788]" />
+            {/* Título con ícono */}
+            <div className="flex flex-col items-center text-center gap-4 mb-10 sm:mb-12">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#52B788]/20 backdrop-blur-md border border-[#52B788]/30 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(82,183,136,0.3)]">
+                <Package className="w-8 h-8 sm:w-10 sm:h-10 text-[#52B788]" />
               </div>
-              <div>
-                <h2 className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-2 sm:mb-4">Ciclos Productivos</h2>
-                <p className="text-[#74C69D] uppercase tracking-[0.2em] sm:tracking-[0.4em] text-xs sm:text-sm md:text-lg font-bold">Línea de Tiempo del Cultivo</p>
-              </div>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
+                Gestión de Inventario
+              </h2>
             </div>
           </ScrollReveal>
 
           <ScrollReveal delay={0.2}>
-            {/* CONTENEDOR CLARO */}
-            <div className="bg-[#E9F5EE]/10 backdrop-blur-3xl rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-12 md:p-16 border border-[#E9F5EE]/30 shadow-2xl hover:border-[#52B788]/50 transition-colors duration-700 max-w-6xl mx-auto">
-              <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-10 sm:mb-20 text-center">
-                Campaña Soja <span className="text-[#52B788]">2026</span>
-              </h3>
-              
-              <div className="relative pb-6 sm:pb-10">
-                <div className="absolute top-12 left-[10%] right-[10%] h-3 bg-white/10 rounded-full shadow-inner border border-white/5 hidden sm:block" />
-                <div className="absolute top-12 left-[10%] w-[40%] h-3 bg-gradient-to-r from-[#2D6A4F] via-[#52B788] to-[#74C69D] rounded-full shadow-[0_0_20px_#52B788] hidden sm:block" />
+            {/* Card principal inventario */}
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl">
+              {/* Header */}
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/10">
+                <Box className="w-5 h-5 text-[#52B788]" />
+                <h3 className="text-lg font-bold text-white">Resumen de Inventario</h3>
+              </div>
 
-                <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-5 gap-4 md:gap-6 relative z-10">
-                  {FENO_STAGES.map((phase, idx) => (
-                    <div key={idx} className="flex flex-col items-center text-center group cursor-default">
-                      <div className={`w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-2xl sm:rounded-3xl flex items-center justify-center text-3xl sm:text-4xl md:text-5xl mb-3 sm:mb-6 transition-all duration-500 group-hover:-translate-y-4 group-hover:scale-110 ${
-                        phase.status === 'completed' ? 'bg-[#52B788] border-2 border-[#74C69D] shadow-[0_10px_20px_rgba(82,183,136,0.4)]' :
-                        phase.status === 'current' ? 'bg-white ring-6 sm:ring-8 ring-white/30 shadow-[0_0_40px_rgba(255,255,255,0.6)] animate-pulse text-[#1B4332]' :
-                        'bg-white/10 border-2 border-white/20 opacity-80 group-hover:opacity-100 group-hover:border-white/40 group-hover:bg-white/20'
-                      }`}>
-                        {phase.icon}
-                      </div>
-                      <span className={`text-[10px] md:text-sm uppercase tracking-[0.15em] sm:tracking-[0.2em] font-black transition-colors ${
-                        phase.status === 'pending' ? 'text-gray-400 group-hover:text-white' : 
-                        phase.status === 'current' ? 'text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.8)] scale-110 block mt-1 sm:mt-2' :
-                        'text-[#74C69D]'
-                      }`}>
-                        {phase.stage}
-                      </span>
-                    </div>
-                  ))}
+              {/* Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="bg-white/10 rounded-xl p-4 border border-white/15">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Valor Total</p>
+                  <p className="text-2xl font-black text-white">US$10.432,41</p>
                 </div>
+                <div className="bg-white/10 rounded-xl p-4 border border-white/15">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Stock Bajo</p>
+                  <p className="text-2xl font-black text-white">1 artículo</p>
+                </div>
+                <div className="bg-white/10 rounded-xl p-4 border border-white/15">
+                  <p className="text-[11px] font-extrabold uppercase tracking-widest text-white/80 mb-1">Artículos Disponibles</p>
+                  <p className="text-2xl font-black text-white">1/2</p>
+                </div>
+              </div>
+
+              {/* Lista de items */}
+              <div className="space-y-3">
+                {/* Item 1 */}
+                <div className="flex items-center justify-between bg-white/5 rounded-xl px-5 py-4 border border-white/10 hover:border-[#52B788]/30 transition-all">
+                  <div className="flex items-center gap-3">
+                    <Sprout className="w-4 h-4 text-[#52B788]" />
+                    <span className="text-sm font-bold text-white">Maíz</span>
+                    <span className="text-xs text-red-400 font-semibold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                      Sin Stock
+                    </span>
+                  </div>
+                  <button className="text-gray-400 hover:text-white transition-colors">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Item 2 */}
+                <div className="flex items-center justify-between bg-white/5 rounded-xl px-5 py-4 border border-white/10 hover:border-[#52B788]/30 transition-all">
+                  <div className="flex items-center gap-3">
+                    <Sprout className="w-4 h-4 text-[#52B788]" />
+                    <span className="text-sm font-bold text-white">Soja</span>
+                    <span className="text-xs text-[#52B788] font-semibold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#52B788] inline-block" />
+                      Disponible
+                    </span>
+                  </div>
+                  <button className="text-gray-400 hover:text-white transition-colors">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Features highlights */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 mt-6 border-t border-white/10">
+                {FEATURE_HIGHLIGHTS.map((f, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-1 h-full min-h-[40px] bg-[#52B788]/40 rounded-full shrink-0" />
+                    <p className="text-xs text-white/80 leading-relaxed">{f.text}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </ScrollReveal>
         </div>
+
+        {/* Flecha indicadora de scroll hacia Footer */}
+        <ScrollDownArrow targetId="footer" label="Ir al pie de página" />
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
           § 5 — FOOTER
       ══════════════════════════════════════════════════════════════════ */}
-      <footer className="relative z-10 pt-16 pb-12 bg-[#060D0B]/80 backdrop-blur-xl border-t border-[#52B788]/20 text-gray-300">
+      <footer id="footer" className="relative z-10 pt-16 pb-12 bg-[#060D0B]/80 backdrop-blur-xl border-t border-[#52B788]/20 text-gray-300 snap-start">
         <div className="container mx-auto px-6 max-w-[1400px]">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-16">
-            
+
             {/* Col 1: Brand & Desc */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
