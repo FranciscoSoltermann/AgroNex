@@ -331,6 +331,60 @@ export default function AuthPage() {
         setLoading(true);
         setError(null);
         try {
+            // === BYPASS OTP TEMPORAL (HASTA INTEGRAR RESEND) ===
+            console.log("[AgroNex Registro] Bypass OTP. Registrando usuario en Supabase directamente...");
+            
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: email.trim(),
+                password
+            });
+
+            let session = authData?.session;
+
+            if (authError) {
+                if (!isUserAlreadyRegisteredError(authError)) {
+                    throw authError;
+                }
+                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                    email: email.trim(),
+                    password,
+                });
+                if (signInErr) throw signInErr;
+                session = signInData?.session;
+            }
+
+            if (!session?.access_token) {
+                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                    email: email.trim(),
+                    password,
+                });
+                if (signInErr) throw new Error("No se pudo obtener sesión activa. Iniciá sesión con tus credenciales.");
+                session = signInData?.session;
+            }
+
+            // Crear perfil de usuario en el backend AgroNex
+            console.log("[AgroNex Registro] Verificando si ya posee perfil registrado...");
+            
+            // Wait for cookies to be set, or force apiClient if needed (apiClient automatically grabs from supabase.auth)
+            const registroEstado = await apiClient.get("/usuarios/me/check");
+            if (registroEstado?.data?.registrado === true) {
+                router.push("/dashboard");
+                return;
+            }
+
+            const url = tipoUsuario === "FISICA" ? `/public/auth/registro/fisica` : `/public/auth/registro/juridica`;
+            const payload = tipoUsuario === "FISICA"
+                ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim(), rol: rolRegistro }
+                : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim(), rol: rolRegistro };
+
+            console.log("[AgroNex Registro] Registrando datos de perfil...");
+            await apiClient.post(url, payload, {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+
+            router.push("/dashboard");
+
+            /* --- CODIGO ORIGINAL CON OTP COMENTADO ---
             const codigoPayload = tipoUsuario === "FISICA"
                 ? { email: email.trim(), dni: dni.trim() }
                 : { email: email.trim(), cuit: cuit.trim() };
@@ -340,6 +394,7 @@ export default function AuthPage() {
             console.log("[AgroNex Registro] Código enviado exitosamente a:", email.trim());
 
             setShowOtpChallenge(true);
+            ------------------------------------------- */
         } catch (err) {
             console.error("[AgroNex Registro] ERROR:", err);
             if (err?.message === "Network Error" || err?.code === "ERR_NETWORK") {
