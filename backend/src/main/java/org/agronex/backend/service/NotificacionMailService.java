@@ -57,8 +57,9 @@ public class NotificacionMailService {
             javaMailSender.send(mimeMessage);
             log.info("✅ Código de verificación enviado exitosamente a {}", maskedEmail);
         } catch (Exception e) {
-            log.error("❌ Error al enviar código de verificación a {}: {}", maskedEmail, e.getMessage());
-            throw new RuntimeException("No se pudo enviar el correo de verificación. Por favor verifique la dirección ingresada o intente más tarde.");
+            log.error("🚨 Error al enviar código de verificación a {}: {}", maskedEmail, e.getMessage());
+            log.warn("⚠️ [MODO DEV] Omitiendo el error de correo. Usa el código generado en los logs para continuar.");
+            // No arrojamos excepcion para que el frontend siga a la pantalla de OTP
         }
     }
 
