@@ -54,6 +54,14 @@ public class CampaniaService {
             lotesValidados.add(lote);
         }
 
+        // Validar que todos los lotes pertenezcan al mismo campo
+        UUID idPrimerCampo = lotesValidados.get(0).getCampo().getIdCampo();
+        boolean mismoCampo = lotesValidados.stream()
+                .allMatch(l -> l.getCampo().getIdCampo().equals(idPrimerCampo));
+        if (!mismoCampo) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Todos los lotes de una campaña deben pertenecer al mismo campo.");
+        }
+
         // Crear la campaña
         Campania campania = Campania.builder()
                 .cultivo(request.getCultivo())
@@ -155,12 +163,27 @@ public class CampaniaService {
 
         // Crear nuevas asignaciones
         List<CampaniaLote> nuevasAsignaciones = new ArrayList<>();
+        List<Lote> lotesEditValidados = new ArrayList<>();
         for (CampaniaLoteRequest lr : lotesReq) {
             Lote lote = loteRepository.findById(lr.getIdLote())
                     .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado: " + lr.getIdLote()));
             if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
                 throw new AccessDeniedException("Acceso denegado al lote: " + lote.getNombre());
             }
+            lotesEditValidados.add(lote);
+        }
+
+        // Validar que todos los lotes pertenezcan al mismo campo
+        UUID idPrimerCampo = lotesEditValidados.get(0).getCampo().getIdCampo();
+        boolean mismoCampo = lotesEditValidados.stream()
+                .allMatch(l -> l.getCampo().getIdCampo().equals(idPrimerCampo));
+        if (!mismoCampo) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Todos los lotes de una campaña deben pertenecer al mismo campo.");
+        }
+
+        for (int i = 0; i < lotesReq.size(); i++) {
+            CampaniaLoteRequest lr = lotesReq.get(i);
+            Lote lote = lotesEditValidados.get(i);
             CampaniaLote cl = CampaniaLote.builder()
                     .campania(campania)
                     .lote(lote)

@@ -32,6 +32,7 @@ const emptyInsumoRow = () => ({ idInsumo: "", dosisHa: "" });
 
 export default function CiclosPage() {
     const { symbol, convertCurrency } = useCurrency();
+    const [campos, setCampos] = useState([]);
     const [campanias, setCampanias] = useState([]);
     const [actividades, setActividades] = useState([]);
     const [lotes, setLotes] = useState([]);
@@ -62,12 +63,32 @@ export default function CiclosPage() {
     const [submitSuccess, setSubmitSuccess] = useState(null);
 
     const [showModalCampania, setShowModalCampania] = useState(false);
-    const [formCampania, setFormCampania] = useState({ cultivo: "", fechaInicio: "", fechaFin: "", lotes: [] });
+    const [formCampania, setFormCampania] = useState({ idCampo: "", cultivo: "", fechaInicio: "", fechaFin: "", lotes: [] });
     const [isEditMode, setIsEditMode] = useState(false);
     const [campaniaIdToEdit, setCampaniaIdToEdit] = useState(null);
     const [campLoading, setCampLoading] = useState(false);
     const [campError, setCampError] = useState(null);
     const [campSuccess, setCampSuccess] = useState(null);
+
+    const camposDisponibles = useMemo(() => {
+        if (campos.length > 0) return campos;
+        const map = new Map();
+        lotes.forEach((l) => {
+            if (l.idCampo && !map.has(l.idCampo)) {
+                map.set(l.idCampo, {
+                    idCampo: l.idCampo,
+                    nombre: l.nombreCampo || "Campo",
+                    superficieTotal: l.superficieCampo || null,
+                });
+            }
+        });
+        return Array.from(map.values());
+    }, [campos, lotes]);
+
+    const lotesDelCampoSeleccionado = useMemo(() => {
+        if (!formCampania.idCampo) return [];
+        return lotes.filter((l) => l.idCampo === formCampania.idCampo);
+    }, [lotes, formCampania.idCampo]);
 
     const campaniasDelLote = useMemo(() => {
         if (!idLoteSeleccionado) return campanias;
@@ -92,6 +113,7 @@ export default function CiclosPage() {
                 getDashboardBootstrapData({ forceRefresh: !!options.forceRefresh }),
                 apiClient.get(`/actividades?t=${timestamp}`).catch(() => ({ data: [] })),
             ]);
+            setCampos(bootstrap.campos || []);
             setLotes(bootstrap.lotes || []);
             setCampanias(bootstrap.campanias || []);
             setActividades(actRes.data || []);
@@ -206,24 +228,37 @@ export default function CiclosPage() {
     };
 
     const handleOpenModalCampania = (campaniaEdit = null) => {
+        setCampError(null);
+        setCampSuccess(null);
         if (campaniaEdit) {
             setIsEditMode(true);
             setCampaniaIdToEdit(campaniaEdit.idCampania);
+            const primerLoteId = campaniaEdit.lotes?.[0]?.idLote || campaniaEdit.idLote;
+            const loteObj = lotes.find((l) => l.idLote === primerLoteId);
+            const campoId = loteObj?.idCampo || campaniaEdit.lotes?.[0]?.idCampo || (camposDisponibles[0]?.idCampo || "");
             setFormCampania({
-                cultivo: campaniaEdit.cultivo,
+                idCampo: campoId,
+                cultivo: campaniaEdit.cultivo || "",
                 fechaInicio: campaniaEdit.fechaInicio ? campaniaEdit.fechaInicio.slice(0, 10) : "",
                 fechaFin: campaniaEdit.fechaFin ? campaniaEdit.fechaFin.slice(0, 10) : "",
-                lotes: campaniaEdit.lotes?.map(l => ({ idLote: l.idLote, fechaInicioLote: l.fechaInicioLote ? l.fechaInicioLote.slice(0, 10) : "" })) || []
+                lotes: campaniaEdit.lotes?.map(l => ({
+                    idLote: l.idLote,
+                    fechaInicioLote: l.fechaInicioLote ? l.fechaInicioLote.slice(0, 10) : ""
+                })) || (primerLoteId ? [{ idLote: primerLoteId, fechaInicioLote: campaniaEdit.fechaInicio ? campaniaEdit.fechaInicio.slice(0, 10) : "" }] : [])
             });
         } else {
             setIsEditMode(false);
             setCampaniaIdToEdit(null);
             const todayStr = new Date().toISOString().split("T")[0];
+            const campoId = loteActual?.idCampo || (camposDisponibles[0]?.idCampo || "");
             setFormCampania({
+                idCampo: campoId,
                 cultivo: "",
                 fechaInicio: todayStr,
                 fechaFin: "",
-                lotes: idLoteSeleccionado ? [{ idLote: idLoteSeleccionado, fechaInicioLote: todayStr }] : []
+                lotes: (idLoteSeleccionado && loteActual?.idCampo === campoId)
+                    ? [{ idLote: idLoteSeleccionado, fechaInicioLote: todayStr }]
+                    : []
             });
         }
         setShowModalCampania(true);
@@ -300,8 +335,12 @@ export default function CiclosPage() {
 
     const handleCrearCampania = async (e) => {
         e.preventDefault();
+        if (!formCampania.idCampo) {
+            setCampError("Debes seleccionar un campo.");
+            return;
+        }
         if (formCampania.lotes.length === 0) {
-            setCampError("Debes seleccionar al menos un lote.");
+            setCampError("Debes seleccionar al menos un lote de este campo.");
             return;
         }
         setCampLoading(true);
@@ -680,6 +719,30 @@ export default function CiclosPage() {
                                 </button>
                             </div>
                             <form onSubmit={handleCrearCampania} className="space-y-4">
+                                <FormField label="Campo" required>
+                                    <select
+                                        required
+                                        value={formCampania.idCampo}
+                                        onChange={(e) => {
+                                            const nuevoCampoId = e.target.value;
+                                            setFormCampania((p) => ({
+                                                ...p,
+                                                idCampo: nuevoCampoId,
+                                                lotes: [] // Al cambiar de campo, se limpian los lotes asignados
+                                            }));
+                                            setCampError(null);
+                                        }}
+                                        className={INPUT_CLASS}
+                                    >
+                                        <option value="" disabled>Selecciona un campo…</option>
+                                        {camposDisponibles.map((campo) => (
+                                            <option key={campo.idCampo} value={campo.idCampo}>
+                                                {campo.nombre} {campo.superficieTotal ? `(${campo.superficieTotal} Ha)` : ""}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </FormField>
+
                                 <FormField label="Cultivo" required>
                                     <input
                                         type="text"
@@ -690,52 +753,85 @@ export default function CiclosPage() {
                                         placeholder="ej. Soja, Maíz…"
                                     />
                                 </FormField>
+
                                 <FormField label="Lotes asignados" required>
-                                    <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-2 bg-gray-50 dark:bg-[#15191e] dark:border-gray-800">
-                                        {lotes.map(lote => {
-                                            const selectedLote = formCampania.lotes.find(l => l.idLote === lote.idLote);
-                                            const isSelected = !!selectedLote;
-                                            return (
-                                                <div key={lote.idLote} className="flex flex-col gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="checkbox"
-                                                            id={`lote-${lote.idLote}`}
-                                                            checked={isSelected}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) {
-                                                                    setFormCampania(p => ({ ...p, lotes: [...p.lotes, { idLote: lote.idLote, fechaInicioLote: p.fechaInicio || "" }] }));
-                                                                } else {
-                                                                    setFormCampania(p => ({ ...p, lotes: p.lotes.filter(l => l.idLote !== lote.idLote) }));
-                                                                }
-                                                            }}
-                                                            className="w-4 h-4 text-[#2D6A4F] rounded border-gray-300 focus:ring-[#2D6A4F]"
-                                                        />
-                                                        <label htmlFor={`lote-${lote.idLote}`} className="text-[12px] font-semibold cursor-pointer text-gray-800 dark:text-gray-200 select-none">
-                                                            {lote.nombre} ({lote.superficie} Ha) <span className="text-gray-400 font-normal">— {lote.nombreCampo}</span>
-                                                        </label>
-                                                    </div>
-                                                    {isSelected && (
-                                                        <div className="pl-6 pt-1 flex items-center gap-2">
-                                                            <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Inicio (opcional):</span>
-                                                            <input
-                                                                type="date"
-                                                                value={selectedLote.fechaInicioLote}
-                                                                onChange={(e) => {
-                                                                    const newDate = e.target.value;
-                                                                    setFormCampania(p => ({
-                                                                        ...p,
-                                                                        lotes: p.lotes.map(l => l.idLote === lote.idLote ? { ...l, fechaInicioLote: newDate } : l)
-                                                                    }));
-                                                                }}
-                                                                className="text-[11px] px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:border-[#2D6A4F] bg-white"
-                                                            />
+                                    {!formCampania.idCampo ? (
+                                        <div className="border border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-4 text-center text-[12px] text-gray-400 dark:text-gray-500 bg-gray-50/50 dark:bg-[#15191e]">
+                                            Seleccioná un campo primero para ver y asignar sus lotes.
+                                        </div>
+                                    ) : lotesDelCampoSeleccionado.length === 0 ? (
+                                        <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-4 text-center text-[12px] text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-[#15191e]">
+                                            Este campo no tiene lotes registrados aún.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between px-1">
+                                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                                                    {formCampania.lotes.length} de {lotesDelCampoSeleccionado.length} {lotesDelCampoSeleccionado.length === 1 ? "lote seleccionado" : "lotes seleccionados"}
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const todos = formCampania.lotes.length === lotesDelCampoSeleccionado.length;
+                                                        setFormCampania(p => ({
+                                                            ...p,
+                                                            lotes: todos
+                                                                ? []
+                                                                : lotesDelCampoSeleccionado.map(l => ({ idLote: l.idLote, fechaInicioLote: p.fechaInicio || "" }))
+                                                        }));
+                                                    }}
+                                                    className="text-[10px] font-bold text-[#2D6A4F] dark:text-[#52B788] hover:underline"
+                                                >
+                                                    {formCampania.lotes.length === lotesDelCampoSeleccionado.length ? "Deseleccionar todos" : "Seleccionar todos"}
+                                                </button>
+                                            </div>
+                                            <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-xl p-2 bg-gray-50 dark:bg-[#15191e] dark:border-gray-800">
+                                                {lotesDelCampoSeleccionado.map(lote => {
+                                                    const selectedLote = formCampania.lotes.find(l => l.idLote === lote.idLote);
+                                                    const isSelected = !!selectedLote;
+                                                    return (
+                                                        <div key={lote.idLote} className="flex flex-col gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    id={`lote-${lote.idLote}`}
+                                                                    checked={isSelected}
+                                                                    onChange={(e) => {
+                                                                        if (e.target.checked) {
+                                                                            setFormCampania(p => ({ ...p, lotes: [...p.lotes, { idLote: lote.idLote, fechaInicioLote: p.fechaInicio || "" }] }));
+                                                                        } else {
+                                                                            setFormCampania(p => ({ ...p, lotes: p.lotes.filter(l => l.idLote !== lote.idLote) }));
+                                                                        }
+                                                                    }}
+                                                                    className="w-4 h-4 text-[#2D6A4F] rounded border-gray-300 focus:ring-[#2D6A4F]"
+                                                                />
+                                                                <label htmlFor={`lote-${lote.idLote}`} className="text-[12px] font-semibold cursor-pointer text-gray-800 dark:text-gray-200 select-none">
+                                                                    {lote.nombre} ({lote.superficie} Ha)
+                                                                </label>
+                                                            </div>
+                                                            {isSelected && (
+                                                                <div className="pl-6 pt-1 flex items-center gap-2">
+                                                                    <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Inicio (opcional):</span>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={selectedLote.fechaInicioLote}
+                                                                        onChange={(e) => {
+                                                                            const newDate = e.target.value;
+                                                                            setFormCampania(p => ({
+                                                                                ...p,
+                                                                                lotes: p.lotes.map(l => l.idLote === lote.idLote ? { ...l, fechaInicioLote: newDate } : l)
+                                                                            }));
+                                                                        }}
+                                                                        className="text-[11px] px-2 py-1 border border-gray-200 rounded-md focus:outline-none focus:border-[#2D6A4F] bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
+                                                                    />
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </FormField>
                                 <div className="grid grid-cols-2 gap-3">
                                     <FormField label="Inicio" required>
