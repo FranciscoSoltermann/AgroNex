@@ -17,6 +17,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -174,20 +176,33 @@ public class CampaniaService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Todos los lotes de una campaña deben pertenecer al mismo campo.");
         }
 
-        // Limpiar la lista manejada por Hibernate (eliminará huérfanos en BD)
-        campania.getCampaniaLotes().clear();
-        campaniaRepository.flush();
+        // Sincronizar campaniaLotes in-place sin violar constraints de unicidad
+        Set<UUID> nuevosLotesIds = lotesReq.stream()
+                .map(CampaniaLoteRequest::getIdLote)
+                .collect(Collectors.toSet());
 
-        // Agregar los nuevos CampaniaLote a la colección existente
+        // 1. Eliminar de la colección los lotes que ya no fueron seleccionados
+        campania.getCampaniaLotes().removeIf(cl -> !nuevosLotesIds.contains(cl.getLote().getIdLote()));
+
+        // 2. Actualizar fechas de inicio para los que se mantienen o agregar los nuevos
         for (int i = 0; i < lotesReq.size(); i++) {
             CampaniaLoteRequest lr = lotesReq.get(i);
             Lote lote = lotesEditValidados.get(i);
-            CampaniaLote cl = CampaniaLote.builder()
-                    .campania(campania)
-                    .lote(lote)
-                    .fechaInicioLote(lr.getFechaInicioLote())
-                    .build();
-            campania.getCampaniaLotes().add(cl);
+
+            Optional<CampaniaLote> existenteOpt = campania.getCampaniaLotes().stream()
+                    .filter(cl -> cl.getLote().getIdLote().equals(lr.getIdLote()))
+                    .findFirst();
+
+            if (existenteOpt.isPresent()) {
+                existenteOpt.get().setFechaInicioLote(lr.getFechaInicioLote());
+            } else {
+                CampaniaLote cl = CampaniaLote.builder()
+                        .campania(campania)
+                        .lote(lote)
+                        .fechaInicioLote(lr.getFechaInicioLote())
+                        .build();
+                campania.getCampaniaLotes().add(cl);
+            }
         }
 
         Campania guardada = campaniaRepository.save(campania);
