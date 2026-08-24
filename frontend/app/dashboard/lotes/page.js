@@ -915,76 +915,79 @@ function ActividadCard({ actividad, onEliminar, onEditar }) {
     const insumos = actividad.insumos || [];
 
     return (
-        <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow relative group pr-14 md:pr-4">
-            <div className="absolute top-3 right-3 flex items-center gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-all">
-                <button
-                    type="button"
-                    onClick={() => onEditar && onEditar(actividad)}
-                    className="text-gray-500 hover:text-blue-600 font-bold text-[10px] flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-1.5 rounded-md min-h-9 transition-colors"
-                    title="Editar actividad"
-                >
-                    <Pencil size={12} /> Editar
-                </button>
-                <button
-                    type="button"
-                    onClick={() => onEliminar && onEliminar(actividad.idActividad)}
-                    className="text-gray-500 hover:text-red-500 font-bold text-[10px] flex items-center gap-1 bg-red-50 dark:bg-red-900/30 px-2 py-1.5 rounded-md min-h-9 transition-colors"
-                    title="Eliminar actividad"
-                >
-                    <Trash2 size={12} /> Eliminar
-                </button>
-            </div>
-            <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white flex-shrink-0">
-                    {c.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                        <span className="text-[9px] text-gray-400">{actividad.fecha}</span>
-                        {actividad.nombreLote && (
-                            <span className="text-[9px] font-bold text-[#2D6A4F] bg-[#EBF3EF] px-2 py-0.5 rounded-md">
-                                {actividad.nombreLote}
-                            </span>
+        <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow group">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white shrink-0">
+                        {c.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                            <span className="text-[9px] text-gray-400 dark:text-gray-500">{actividad.fecha}</span>
+                            {actividad.nombreLote && (
+                                <span className="text-[9px] font-bold text-[#2D6A4F] dark:text-[#52B788] bg-[#EBF3EF] dark:bg-[#2D6A4F]/20 px-2 py-0.5 rounded-md">
+                                    {actividad.nombreLote}
+                                </span>
+                            )}
+                        </div>
+                        <p className="font-bold text-gray-900 dark:text-gray-100 text-[13px]">{actividad.tipoActv}</p>
+                        <div className="flex flex-wrap gap-2 mt-1.5 text-[10px] text-gray-600 dark:text-gray-400">
+                            {actividad.hectareasTratadas != null && (
+                                <span className="font-semibold">
+                                    Ha tratadas: <strong className="text-gray-900 dark:text-gray-200">{actividad.hectareasTratadas}</strong>
+                                </span>
+                            )}
+                            {actividad.superficieLoteHa != null && (
+                                <span>
+                                    Lote: <strong className="text-gray-900 dark:text-gray-200">{actividad.superficieLoteHa}</strong> Ha
+                                </span>
+                            )}
+                        </div>
+                        {insumos.length > 0 && (
+                            <ul className="mt-2 space-y-1 text-[11px] text-gray-700 dark:text-gray-300 border-t border-gray-100 dark:border-gray-800 pt-2">
+                                {insumos.map((ins) => (
+                                    <li key={ins.idActividadInsumo || `${ins.idInsumo}-${ins.dosisHa}`} className="flex justify-between gap-2">
+                                        <span className="truncate">{ins.nombreInsumo || "Insumo"}</span>
+                                        {ins.dosisHa > 0 && <span className="font-mono font-bold shrink-0">{ins.dosisHa} / Ha</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        {actividad.notas && (
+                            <p className="mt-2 text-[10px] text-gray-500 dark:text-gray-400 italic border-l-2 border-[#2D6A4F]/30 pl-2">{actividad.notas}</p>
                         )}
                     </div>
-                    <p className="font-bold text-gray-900 text-[13px]">{actividad.tipoActv}</p>
-                    <div className="flex flex-wrap gap-2 mt-1.5 text-[10px] text-gray-600">
-                        {actividad.hectareasTratadas != null && (
-                            <span className="font-semibold">
-                                Ha tratadas: <strong className="text-gray-900">{actividad.hectareasTratadas}</strong>
-                            </span>
-                        )}
-                        {actividad.superficieLoteHa != null && (
-                            <span>
-                                Lote: <strong>{actividad.superficieLoteHa}</strong> Ha
-                            </span>
-                        )}
-                    </div>
-                    {insumos.length > 0 && (
-                        <ul className="mt-2 space-y-1 text-[11px] text-gray-700 border-t border-gray-100 pt-2">
-                            {insumos.map((ins) => (
-                                <li key={ins.idActividadInsumo || `${ins.idInsumo}-${ins.dosisHa}`} className="flex justify-between gap-2">
-                                    <span className="truncate">{ins.nombreInsumo || "Insumo"}</span>
-                                    {ins.dosisHa > 0 && <span className="font-mono font-bold shrink-0">{ins.dosisHa} / Ha</span>}
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                    {actividad.notas && (
-                        <p className="mt-2 text-[10px] text-gray-500 italic border-l-2 border-[#2D6A4F]/30 pl-2">{actividad.notas}</p>
-                    )}
                 </div>
-                <div className="text-right flex-shrink-0">
+
+                <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-800">
                     {actividad.costoServicio > 0 && (
-                        <>
-                            <p className="text-[11px] font-black text-gray-900">
+                        <div className="text-left sm:text-right">
+                            <p className="text-[12px] font-black text-gray-900 dark:text-gray-100 whitespace-nowrap">
                                 {symbol}{convertCurrency(Number((actividad.costoServicio || 0) * (actividad.hectareasTratadas != null ? actividad.hectareasTratadas : (actividad.superficieLoteHa || 0)))).toLocaleString("es-AR")} total
                             </p>
-                            <p className="text-[9px] text-gray-400 mt-0.5">
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 whitespace-nowrap">
                                 ({symbol}{convertCurrency(Number(actividad.costoServicio)).toLocaleString("es-AR")}/Ha)
                             </p>
-                        </>
+                        </div>
                     )}
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => onEditar && onEditar(actividad)}
+                            className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-[11px] flex items-center gap-1 bg-gray-50 hover:bg-blue-50 dark:bg-gray-800/80 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 rounded-lg transition-colors shadow-sm"
+                            title="Editar actividad"
+                        >
+                            <Pencil size={11} /> <span>Editar</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onEliminar && onEliminar(actividad.idActividad)}
+                            className="text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 font-bold text-[11px] flex items-center gap-1 bg-gray-50 hover:bg-red-50 dark:bg-gray-800/80 dark:hover:bg-red-900/30 border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 rounded-lg transition-colors shadow-sm"
+                            title="Eliminar actividad"
+                        >
+                            <Trash2 size={11} /> <span>Eliminar</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
