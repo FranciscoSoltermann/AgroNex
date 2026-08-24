@@ -372,10 +372,11 @@ export default function CiclosPage() {
             }
 
             invalidateDashboardBootstrapCache();
+            await fetchData({ forceRefresh: true });
             setTimeout(() => {
                 setShowModalCampania(false);
                 setCampSuccess(null);
-            }, 800);
+            }, 500);
         } catch (err) {
             const d = err.response?.data;
             const msg = typeof d === "string" ? d : d?.message || d?.error || (d && Object.values(d).join(" ")) || err.message;

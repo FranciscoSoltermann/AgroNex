@@ -182,7 +182,7 @@ public class CampaniaService {
                 .collect(Collectors.toSet());
 
         // 1. Eliminar de la colección los lotes que ya no fueron seleccionados
-        campania.getCampaniaLotes().removeIf(cl -> !nuevosLotesIds.contains(cl.getLote().getIdLote()));
+        campania.getCampaniaLotes().removeIf(cl -> cl.getLote() == null || !nuevosLotesIds.contains(cl.getLote().getIdLote()));
 
         // 2. Actualizar fechas de inicio para los que se mantienen o agregar los nuevos
         for (int i = 0; i < lotesReq.size(); i++) {
@@ -190,7 +190,7 @@ public class CampaniaService {
             Lote lote = lotesEditValidados.get(i);
 
             Optional<CampaniaLote> existenteOpt = campania.getCampaniaLotes().stream()
-                    .filter(cl -> cl.getLote().getIdLote().equals(lr.getIdLote()))
+                    .filter(cl -> cl.getLote() != null && cl.getLote().getIdLote().equals(lr.getIdLote()))
                     .findFirst();
 
             if (existenteOpt.isPresent()) {
@@ -210,12 +210,15 @@ public class CampaniaService {
         String nombresLotes = lotesEditValidados.stream()
                 .map(Lote::getNombre)
                 .collect(Collectors.joining(", "));
+        String emailOwner = lotesEditValidados.get(0).getCampo() != null && lotesEditValidados.get(0).getCampo().getUsuario() != null
+                ? lotesEditValidados.get(0).getCampo().getUsuario().getEmail()
+                : null;
         auditService.registrar(
-                idUsuarioToken, lotesEditValidados.get(0).getCampo().getUsuario().getEmail(),
+                idUsuarioToken, emailOwner,
                 EntidadAudit.CAMPANIA, idCampania.toString(),
-                "Campaña " + campania.getCultivo() + " editada",
+                "Campaña " + guardada.getCultivo() + " editada",
                 AccionAudit.ACTUALIZAR,
-                "Lotes: " + nombresLotes + ". Inicio: " + campania.getFechaInicio()
+                "Lotes: " + nombresLotes + ". Inicio: " + guardada.getFechaInicio()
         );
 
         return campaniaMapper.toResponse(guardada);
