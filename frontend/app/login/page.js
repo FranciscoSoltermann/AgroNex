@@ -331,15 +331,55 @@ export default function AuthPage() {
         setLoading(true);
         setError(null);
         try {
-            const codigoPayload = tipoUsuario === "FISICA"
-                ? { email: email.trim(), dni: dni.trim() }
-                : { email: email.trim(), cuit: cuit.trim() };
+            // Registro directo sin verificación por email (pendiente integrar servicio de mail)
+            console.log("[AgroNex Registro] Registrando usuario en Supabase...");
+            
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: email.trim(),
+                password
+            });
 
-            console.log("[AgroNex Registro] Paso 1: Solicitando código de verificación por mail...");
-            await apiClient.post("/public/auth/registro/enviar-codigo", codigoPayload);
-            console.log("[AgroNex Registro] Código enviado exitosamente a:", email.trim());
+            let session = authData?.session;
 
-            setShowOtpChallenge(true);
+            if (authError) {
+                if (!isUserAlreadyRegisteredError(authError)) {
+                    throw authError;
+                }
+                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                    email: email.trim(),
+                    password,
+                });
+                if (signInErr) throw signInErr;
+                session = signInData?.session;
+            }
+
+            if (!session?.access_token) {
+                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+                    email: email.trim(),
+                    password,
+                });
+                if (signInErr) throw new Error("No se pudo obtener sesión activa. Iniciá sesión con tus credenciales.");
+                session = signInData?.session;
+            }
+
+            console.log("[AgroNex Registro] Verificando si ya posee perfil registrado...");
+            const registroEstado = await apiClient.get("/usuarios/me/check");
+            if (registroEstado?.data?.registrado === true) {
+                router.push("/dashboard");
+                return;
+            }
+
+            const url = tipoUsuario === "FISICA" ? `/public/auth/registro/fisica` : `/public/auth/registro/juridica`;
+            const payload = tipoUsuario === "FISICA"
+                ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim(), rol: rolRegistro }
+                : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim(), rol: rolRegistro };
+
+            console.log("[AgroNex Registro] Registrando datos de perfil...");
+            await apiClient.post(url, payload, {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+
+            router.push("/dashboard");
         } catch (err) {
             console.error("[AgroNex Registro] ERROR:", err);
             if (err?.message === "Network Error" || err?.code === "ERR_NETWORK") {
