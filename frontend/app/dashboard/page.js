@@ -12,18 +12,17 @@ import {
 import dynamic from "next/dynamic";
 import { useCurrency } from "@/lib/currency-context";
 
-const CotizacionesBCR = dynamic(() => import("@/components/features/dashboard/CotizacionesBCR"), {
+const CotizacionesPizarraBCR = dynamic(() => import("@/components/features/dashboard/CotizacionesPizarraBCR"), {
     ssr: false,
     loading: () => (
         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 animate-pulse">
             <div className="h-5 w-56 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                {[...Array(6)].map((_, i) => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl" />)}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[...Array(5)].map((_, i) => <div key={i} className="h-24 bg-gray-100 dark:bg-gray-800 rounded-xl" />)}
             </div>
         </div>
     )
 });
-
 
 
 const UNIDAD_LABEL = { UNIDADES: "und", LITROS: "L", KILOGRAMOS: "kg", TONELADAS: "tn" };
@@ -409,9 +408,9 @@ export default function DashboardHome() {
             </div>
             )}
 
-            {/* Cotizaciones de Granos — BCR */}
+            {/* Precios de Pizarra — CAC / BCR */}
             <div className="flex-none lg:flex-[1.5] min-h-min flex flex-col shrink-0">
-                <CotizacionesBCR />
+                <CotizacionesPizarraBCR />
             </div>
 
         </div>

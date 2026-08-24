@@ -2,14 +2,23 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Leaf, Menu, X } from 'lucide-react';
 
 export const Navbar = () => {
     const [open, setOpen] = useState(false);
+    const pathname = usePathname();
+    const isLoginPage = pathname === '/login' || pathname?.startsWith('/login');
 
     return (
         <>
-            <nav className="flex items-center justify-between px-6 sm:px-12 py-3.5 sm:py-4 bg-[#060E0B]/85 backdrop-blur-md sticky top-0 z-50 border-b border-white/[0.06] transition-colors">
+            <nav
+                className={`flex items-center justify-between px-6 sm:px-12 py-3.5 sm:py-4 transition-all duration-300 z-50 ${
+                    isLoginPage
+                        ? 'bg-transparent border-b border-white/[0.08] relative'
+                        : 'bg-[#060E0B]/85 backdrop-blur-md sticky top-0 border-b border-white/[0.06]'
+                }`}
+            >
                 {/* LOGO */}
                 <Link
                     href="/"
@@ -21,28 +30,32 @@ export const Navbar = () => {
                     </span>
                 </Link>
 
-                {/* DESKTOP — BOTÓN INGRESAR */}
-                <div className="hidden sm:flex items-center gap-4">
-                    <Link
-                        href="/login"
-                        className="border border-white/25 hover:border-white/60 bg-white/[0.03] hover:bg-white/[0.08] text-white px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm active:scale-95"
-                    >
-                        Ingresar
-                    </Link>
-                </div>
+                {/* DESKTOP — BOTÓN INGRESAR (se oculta automáticamente en /login) */}
+                {!isLoginPage && (
+                    <div className="hidden sm:flex items-center gap-4">
+                        <Link
+                            href="/login"
+                            className="border border-white/25 hover:border-white/60 bg-white/[0.03] hover:bg-white/[0.08] text-white px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 shadow-sm active:scale-95"
+                        >
+                            Ingresar
+                        </Link>
+                    </div>
+                )}
 
-                {/* MOBILE — HAMBURGER */}
-                <button
-                    className="sm:hidden p-2 rounded-lg hover:bg-white/10 transition-colors text-white"
-                    onClick={() => setOpen(true)}
-                    aria-label="Abrir menú"
-                >
-                    <Menu size={22} />
-                </button>
+                {/* MOBILE — HAMBURGER (se oculta en /login) */}
+                {!isLoginPage && (
+                    <button
+                        className="sm:hidden p-2 rounded-lg hover:bg-white/10 transition-colors text-white"
+                        onClick={() => setOpen(true)}
+                        aria-label="Abrir menú"
+                    >
+                        <Menu size={22} />
+                    </button>
+                )}
             </nav>
 
             {/* MOBILE DRAWER */}
-            {open && (
+            {open && !isLoginPage && (
                 <div className="fixed inset-0 z-[100] flex sm:hidden">
                     {/* Backdrop */}
                     <div

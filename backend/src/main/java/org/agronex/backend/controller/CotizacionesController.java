@@ -2,6 +2,7 @@ package org.agronex.backend.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.agronex.backend.service.CotizacionesBcrPizarraService;
 import org.agronex.backend.service.CotizacionesService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,7 @@ import java.util.Map;
 public class CotizacionesController {
 
     private final CotizacionesService cotizacionesService;
+    private final CotizacionesBcrPizarraService cotizacionesBcrPizarraService;
 
     /**
      * Devuelve las cotizaciones actuales del mercado de granos BCR.
@@ -43,6 +45,27 @@ public class CotizacionesController {
             return ResponseEntity.ok(Map.of(
                 "source", "BCR - Bolsa de Comercio de Rosario",
                 "error", "No se pudieron obtener las cotizaciones en este momento.",
+                "cotizaciones", List.of()
+            ));
+        }
+    }
+
+    /**
+     * Devuelve los Precios de Pizarra de la Cámara Arbitral de Cereales (CAC) - BCR.
+     * Incluye Soja, Trigo, Maíz, Girasol y Sorgo.
+     * Los precios están en ARS/Tn (pesos argentinos por tonelada).
+     * Datos obtenidos por web scraping de: https://www.cac.bcr.com.ar/es/precios-de-pizarra
+     */
+    @GetMapping("/pizarra-bcr")
+    public ResponseEntity<Map<String, Object>> getCotizacionesPizarraBcr() {
+        try {
+            Map<String, Object> cotizaciones = cotizacionesBcrPizarraService.getCotizacionesPizarra();
+            return ResponseEntity.ok(cotizaciones);
+        } catch (Exception e) {
+            log.error("Error al obtener cotizaciones de pizarra BCR: {}", e.getMessage());
+            return ResponseEntity.ok(Map.of(
+                "source", "Cámara Arbitral de Cereales (CAC) — BCR",
+                "error", "No se pudieron obtener los precios de pizarra en este momento.",
                 "cotizaciones", List.of()
             ));
         }

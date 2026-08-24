@@ -5,10 +5,11 @@ import {
     TrendingUp, TrendingDown, Minus, RefreshCw, ExternalLink, 
     BarChart3, AlertCircle, Sprout, Wheat, Bean, Flower2
 } from "lucide-react";
+import { useCurrency } from "@/lib/currency-context";
 
 /**
  * Función auxiliar para obtener el icono estilizado de cada grano en base al slug o nombre.
- * Utiliza contenedores redondos con fondo claro y bordes suaves en verde AgroNex.
+ * Reutiliza el mismo diseño visual que CotizacionesBCR.js para mantener coherencia.
  */
 function getGranoIcon(slug) {
     const s = slug?.toLowerCase() || "";
@@ -25,65 +26,24 @@ function getGranoIcon(slug) {
     if (s.includes("trigo")) {
         return iconContainer(<Wheat size={13} className="text-[#2D6A4F] dark:text-[#52B788]" />);
     }
-    if (s.includes("cebada")) {
-        // Cebada: espiga inclinada con aristas largas características
-        return iconContainer(
-            <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#52B788]">
-                <path d="M13 21L11 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                {/* Granos alternados con aristas largas */}
-                <ellipse cx="10.5" cy="8" rx="1.2" ry="2" transform="rotate(-15 10.5 8)" fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="0.8" />
-                <line x1="9.5" y1="6.5" x2="6" y2="4" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" />
-                <ellipse cx="12" cy="10.5" rx="1.2" ry="2" transform="rotate(10 12 10.5)" fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="0.8" />
-                <line x1="13" y1="9" x2="16.5" y2="7" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" />
-                <ellipse cx="11" cy="13.5" rx="1.2" ry="2" transform="rotate(-10 11 13.5)" fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="0.8" />
-                <line x1="10" y1="12" x2="7" y2="10.5" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" />
-                <ellipse cx="11.8" cy="16.5" rx="1" ry="1.8" transform="rotate(5 11.8 16.5)" fill="currentColor" fillOpacity="0.25" stroke="currentColor" strokeWidth="0.8" />
-                {/* Arista superior */}
-                <line x1="10.5" y1="6" x2="9" y2="2" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" />
-            </svg>
-        );
-    }
     if (s.includes("maiz") || s.includes("maíz")) {
-        // Maíz: silueta exacta del emoji de mazorca (Twemoji 🌽) pero en verde y blanco
         return iconContainer(
             <svg viewBox="0 0 36 36" fill="none" className="w-4 h-4 text-[#2D6A4F] dark:text-[#52B788] transition-colors">
-                {/* Hojas del fondo */}
                 <path 
                     d="M15.373 1.022C13.71 2.686 8.718 9.34 11.214 15.164c2.495 5.823 5.909 2.239 7.486-2.495.832-2.496.832-5.824-.831-10.815-.832-2.496-2.496-.832-2.496-.832zm19.304 19.304c-1.663 1.663-8.319 6.655-14.142 4.159-5.824-2.496-2.241-5.909 2.495-7.486 2.497-.832 5.823-.833 10.814.832 2.496.831.833 2.495.833 2.495z" 
-                    fill="currentColor" 
-                    fillOpacity="0.08"
-                    stroke="currentColor" 
-                    strokeWidth="1.2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
+                    fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" 
                 />
-                {/* Cuerpo de la mazorca (fondo de los granos) */}
                 <path 
                     d="M32.314 6.317s-.145-1.727-.781-2.253c-.435-.546-2.018-.546-2.018-.546-1.664 0-20.798 2.496-24.125 19.133-.595 2.973 4.627 8.241 7.638 7.638C29.667 26.963 32.313 7.98 32.314 6.317z" 
-                    fill="currentColor" 
-                    fillOpacity="0.15"
-                    stroke="currentColor" 
-                    strokeWidth="1.2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
+                    fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" 
                 />
-                {/* Los granos individuales */}
                 <path 
                     d="M24.769 8.816l-1.617-1.617c-.446-.446-1.172-.446-1.618 0-.446.447-.446 1.171 0 1.617l1.618 1.618c.445.446 1.171.446 1.617 0 .446-.446.446-1.17 0-1.618zm-9.705 1.619c.446.446 1.171.446 1.617 0 .447-.447.447-1.171 0-1.618l-.77-.77c-.654.398-1.302.829-1.938 1.297l1.091 1.091zm2.426-2.427c.447.447 1.17.447 1.617 0 .446-.446.446-1.17 0-1.617l-.025-.025c-.711.325-1.431.688-2.149 1.086l.557.556zm-4.853 4.853c.447.446 1.171.446 1.619 0 .446-.447.446-1.171 0-1.618l-1.198-1.196c-.586.474-1.156.985-1.707 1.528l1.286 1.286zM23.96 4.773c-.447.447-.447 1.17 0 1.617l1.617 1.617c.447.447 1.171.447 1.617 0 .446-.446.446-1.17 0-1.617l-1.617-1.617c-.447-.446-1.17-.446-1.617 0zm2.408-.796c.006.007.008.016.015.023L28 5.617c.447.447 1.171.447 1.617 0 .446-.446.446-1.17 0-1.617l-.462-.462c-.54.044-1.516.172-2.787.439zm-4.025 8.884c.446-.447.446-1.171 0-1.618l-1.618-1.617c-.446-.447-1.171-.447-1.617 0-.447.446-.447 1.17 0 1.617l1.617 1.618c.446.446 1.171.446 1.618 0zm-2.428 2.426c.447-.447.447-1.171 0-1.618l-1.617-1.617c-.446-.447-1.17-.447-1.617 0-.446.447-.446 1.171 0 1.617l1.617 1.618c.447.446 1.172.446 1.617 0zm-4.851 4.852c.447-.447.446-1.17 0-1.618l-1.618-1.617c-.446-.446-1.169-.447-1.617 0-.446.447-.446 1.171 0 1.617l1.617 1.618c.447.446 1.171.446 1.618 0zm-.808-5.661c-.447.446-.447 1.171 0 1.618l1.617 1.617c.447.446 1.17.446 1.618 0 .447-.447.447-1.171 0-1.617l-1.618-1.618c-.447-.447-1.171-.447-1.617 0z" 
-                    stroke="currentColor" 
-                    strokeWidth="1.2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
+                    stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" 
                 />
-                {/* Chala / cobertura inferior */}
                 <path 
                     d="M27.866 23.574c-7.125-2.374-15.097.652-19.418 3.576 2.925-4.321 5.95-12.294 3.576-19.418-.934-2.8-5.602-5.601-8.402-2.801-.934.934-1.867 1.868 0 1.868s4.667 2.8 3.735 5.601c-.835 2.505-6.889 8.742-4.153 15.375-.27.115-.523.279-.744.499l-.715.714c-.919.919-.919 2.409 0 3.329l.716.716c.919.92 2.409.92 3.328 0l.715-.716c.123-.123.227-.258.316-.398 6.999 3.84 13.747-2.799 16.379-3.677 2.8-.933 5.6 1.868 5.6 3.734 0 1.867.934.934 1.867 0 2.801-2.8-.001-7.47-2.8-8.402z" 
-                    fill="currentColor" 
-                    fillOpacity="0.08"
-                    stroke="currentColor" 
-                    strokeWidth="1.2" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
+                    fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" 
                 />
             </svg>
         );
@@ -92,17 +52,12 @@ function getGranoIcon(slug) {
         return iconContainer(<Flower2 size={13} className="text-[#2D6A4F] dark:text-[#52B788]" />);
     }
     if (s.includes("sorgo")) {
-        // Sorgo: panoja densa en la punta con tallo y hojas
         return iconContainer(
             <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#52B788]">
-                {/* Tallo */}
                 <path d="M12 22V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                {/* Hojas del tallo */}
                 <path d="M12 16C10 15 8 14 7 12" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
                 <path d="M12 13C14 12 16 11 17 9.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
-                {/* Panoja (racimo denso ovalado arriba) */}
                 <ellipse cx="12" cy="6" rx="3.5" ry="4.5" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="0.8" />
-                {/* Granos de la panoja */}
                 <circle cx="10.5" cy="4.5" r="0.7" fill="currentColor" />
                 <circle cx="12" cy="3.5" r="0.7" fill="currentColor" />
                 <circle cx="13.5" cy="4.5" r="0.7" fill="currentColor" />
@@ -120,38 +75,42 @@ function getGranoIcon(slug) {
 }
 
 /**
- * Widget de cotizaciones del Mercado de Granos (BCR - Bolsa de Comercio de Rosario).
- * Muestra los precios de pizarra de los principales granos argentinos.
+ * Widget de Precios de Pizarra — Cámara Arbitral de Cereales (CAC) / BCR.
+ * Muestra los precios pizarra de los principales granos argentinos.
+ * 
+ * Los precios vienen del backend siempre en ARS/Tn.
+ * Si el usuario tiene la moneda en USD, se convierten usando useCurrency (dolarapi.com).
  */
-export default function CotizacionesBCR() {
-    const fetchCotizaciones = async () => {
+export default function CotizacionesPizarraBCR() {
+    const { currency, symbol, convertCurrency } = useCurrency();
+
+    const fetchPizarra = async () => {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
         const url = baseUrl.endsWith("/api") ? baseUrl : `${baseUrl}/api`;
-        const res = await fetch(`${url}/public/cotizaciones/granos`);
-        if (!res.ok) throw new Error("Error al obtener cotizaciones");
+        const res = await fetch(`${url}/public/cotizaciones/pizarra-bcr`);
+        if (!res.ok) throw new Error("Error al obtener precios de pizarra");
         return await res.json();
     };
 
     const fallbackData = {
-        source: "BCR - Bolsa de Comercio de Rosario",
+        source: "CAC — BCR (Datos de Referencia)",
         fecha: new Date().toLocaleDateString("es-AR"),
-        mercado: "Mercado de Granos - Pizarra",
+        mercado: "Precios de Pizarra — Rosario",
         moneda: "ARS",
         cotizaciones: [
-            { nombre: "Soja", slug: "soja", compra: 305000, venta: 307000, variacion: -0.8, unidad: "USD/Tn" },
-            { nombre: "Trigo", slug: "trigo", compra: 195000, venta: 197000, variacion: 1.2, unidad: "USD/Tn" },
-            { nombre: "Maíz", slug: "maiz", compra: 175000, venta: 177000, variacion: 0.5, unidad: "USD/Tn" },
-            { nombre: "Girasol", slug: "girasol", compra: 350000, venta: 355000, variacion: -0.3, unidad: "USD/Tn" },
-            { nombre: "Sorgo", slug: "sorgo", compra: 155000, venta: 157000, variacion: 0.2, unidad: "USD/Tn" },
-            { nombre: "Cebada", slug: "cebada", compra: 180000, venta: 182000, variacion: -0.5, unidad: "USD/Tn" },
+            { nombre: "Soja", slug: "soja", compra: 518892.5, venta: 524107.5, cierre: 521500, variacion: 0.0, unidad: "ARS/Tn" },
+            { nombre: "Trigo", slug: "trigo", compra: 333573.75, venta: 336926.25, cierre: 335250, variacion: 0.0, unidad: "ARS/Tn" },
+            { nombre: "Maíz", slug: "maiz", compra: 265376.45, venta: 268043.55, cierre: 266710, variacion: 0.0, unidad: "ARS/Tn" },
+            { nombre: "Girasol", slug: "girasol", compra: 733862.25, venta: 741237.75, cierre: 737550, variacion: 0.0, unidad: "ARS/Tn" },
+            { nombre: "Sorgo", slug: "sorgo", compra: 277236.85, venta: 280023.15, cierre: 278630, variacion: 0.0, unidad: "ARS/Tn" },
         ],
         disclaimer: "Valores de referencia.",
         apiConfigured: false,
     };
 
     const { data: queryData, isLoading: loading, isError, refetch } = useQuery({
-        queryKey: ['cotizacionesBCR'],
-        queryFn: fetchCotizaciones,
+        queryKey: ['cotizacionesPizarraBCR'],
+        queryFn: fetchPizarra,
         retry: 2,
         refetchOnWindowFocus: false,
     });
@@ -162,8 +121,8 @@ export default function CotizacionesBCR() {
         return (
             <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 animate-pulse">
                 <div className="h-5 w-56 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
-                    {[...Array(6)].map((_, i) => (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
+                    {[...Array(5)].map((_, i) => (
                         <div key={i} className="h-20 sm:h-24 bg-gray-100 dark:bg-gray-800 rounded-xl" />
                     ))}
                 </div>
@@ -172,6 +131,9 @@ export default function CotizacionesBCR() {
     }
 
     const cotizaciones = data?.cotizaciones || [];
+
+    // La unidad mostrada depende de la moneda del usuario
+    const displayUnit = currency === "USD" ? "USD/Tn" : "ARS/Tn";
 
     return (
         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col h-full">
@@ -183,10 +145,10 @@ export default function CotizacionesBCR() {
                     </div>
                     <div className="min-w-0">
                         <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 leading-tight">
-                            Cotizaciones de Granos
+                            Precios de Pizarra
                         </h3>
                         <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate">
-                            {data?.source || "Bolsa de Comercio de Rosario"} · {data?.fecha || "—"}
+                            {data?.source || "Cámara Arbitral de Cereales (CAC) — BCR"} · {data?.fecha || "—"}
                         </p>
                     </div>
                 </div>
@@ -203,21 +165,28 @@ export default function CotizacionesBCR() {
                         <RefreshCw size={11} /> Actualizar
                     </button>
                     <a
-                        href="https://www.bcr.com.ar/es/mercados/boletin-diario/mercado-de-granos"
+                        href="https://www.cac.bcr.com.ar/es/precios-de-pizarra"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-[#2D6A4F] hover:text-white bg-green-50 dark:bg-green-900/20 hover:bg-[#2D6A4F] border border-green-200 dark:border-green-800 transition-all"
                     >
-                        <ExternalLink size={11} /> BCR
+                        <ExternalLink size={11} /> CAC
                     </a>
                 </div>
             </div>
 
             {/* Grain Cards */}
             <div className="px-3 pb-3 flex-1 min-h-0 overflow-hidden flex flex-col">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 flex-1 min-h-0">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 flex-1 min-h-0">
                     {cotizaciones.map((grano) => (
-                        <GranoCard key={grano.nombre} grano={grano} />
+                        <GranoCard
+                            key={grano.nombre}
+                            grano={grano}
+                            currency={currency}
+                            symbol={symbol}
+                            convertCurrency={convertCurrency}
+                            displayUnit={displayUnit}
+                        />
                     ))}
                 </div>
 
@@ -232,7 +201,7 @@ export default function CotizacionesBCR() {
     );
 }
 
-function GranoCard({ grano }) {
+function GranoCard({ grano, currency, symbol, convertCurrency, displayUnit }) {
     const variacion = grano.variacion || 0;
     const isPositive = variacion > 0;
     const isNegative = variacion < 0;
@@ -251,9 +220,41 @@ function GranoCard({ grano }) {
 
     const VarIcon = isPositive ? TrendingUp : isNegative ? TrendingDown : Minus;
 
+    /**
+     * Formatea un precio aplicando la conversión de moneda del usuario.
+     * - ARS: "$521k" (miles abreviados)
+     * - USD: "US$350" (valor directo)
+     */
     const formatPrice = (val) => {
-        if (val >= 1000) return `${(val / 1000).toFixed(0)}k`;
-        return val?.toLocaleString("es-AR") || "—";
+        if (val == null || val === 0) return "—";
+        const converted = convertCurrency(val);
+        if (currency === "USD") {
+            // En USD los precios de granos son del orden de cientos
+            return `${symbol}${converted.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+        }
+        // En ARS abreviamos en miles
+        if (converted >= 1000) {
+            const k = converted / 1000;
+            return `${symbol}${k.toLocaleString("es-AR", { maximumFractionDigits: 0 })}k`;
+        }
+        return `${symbol}${converted.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
+    };
+
+    /**
+     * Formatea precios compra/venta con más detalle.
+     */
+    const formatPriceDetail = (val) => {
+        if (val == null || val === 0) return "—";
+        const converted = convertCurrency(val);
+        if (currency === "USD") {
+            return `${symbol}${converted.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+        // ARS con detalle
+        if (converted >= 1000) {
+            const k = converted / 1000;
+            return `${symbol}${k.toLocaleString("es-AR", { maximumFractionDigits: 1 })}k`;
+        }
+        return `${symbol}${converted.toLocaleString("es-AR", { maximumFractionDigits: 0 })}`;
     };
 
     return (
@@ -270,7 +271,7 @@ function GranoCard({ grano }) {
             <div className="mb-0.5">
                 <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Cierre</p>
                 <p className="text-[13px] font-black text-gray-900 dark:text-gray-100 leading-tight tabular-nums">
-                    ${formatPrice(grano.cierre || grano.venta)}
+                    {formatPrice(grano.cierre || grano.venta)}
                 </p>
             </div>
 
@@ -279,13 +280,13 @@ function GranoCard({ grano }) {
                 <div className="flex-1">
                     <p className="text-[8px] font-bold text-gray-400 uppercase">Compra</p>
                     <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">
-                        ${formatPrice(grano.compra)}
+                        {formatPriceDetail(grano.compra)}
                     </p>
                 </div>
                 <div className="flex-1">
                     <p className="text-[8px] font-bold text-gray-400 uppercase">Venta</p>
                     <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">
-                        ${formatPrice(grano.venta)}
+                        {formatPriceDetail(grano.venta)}
                     </p>
                 </div>
             </div>

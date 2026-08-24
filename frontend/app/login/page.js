@@ -505,24 +505,29 @@ export default function AuthPage() {
     const inputRegisterWithIcon = `${inputBase} pl-11 pr-5 py-3.5 sm:py-3`;
 
     return (
-        <div className="min-h-screen flex flex-col bg-[#060D0B] font-sans selection:bg-green-100 antialiased safe-area-top">
-            <Navbar />
-            <div className="flex-1 flex overflow-hidden relative group">
-                {/* ── Background hero ── */}
-                <div className="absolute inset-0">
-                    <div className="absolute inset-0 transition-all duration-[1500ms] ease-out group-hover:scale-110 group-hover:brightness-110">
-                        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center"></div>
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#2D6A4F]/90 to-[#1B4332]/95 mix-blend-multiply opacity-85 transition-opacity duration-700 group-hover:opacity-30"></div>
-                    </div>
-                    <div className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 px-6 md:px-8 lg:px-12 xl:px-12 z-10 w-[52%] lg:w-[55%] xl:w-auto">
-                        <div className="max-w-xs md:max-w-md lg:max-w-lg xl:max-w-2xl transition-transform duration-700 group-hover:-translate-y-2">
-                            <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-6xl font-black text-white leading-tight mb-3 lg:mb-6 tracking-tighter uppercase italic xl:whitespace-nowrap">
-                                Sembrando eficiencia,<br />cosechando rentabilidad.
-                            </h1>
-                            <p className="pl-2 md:pl-3 text-xs md:text-sm lg:text-base xl:text-lg text-green-50/70 leading-relaxed font-medium">
-                                Agricultura Inteligente & Analisis de Datos.
-                            </p>
-                        </div>
+        <div className="min-h-screen flex flex-col bg-[#060D0B] font-sans selection:bg-green-100 antialiased safe-area-top relative overflow-hidden group">
+            {/* ── Background hero (ocupa la pantalla completa, incluso detrás de la Navbar) ── */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+                <div className="absolute inset-0 transition-all duration-[1500ms] ease-out group-hover:scale-110 group-hover:brightness-110">
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=2000&auto=format&fit=crop')] bg-cover bg-center"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#2D6A4F]/90 to-[#1B4332]/95 mix-blend-multiply opacity-85 transition-opacity duration-700 group-hover:opacity-30"></div>
+                </div>
+            </div>
+
+            {/* ── Navbar integrada transparentemente ── */}
+            <div className="relative z-50">
+                <Navbar />
+            </div>
+
+            <div className="flex-1 flex overflow-hidden relative z-10">
+                <div className="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 px-6 md:px-8 lg:px-12 xl:px-12 z-10 w-[52%] lg:w-[55%] xl:w-auto">
+                    <div className="max-w-xs md:max-w-md lg:max-w-lg xl:max-w-2xl transition-transform duration-700 group-hover:-translate-y-2">
+                        <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-6xl font-black text-white leading-tight mb-3 lg:mb-6 tracking-tighter uppercase italic xl:whitespace-nowrap">
+                            Sembrando eficiencia,<br />cosechando rentabilidad.
+                        </h1>
+                        <p className="pl-2 md:pl-3 text-xs md:text-sm lg:text-base xl:text-lg text-green-50/70 leading-relaxed font-medium">
+                            Agricultura Inteligente & Analisis de Datos.
+                        </p>
                     </div>
                 </div>
 
