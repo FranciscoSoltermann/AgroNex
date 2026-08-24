@@ -318,7 +318,7 @@ export default function CiclosPage() {
         setConfirmModal({
             isOpen: true,
             title: "Eliminar Lote",
-            message: "¿Estás seguro que querés eliminar este lote?\n\n¡ATENCIÓN! Esto eliminará permanentemente TODAS sus campañas, actividades, insumos usados, gastos imputados y registros de cosecha vinculados. Esta acción NO se puede deshacer.",
+            message: "¿Estás seguro que querés eliminar este lote?\n\n¡ATENCIÓN! Esto eliminará permanentemente todos los datos vinculados a este lote. Esta acción no se podrá deshacer.",
             onConfirm: async () => {
                 try {
                     await apiClient.delete(`/lotes/${idLoteSeleccionado}`);
@@ -392,7 +392,7 @@ export default function CiclosPage() {
         setConfirmModal({
             isOpen: true,
             title: "Eliminar Campaña",
-            message: `¿Seguro que querés eliminar la campaña "${camp.cultivo}"?\n\n¡ATENCIÓN! Esta acción eliminará permanentemente todos los datos de la campaña: actividades, insumos usados, gastos fijos imputados y registros de cosecha. No se puede deshacer.`,
+            message: `¿Seguro que querés eliminar la campaña "${camp.cultivo}"?\n\n¡ATENCIÓN! Esta acción eliminará permanentemente todos los datos de la campaña y no se podrá deshacer.`,
             onConfirm: async () => {
                 try {
                     await apiClient.delete(`/campanias/${idCampania}`);
