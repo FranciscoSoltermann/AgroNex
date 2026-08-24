@@ -378,7 +378,8 @@ export default function CiclosPage() {
             }, 800);
         } catch (err) {
             const d = err.response?.data;
-            setCampError(d?.error || d?.message || (isEditMode ? "Error al actualizar." : "Error al crear la campaña."));
+            const msg = typeof d === "string" ? d : d?.message || d?.error || (d && Object.values(d).join(" ")) || err.message;
+            setCampError(msg || (isEditMode ? "Error al actualizar." : "Error al crear la campaña."));
         } finally {
             setCampLoading(false);
         }

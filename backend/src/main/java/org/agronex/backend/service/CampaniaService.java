@@ -68,25 +68,24 @@ public class CampaniaService {
                 .fechaInicio(request.getFechaInicio())
                 .fechaFin(request.getFechaFin())
                 .estado("ABIERTA")
+                .campaniaLotes(new ArrayList<>())
                 .build();
-        Campania guardada = campaniaRepository.save(campania);
 
-        // Asignar lotes con sus fechas específicas
-        List<CampaniaLote> asignaciones = new ArrayList<>();
         for (int i = 0; i < lotesReq.size(); i++) {
             CampaniaLoteRequest lr = lotesReq.get(i);
             Lote lote = lotesValidados.get(i);
             CampaniaLote cl = CampaniaLote.builder()
-                    .campania(guardada)
+                    .campania(campania)
                     .lote(lote)
                     .fechaInicioLote(lr.getFechaInicioLote())
                     .build();
-            asignaciones.add(campaniaLoteRepository.save(cl));
+            campania.getCampaniaLotes().add(cl);
         }
-        guardada.setCampaniaLotes(asignaciones);
+
+        Campania guardada = campaniaRepository.save(campania);
 
         // Auditoría
-        String nombresLotes = lotesValidados.stream().map(l -> l.getNombre()).collect(Collectors.joining(", "));
+        String nombresLotes = lotesValidados.stream().map(Lote::getNombre).collect(Collectors.joining(", "));
         auditService.registrar(
                 idUsuarioToken, lotesValidados.get(0).getCampo().getUsuario().getEmail(),
                 EntidadAudit.CAMPANIA, guardada.getIdCampania().toString(),
@@ -145,7 +144,7 @@ public class CampaniaService {
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
 
         Lote primerLote = campania.getLote();
-        if (primerLote == null || !primerLote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+        if (primerLote != null && !primerLote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("Acceso denegado");
         }
 
@@ -157,12 +156,6 @@ public class CampaniaService {
         // Actualizar asignaciones de lotes
         List<CampaniaLoteRequest> lotesReq = normalizarLotes(request);
 
-        // Eliminar asignaciones previas
-        campaniaLoteRepository.deleteByCampaniaIdCampania(idCampania);
-        campania.getCampaniaLotes().clear();
-
-        // Crear nuevas asignaciones
-        List<CampaniaLote> nuevasAsignaciones = new ArrayList<>();
         List<Lote> lotesEditValidados = new ArrayList<>();
         for (CampaniaLoteRequest lr : lotesReq) {
             Lote lote = loteRepository.findById(lr.getIdLote())
@@ -181,6 +174,11 @@ public class CampaniaService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Todos los lotes de una campaña deben pertenecer al mismo campo.");
         }
 
+        // Limpiar la lista manejada por Hibernate (eliminará huérfanos en BD)
+        campania.getCampaniaLotes().clear();
+        campaniaRepository.flush();
+
+        // Agregar los nuevos CampaniaLote a la colección existente
         for (int i = 0; i < lotesReq.size(); i++) {
             CampaniaLoteRequest lr = lotesReq.get(i);
             Lote lote = lotesEditValidados.get(i);
@@ -189,17 +187,16 @@ public class CampaniaService {
                     .lote(lote)
                     .fechaInicioLote(lr.getFechaInicioLote())
                     .build();
-            nuevasAsignaciones.add(campaniaLoteRepository.save(cl));
+            campania.getCampaniaLotes().add(cl);
         }
-        campania.setCampaniaLotes(nuevasAsignaciones);
 
         Campania guardada = campaniaRepository.save(campania);
 
-        String nombresLotes = nuevasAsignaciones.stream()
-                .map(cl -> cl.getLote().getNombre())
+        String nombresLotes = lotesEditValidados.stream()
+                .map(Lote::getNombre)
                 .collect(Collectors.joining(", "));
         auditService.registrar(
-                idUsuarioToken, nuevasAsignaciones.get(0).getLote().getCampo().getUsuario().getEmail(),
+                idUsuarioToken, lotesEditValidados.get(0).getCampo().getUsuario().getEmail(),
                 EntidadAudit.CAMPANIA, idCampania.toString(),
                 "Campaña " + campania.getCultivo() + " editada",
                 AccionAudit.ACTUALIZAR,
