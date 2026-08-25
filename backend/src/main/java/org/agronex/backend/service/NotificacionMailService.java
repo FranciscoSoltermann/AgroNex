@@ -1,65 +1,130 @@
 package org.agronex.backend.service;
 
-import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+
+/**
+ * Servicio de envío de correos electrónicos usando la API HTTP de Resend.
+ * Reemplaza el anterior JavaMailSender (SMTP) que era bloqueado por Render.
+ *
+ * Resend envía los correos a través de HTTPS (puerto 443), por lo que
+ * funciona en cualquier plataforma cloud sin restricciones de puertos.
+ */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class NotificacionMailService {
 
-    private final JavaMailSender javaMailSender;
+    @Value("${resend.api-key:}")
+    private String resendApiKey;
 
-    @Value("${spring.mail.username:admin@agronex.com}")
-    private String rawFromEmail;
+    @Value("${resend.from-email:AgroNex <onboarding@resend.dev>}")
+    private String fromEmail;
 
-    private String getFromEmail() {
-        if (rawFromEmail == null) return "admin@agronex.com";
-        String trimmed = rawFromEmail.trim();
-        return trimmed.isEmpty() ? "admin@agronex.com" : trimmed;
-    }
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
+    /**
+     * Envía una alerta simple por email (texto plano).
+     */
     public void enviarAlerta(String destinatario, String asunto, String mensaje) {
         String maskedEmail = maskEmail(destinatario);
         log.info("📧 Preparando alerta por email para {}: {}", maskedEmail, asunto);
         try {
-            SimpleMailMessage mailMessage = new SimpleMailMessage();
-            mailMessage.setFrom(getFromEmail());
-            mailMessage.setTo(destinatario);
-            mailMessage.setSubject(asunto);
-            mailMessage.setText(mensaje);
-            
-            javaMailSender.send(mailMessage);
+            String jsonBody = buildJsonPayload(destinatario, asunto, null, mensaje);
+            enviarViaResend(jsonBody);
             log.info("✅ Email de alerta enviado exitosamente a {}", maskedEmail);
         } catch (Exception e) {
             log.error("❌ Error al enviar email de alerta a {}: {}", maskedEmail, e.getMessage());
         }
     }
 
+    /**
+     * Envía un correo HTML con el código de verificación de 6 dígitos.
+     */
     public void enviarCodigoVerificacion(String destinatario, String codigo) {
         String maskedEmail = maskEmail(destinatario);
         log.info("📧 Enviando código de verificación a {}", maskedEmail);
         try {
-            MimeMessage mimeMessage = javaMailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-            
-            helper.setFrom(getFromEmail());
-            helper.setTo(destinatario);
-            helper.setSubject("🔑 Tu código de verificación AgroNex: " + codigo);
-            helper.setText(generarPlantillaHtmlCodigo(codigo), true);
-
-            javaMailSender.send(mimeMessage);
+            String htmlContent = generarPlantillaHtmlCodigo(codigo);
+            String asunto = "🔑 Tu código de verificación AgroNex: " + codigo;
+            String jsonBody = buildJsonPayload(destinatario, asunto, htmlContent, null);
+            enviarViaResend(jsonBody);
             log.info("✅ Código de verificación enviado exitosamente a {}", maskedEmail);
         } catch (Exception e) {
-            log.error("❌ Error al enviar código de verificación a {}: {}", maskedEmail, e.getMessage());
-            throw new RuntimeException("No se pudo enviar el correo de verificación. Por favor verifique la dirección ingresada o intente más tarde.");
+            log.error("🚨 Error al enviar código de verificación a {}: {}", maskedEmail, e.getMessage());
+            throw new RuntimeException("No se pudo enviar el correo de verificación. Por favor verificá la dirección ingresada o intentá más tarde.");
         }
+    }
+
+    /**
+     * Envía un email usando la API REST de Resend (POST https://api.resend.com/emails).
+     */
+    private void enviarViaResend(String jsonBody) throws Exception {
+        if (resendApiKey == null || resendApiKey.isBlank()) {
+            throw new IllegalStateException("RESEND_API_KEY no está configurada. No se pueden enviar correos.");
+        }
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.resend.com/emails"))
+                .header("Authorization", "Bearer " + resendApiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                .timeout(Duration.ofSeconds(10))
+                .build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() >= 400) {
+            log.error("❌ Resend API respondió con status {}: {}", response.statusCode(), response.body());
+            throw new RuntimeException("Resend API error: " + response.body());
+        }
+
+        log.debug("📬 Resend API response: {}", response.body());
+    }
+
+    /**
+     * Construye el JSON para la API de Resend.
+     * Si htmlContent es null, envía text plano. Si text es null, envía HTML.
+     */
+    private String buildJsonPayload(String to, String subject, String htmlContent, String textContent) {
+        // Escapar comillas y saltos de línea para JSON válido
+        String escapedSubject = escapeJson(subject);
+        String escapedFrom = escapeJson(fromEmail);
+        String escapedTo = escapeJson(to);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("{");
+        sb.append("\"from\":\"").append(escapedFrom).append("\",");
+        sb.append("\"to\":[\"").append(escapedTo).append("\"],");
+        sb.append("\"subject\":\"").append(escapedSubject).append("\"");
+
+        if (htmlContent != null) {
+            sb.append(",\"html\":\"").append(escapeJson(htmlContent)).append("\"");
+        }
+        if (textContent != null) {
+            sb.append(",\"text\":\"").append(escapeJson(textContent)).append("\"");
+        }
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    /** Escapa caracteres especiales para JSON */
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
     }
 
     private String generarPlantillaHtmlCodigo(String codigo) {
@@ -92,7 +157,7 @@ public class NotificacionMailService {
                       <!-- Content Body -->
                       <tr>
                         <td style="padding: 40px 36px; text-align: center;">
-                          <h1 style="color: #1b4332; font-size: 22px; font-weight: 800; margin: 0 0 12px 0;">¡Verificá tu correo electrónico!</h1>
+                          <h1 style="color: #1b4332; font-size: 22px; font-weight: 800; margin: 0 0 12px 0;">Verificá tu correo electrónico</h1>
                           <p style="color: #4a5568; font-size: 14px; line-height: 1.6; margin: 0 0 28px 0;">
                             Estás a un solo paso de completar tu registro. Ingresá el siguiente código de verificación en AgroNex para validar tu cuenta:
                           </p>
@@ -107,7 +172,7 @@ public class NotificacionMailService {
                           <!-- Time Badge -->
                           <div style="display: inline-block; background-color: #fff7ed; border: 1px solid #ffedd5; border-radius: 20px; padding: 8px 18px; margin-bottom: 24px;">
                             <span style="color: #c2410c; font-size: 12px; font-weight: 700;">
-                              ⏱️ Este código expira en 15 minutos
+                              Este código expira en 15 minutos
                             </span>
                           </div>
 

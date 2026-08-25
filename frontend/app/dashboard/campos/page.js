@@ -7,10 +7,12 @@ import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import dynamic from "next/dynamic";
 const LoteDrawer = dynamic(() => import('@/components/features/dashboard/campos/LoteDrawer'), { ssr: false });
+const ShapefileUploader = dynamic(() => import('@/components/features/dashboard/campos/ShapefileUploader'), { ssr: false });
+const JohnDeereFieldSelector = dynamic(() => import('@/components/features/dashboard/campos/JohnDeereFieldSelector'), { ssr: false });
 import {
     Plus, MapPin, Loader2, AlertCircle, MoreVertical,
     LayoutGrid, List, CheckCircle2, AlertTriangle, X, Scan,
-    Pencil, Trash2, Ruler, Map
+    Pencil, Trash2, Ruler, Map, Upload, Tractor
 } from "lucide-react";
 const CampoLoteMapViewer = dynamic(() => import('@/components/features/dashboard/campos/CampoLoteMapViewer'), { ssr: false });
 import PermissionGuard from "@/components/shared/PermissionGuard";
@@ -70,6 +72,9 @@ export default function CamposPage() {
     const [loteInitialCenter, setLoteInitialCenter] = useState(null);
     const [resolvingCenter, setResolvingCenter] = useState(false);
     const [editingLoteGeoId, setEditingLoteGeoId] = useState(null);
+    const [loteInputMethod, setLoteInputMethod] = useState('draw');
+    const [jdConnected, setJdConnected] = useState(false);
+    const [bulkLotes, setBulkLotes] = useState(null);
 
     const resolveCampoCenter = useCallback(async (campo) => {
         if (!campo) return null;
@@ -136,6 +141,13 @@ export default function CamposPage() {
             if (session?.user) {
                 setUserId(session.user.id);
                 await fetchData(session.user.id);
+                
+                try {
+                    const jdRes = await apiClient.get('/johndeere/status');
+                    setJdConnected(jdRes.data?.connected || false);
+                } catch {
+                    setJdConnected(false);
+                }
             } else {
                 setLoading(false);
             }
@@ -246,11 +258,53 @@ export default function CamposPage() {
         }
     };
 
+    const handleCrearLotesBulk = async (e) => {
+        e.preventDefault();
+        if (!bulkLotes || bulkLotes.length === 0) return;
+
+        setSubmitLoading(true);
+        setSubmitError(null);
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const lote of bulkLotes) {
+            try {
+                await apiClient.post("/lotes", {
+                    nombre: lote.nombre,
+                    superficie: parseFloat(lote.superficie),
+                    coordenadasGeoJson: lote.coordenadasGeoJson,
+                    idCampo: campoSeleccionado.idCampo
+                });
+                successCount++;
+            } catch (err) {
+                console.error("Error al crear lote bulk:", err);
+                failCount++;
+            }
+        }
+
+        invalidateDashboardBootstrapCache();
+        await fetchData(userId, { forceRefresh: true });
+
+        if (failCount === 0) {
+            setSubmitSuccess(`¡Se importaron ${successCount} lotes exitosamente!`);
+            toast.success(`¡Se importaron ${successCount} lotes exitosamente!`);
+            setTimeout(() => {
+                setShowModalLote(false);
+                setBulkLotes(null);
+                setSubmitSuccess(null);
+            }, 1000);
+        } else {
+            setSubmitError(`Se importaron ${successCount} lotes. Hubo ${failCount} errores.`);
+        }
+        setSubmitLoading(false);
+    };
+
     const handleCrearLote = async (e) => {
         e.preventDefault();
 
         if (!formLote.coordenadasGeoJson) {
-            setSubmitError("Debes dibujar el polígono del lote en el mapa.");
+            setSubmitError("Debes definir el polígono del lote en el mapa.");
             return;
         }
 
@@ -629,58 +683,159 @@ export default function CamposPage() {
 
                 {/* Modal: Nuevo Lote / Editar Lote Mapeo */}
                 {showModalLote && campoSeleccionado && (
-                    <Modal titulo={editingLoteGeoId ? "Editar Mapeo del Lote" : "Agregar Lote"} onClose={() => { setShowModalLote(false); setEditingLoteGeoId(null); }}>
+                    <Modal titulo={editingLoteGeoId ? "Editar Mapeo del Lote" : (bulkLotes ? `Importar ${bulkLotes.length} Lotes` : "Agregar Lote")} onClose={() => { setShowModalLote(false); setEditingLoteGeoId(null); setLoteInputMethod('draw'); setBulkLotes(null); }}>
                         <p className="text-[12px] text-gray-500 mb-4">Campo: <strong>{campoSeleccionado.nombre}</strong></p>
-                        <form onSubmit={handleCrearLote} className="space-y-4">
-                            <FormField label="Nombre del lote" required>
-                                <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
-                            </FormField>
 
-                            {(!formLote.coordenadasGeoJson || editingLoteGeoId) ? (
-                                <FormField label="Dibujá el lote en el mapa">
-                                    <LoteDrawer
-                                        key={`${campoSeleccionado?.idCampo}-map-${editingLoteGeoId || 'new'}`}
+                        {/* ── MODO MASIVO: formulario simplificado ─────────────── */}
+                        {bulkLotes && bulkLotes.length > 0 ? (
+                            <form onSubmit={handleCrearLotesBulk} className="space-y-4">
+                                {loteInputMethod === 'upload' && (
+                                    <ShapefileUploader
                                         initialCenter={loteInitialCenter}
-                                        initialGeoJson={editingLoteGeoId ? formLote.coordenadasGeoJson : null}
-                                        onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
-                                            setFormLote(p => ({
-                                                ...p,
-                                                coordenadasGeoJson: geoJsonOrMarker || "",
-                                                superficie: haOrCoords || "1"
-                                            }));
+                                        onGeoJsonReady={(geojsonStr, areaHa) => {
+                                            setBulkLotes(null);
+                                            setFormLote(p => ({ ...p, coordenadasGeoJson: geojsonStr || "", superficie: areaHa || "" }));
                                         }}
+                                        onBulkReady={(items) => { if (items) setBulkLotes(items); else setBulkLotes(null); }}
                                     />
+                                )}
+                                {loteInputMethod === 'john-deere' && (
+                                    <JohnDeereFieldSelector
+                                        initialCenter={loteInitialCenter}
+                                        onGeoJsonReady={(geojsonStr, areaHa) => {
+                                            setBulkLotes(null);
+                                            setFormLote(p => ({ ...p, coordenadasGeoJson: geojsonStr || "", superficie: areaHa || "" }));
+                                        }}
+                                        onBulkReady={(items) => { if (items) setBulkLotes(items); else setBulkLotes(null); }}
+                                    />
+                                )}
+                                {submitError && <ErrorMsg msg={submitError} />}
+                                {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                                <SubmitBtn loading={submitLoading} text={`Importar ${bulkLotes.length} lote${bulkLotes.length > 1 ? 's' : ''}`} />
+                            </form>
+                        ) : (
+                            /* ── MODO SIMPLE: formulario completo ─────────────────── */
+                            <form onSubmit={handleCrearLote} className="space-y-4">
+                                <FormField label="Nombre del lote" required>
+                                    <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
                                 </FormField>
-                            ) : (
-                                <div className="bg-green-50 text-green-700 text-xs font-bold p-3 rounded-lg border border-green-200 flex justify-between items-center">
-                                    <span>✓ Lote delimitado correctamente en el mapa.</span>
-                                    <button type="button" onClick={() => setFormLote(p => ({ ...p, coordenadasGeoJson: "" }))} className="text-green-800 underline hover:text-green-900 transition-colors">Volver a dibujar</button>
-                                </div>
-                            )}
 
-                            <div className="grid grid-cols-2 gap-3 items-end">
-                                <FormField label="Superficie (Ha)" required>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            min="0.01"
-                                            value={formLote.superficie}
-                                            onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))}
-                                            className={`${INPUT_CLASS} pr-10 text-[#2D6A4F] font-black`}
-                                            placeholder="0.00"
-                                        />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#2D6A4F] font-bold">Ha</span>
+                                {(!formLote.coordenadasGeoJson || editingLoteGeoId) ? (
+                                    <>
+                                        {/* ── Tabs: método de entrada ─────────────────────── */}
+                                        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setLoteInputMethod('draw'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
+                                                    loteInputMethod === 'draw'
+                                                        ? 'bg-white dark:bg-gray-700 text-[#2D6A4F] shadow-sm'
+                                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                                }`}
+                                            >
+                                                <Pencil size={12} /> Dibujar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setLoteInputMethod('upload'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
+                                                    loteInputMethod === 'upload'
+                                                        ? 'bg-white dark:bg-gray-700 text-[#2D6A4F] shadow-sm'
+                                                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                                }`}
+                                            >
+                                                <Upload size={12} /> Subir archivo
+                                            </button>
+                                            {jdConnected && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setLoteInputMethod('john-deere'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
+                                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
+                                                        loteInputMethod === 'john-deere'
+                                                            ? 'bg-white dark:bg-gray-700 text-[#367C2B] shadow-sm'
+                                                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                                                    }`}
+                                                >
+                                                    <Tractor size={12} /> John Deere
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* ── Contenido del tab activo ────────────────────── */}
+                                        {loteInputMethod === 'draw' && (
+                                            <LoteDrawer
+                                                key={`${campoSeleccionado?.idCampo}-map-${editingLoteGeoId || 'new'}`}
+                                                initialCenter={loteInitialCenter}
+                                                initialGeoJson={editingLoteGeoId ? formLote.coordenadasGeoJson : null}
+                                                onDrawComplete={(geoJsonOrMarker, haOrCoords) => {
+                                                    setFormLote(p => ({
+                                                        ...p,
+                                                        coordenadasGeoJson: geoJsonOrMarker || "",
+                                                        superficie: haOrCoords || "1"
+                                                    }));
+                                                }}
+                                            />
+                                        )}
+                                        {loteInputMethod === 'upload' && (
+                                            <ShapefileUploader
+                                                initialCenter={loteInitialCenter}
+                                                onGeoJsonReady={(geojsonStr, areaHa) => {
+                                                    setBulkLotes(null);
+                                                    setFormLote(p => ({
+                                                        ...p,
+                                                        coordenadasGeoJson: geojsonStr || "",
+                                                        superficie: areaHa || ""
+                                                    }));
+                                                }}
+                                                onBulkReady={(items) => { if (items) setBulkLotes(items); }}
+                                            />
+                                        )}
+                                        {loteInputMethod === 'john-deere' && (
+                                            <JohnDeereFieldSelector
+                                                initialCenter={loteInitialCenter}
+                                                onGeoJsonReady={(geojsonStr, areaHa) => {
+                                                    setBulkLotes(null);
+                                                    setFormLote(p => ({
+                                                        ...p,
+                                                        coordenadasGeoJson: geojsonStr || "",
+                                                        superficie: areaHa || ""
+                                                    }));
+                                                }}
+                                                onBulkReady={(items) => { if (items) setBulkLotes(items); }}
+                                            />
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="bg-green-50 text-green-700 text-xs font-bold p-3 rounded-lg border border-green-200 flex justify-between items-center">
+                                        <span>✓ Lote delimitado correctamente.</span>
+                                        <button type="button" onClick={() => { setFormLote(p => ({ ...p, coordenadasGeoJson: "" })); setLoteInputMethod('draw'); }} className="text-green-800 underline hover:text-green-900 transition-colors">Volver a definir</button>
                                     </div>
-                                </FormField>
-                                <div>
-                                    <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight mb-3">Calculada automáticamente al dibujar, pero podés ajustarla si es necesario.</p>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-3 items-end">
+                                    <FormField label="Superficie (Ha)" required>
+                                        <div className="relative">
+                                            <input 
+                                                type="number" 
+                                                step="0.01"
+                                                min="0.01"
+                                                value={formLote.superficie} 
+                                                onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} 
+                                                className={`${INPUT_CLASS} pr-10 text-[#2D6A4F] font-black`} 
+                                                placeholder="0.00"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#2D6A4F] font-bold">Ha</span>
+                                        </div>
+                                    </FormField>
+                                    <div>
+                                        <p className="text-[10px] sm:text-[11px] text-gray-500 leading-tight mb-3">Calculada automáticamente, pero podés ajustarla si es necesario.</p>
+                                    </div>
                                 </div>
-                            </div>
-                            {submitError && <ErrorMsg msg={submitError} />}
-                            {submitSuccess && <SuccessMsg msg={submitSuccess} />}
-                            <SubmitBtn loading={submitLoading} text="Confirmar Lote" />
-                        </form>
+                                {submitError && <ErrorMsg msg={submitError} />}
+                                {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                                <SubmitBtn loading={submitLoading} text="Confirmar Lote" />
+                            </form>
+                        )}
                     </Modal>
                 )}
 

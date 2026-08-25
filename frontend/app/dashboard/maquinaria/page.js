@@ -565,7 +565,7 @@ function MachineCard({ machine }) {
                         {machine.name || machine.displayName || `Máquina ${machine.id || machine.principalId}`}
                     </p>
                     <p className="text-[10px] text-gray-400 font-medium mt-0.5">
-                        {machine.make || "John Deere"} {machine.model || ""} {machine.modelYear ? `(${machine.modelYear})` : ""}
+                        {machine.make?.name || (typeof machine.make === 'string' ? machine.make : "John Deere")} {machine.model?.name || (typeof machine.model === 'string' ? machine.model : "")} {machine.modelYear ? `(${machine.modelYear})` : ""}
                     </p>
                 </div>
                 <div className={`w-3 h-3 rounded-full ${bc ? "bg-green-400 animate-pulse" : "bg-gray-300"}`} title={bc ? "Con señal GPS" : "Sin señal"} />
@@ -608,7 +608,9 @@ function MachineCard({ machine }) {
                             <Navigation size={12} className="text-purple-500 shrink-0" />
                             <div>
                                 <p className="text-[9px] text-gray-400 font-bold uppercase">Rumbo</p>
-                                <p className="text-[12px] font-black text-gray-900 dark:text-gray-100">{bc.heading}°</p>
+                                <p className="text-[12px] font-black text-gray-900 dark:text-gray-100">
+                                    {typeof bc.heading === 'object' ? bc.heading.value : bc.heading}°
+                                </p>
                             </div>
                         </div>
                     )}

@@ -44,7 +44,7 @@ public class VerificationCodeService {
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(15);
 
         codesMap.put(emailClean, new CodeEntry(code, expiresAt));
-        log.info("🔑 Código de verificación generado para: {}", emailClean);
+        log.info("📧 Código de verificación generado para: {} -> CÓDIGO (SOLO DEV): {}", emailClean, code);
 
         mailService.enviarCodigoVerificacion(emailClean, code);
     }
