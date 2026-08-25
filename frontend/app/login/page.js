@@ -331,8 +331,8 @@ export default function AuthPage() {
         setLoading(true);
         setError(null);
         try {
-            // === BYPASS OTP TEMPORAL (HASTA INTEGRAR RESEND) ===
-            console.log("[AgroNex Registro] Bypass OTP. Registrando usuario en Supabase directamente...");
+            // Registro directo sin verificación por email (pendiente integrar servicio de mail)
+            console.log("[AgroNex Registro] Registrando usuario en Supabase...");
             
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: email.trim(),
@@ -362,10 +362,7 @@ export default function AuthPage() {
                 session = signInData?.session;
             }
 
-            // Crear perfil de usuario en el backend AgroNex
             console.log("[AgroNex Registro] Verificando si ya posee perfil registrado...");
-            
-            // Wait for cookies to be set, or force apiClient if needed (apiClient automatically grabs from supabase.auth)
             const registroEstado = await apiClient.get("/usuarios/me/check");
             if (registroEstado?.data?.registrado === true) {
                 router.push("/dashboard");
@@ -383,18 +380,6 @@ export default function AuthPage() {
             });
 
             router.push("/dashboard");
-
-            /* --- CODIGO ORIGINAL CON OTP COMENTADO ---
-            const codigoPayload = tipoUsuario === "FISICA"
-                ? { email: email.trim(), dni: dni.trim() }
-                : { email: email.trim(), cuit: cuit.trim() };
-
-            console.log("[AgroNex Registro] Paso 1: Solicitando código de verificación por mail...");
-            await apiClient.post("/public/auth/registro/enviar-codigo", codigoPayload);
-            console.log("[AgroNex Registro] Código enviado exitosamente a:", email.trim());
-
-            setShowOtpChallenge(true);
-            ------------------------------------------- */
         } catch (err) {
             console.error("[AgroNex Registro] ERROR:", err);
             if (err?.message === "Network Error" || err?.code === "ERR_NETWORK") {
