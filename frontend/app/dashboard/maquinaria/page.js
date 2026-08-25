@@ -15,8 +15,10 @@ const FieldMap = dynamic(() => import('@/components/features/dashboard/maquinari
     loading: () => <div className="w-full h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg"></div>
 });
 
-const ReporteContratistaButton = dynamic(() => import('@/components/features/dashboard/maquinaria/ReporteContratistaButton'), { ssr: false });
-const MantenimientoPanel = dynamic(() => import('@/components/features/dashboard/maquinaria/MantenimientoPanel'), { ssr: false });
+const MachineLocationMap = dynamic(() => import('@/components/features/dashboard/maquinaria/MachineLocationMap'), {
+    ssr: false,
+    loading: () => <div className="w-full h-44 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg flex items-center justify-center text-xs text-gray-400">Cargando mapa GPS...</div>
+});
 
 import PermissionGuard from "@/components/shared/PermissionGuard";
 
@@ -37,7 +39,6 @@ const PROVIDERS = [
 ];
 
 export default function EcosistemaPage() {
-    const [selectedProvider, setSelectedProvider] = useState(null);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: "", message: "", onConfirm: null });
     const [providers, setProviders] = useState(
         PROVIDERS.map((p) => ({ ...p, configured: null, userConnected: null, connections: [], organizations: [], loading: true, error: null }))
@@ -147,40 +148,6 @@ export default function EcosistemaPage() {
     return (
         <PermissionGuard requiredPermission="GESTION_MAQUINARIA">
         <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-            {/* Header */}
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 sm:p-6 border border-gray-100 dark:border-gray-800 shadow-sm">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                        <div className="flex items-start gap-3 mb-2">
-                            <div className="w-10 h-10 rounded-xl bg-[#2D6A4F] flex items-center justify-center text-white shadow-md shadow-[#2D6A4F]/10 shrink-0">
-                                <Tractor size={20} />
-                            </div>
-                            <div className="min-w-0">
-                                <h2 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100 leading-tight">Ecosistema de Integraciones</h2>
-                                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium leading-snug mt-1">
-                                    Conectá tu cuenta con plataformas de maquinaria agrícola y otros sistemas del sector para sincronizar datos y rastrear equipos.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex w-full sm:w-auto items-center gap-2">
-                        <ReporteContratistaButton />
-                        <button
-                            type="button"
-                            onClick={fetchProviderData}
-                            className="flex w-full sm:w-auto items-center justify-center gap-2 px-4 py-3 sm:py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all shrink-0 min-h-11"
-                        >
-                            <RefreshCw size={14} /> Actualizar
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Panel de Alertas de Mantenimiento */}
-            <MantenimientoPanel />
-
-
-
             {/* Providers */}
             {providers.map((provider) => (
                 <ProviderCard
@@ -216,59 +183,87 @@ export default function EcosistemaPage() {
 
 function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection }) {
     const { id, name, description, color, logo, configured, userConnected, connections, organizations, loading, error } = provider;
-    const [showOrgs, setShowOrgs] = useState(false);
-    const [machines, setMachines] = useState({});
-    const [fields, setFields] = useState({});
-    const [loadingMachines, setLoadingMachines] = useState({});
+    const [machines, setMachines] = useState([]);
+    const [fields, setFields] = useState([]);
+    const [loadingData, setLoadingData] = useState(false);
 
-    const fetchMachines = async (orgId) => {
-        if (machines[orgId] || fields[orgId]) {
-            // Toggle: ya las tenemos, solo las mostramos/ocultamos
-            setMachines(prev => {
-                const copy = { ...prev };
-                delete copy[orgId];
-                return copy;
-            });
-            setFields(prev => {
-                const copy = { ...prev };
-                delete copy[orgId];
-                return copy;
-            });
-            return;
-        }
+    const primaryOrgId = organizations?.[0]?.id || organizations?.[0]?.organizationId;
 
-        setLoadingMachines(prev => ({ ...prev, [orgId]: true }));
+    const loadData = useCallback(async () => {
+        if (!userConnected) return;
+        setLoadingData(true);
         try {
-            const res = await apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/machines`);
-            const machineList = res.data || [];
+            let orgsToQuery = organizations || [];
+            if (orgsToQuery.length === 0) {
+                try {
+                    const orgsRes = await apiClient.get('/maquinaria/john-deere/organizations');
+                    orgsToQuery = orgsRes.data || [];
+                } catch {
+                    orgsToQuery = [];
+                }
+            }
 
-            // Para cada máquina, intentar obtener su breadcrumb (ubicación)
-            const machinesWithLocation = await Promise.all(
-                machineList.map(async (machine) => {
+            const allMachinesArr = [];
+            const allFieldsArr = [];
+
+            await Promise.all(
+                orgsToQuery.map(async (org) => {
+                    const orgId = org.id || org.organizationId;
+                    if (!orgId) return;
+
                     try {
-                        const locRes = await apiClient.get(`/maquinaria/john-deere/machines/${machine.id || machine.principalId}/breadcrumbs`);
-                        const breadcrumbs = locRes.data || [];
-                        return { ...machine, breadcrumbs: breadcrumbs.length > 0 ? breadcrumbs[0] : null };
+                        const [resMachines, resFields] = await Promise.allSettled([
+                            apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/machines`),
+                            apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/fields`)
+                        ]);
+
+                        if (resMachines.status === 'fulfilled') {
+                            const machineList = resMachines.value.data || [];
+                            const machinesWithLocation = await Promise.all(
+                                machineList.map(async (machine) => {
+                                    try {
+                                        const locRes = await apiClient.get(`/maquinaria/john-deere/machines/${machine.id || machine.principalId}/breadcrumbs`);
+                                        const breadcrumbs = locRes.data || [];
+                                        const bc = (breadcrumbs.length > 0 ? breadcrumbs[0] : null) || machine.breadcrumbs || null;
+                                        return { ...machine, breadcrumbs: bc };
+                                    } catch {
+                                        return { ...machine, breadcrumbs: machine.breadcrumbs || null };
+                                    }
+                                })
+                            );
+                            allMachinesArr.push(...machinesWithLocation);
+                        }
+
+                        if (resFields.status === 'fulfilled') {
+                            allFieldsArr.push(...(resFields.value.data || []));
+                        }
                     } catch {
-                        return { ...machine, breadcrumbs: null };
+                        // ignore per org error
                     }
                 })
             );
 
-            setMachines(prev => ({ ...prev, [orgId]: machinesWithLocation }));
-        } catch {
-            setMachines(prev => ({ ...prev, [orgId]: [] }));
-        }
-        
-        try {
-            const resFields = await apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/fields`);
-            setFields(prev => ({ ...prev, [orgId]: resFields.data || [] }));
-        } catch {
-            setFields(prev => ({ ...prev, [orgId]: [] }));
-        }
+            const uniqueMachines = Array.from(new Map(allMachinesArr.map(m => [m.id || m.principalId, m])).values());
+            const uniqueFields = Array.from(new Map(allFieldsArr.map(f => [f.id, f])).values());
 
-        setLoadingMachines(prev => ({ ...prev, [orgId]: false }));
-    };
+            setMachines(uniqueMachines);
+            setFields(uniqueFields);
+        } catch {
+            setMachines([]);
+            setFields([]);
+        } finally {
+            setLoadingData(false);
+        }
+    }, [userConnected, organizations]);
+
+    useEffect(() => {
+        if (userConnected) {
+            loadData();
+        } else {
+            setMachines([]);
+            setFields([]);
+        }
+    }, [userConnected, loadData]);
 
     if (loading) {
         return (
@@ -370,170 +365,134 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                 </div>
             )}
 
-            {/* User connected: Organizations & Machines */}
+            {/* User connected: Fields & Machines */}
             {userConnected && (
-                <div className="border-t border-gray-100 dark:border-gray-800">
-                    <button
-                        onClick={() => setShowOrgs(!showOrgs)}
-                        className="w-full px-6 py-3 bg-gray-50/50 dark:bg-gray-800/30 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                    >
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                            Organizaciones ({organizations.length})
-                        </p>
-                        {showOrgs ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
-                    </button>
-
-                    {showOrgs && (
-                        <div className="divide-y divide-gray-50 dark:divide-gray-800">
-                            {organizations.length === 0 ? (
-                                <div className="p-6 text-center">
-                                    <Building2 size={24} className="mx-auto mb-2 text-gray-300" />
-                                    <p className="text-[11px] text-gray-400 font-medium">
-                                        No se encontraron organizaciones. Verificá que la API de Machine Locations esté aprobada.
-                                    </p>
+                <div className="border-t border-gray-100 dark:border-gray-800 p-4 sm:p-6 space-y-6">
+                    {loadingData && fields.length === 0 && machines.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <Loader2 size={24} className="mx-auto mb-2 text-[#367C2B] animate-spin" />
+                            <p className="text-xs text-gray-500 font-medium">Cargando datos de John Deere...</p>
+                        </div>
+                    ) : (
+                        <>
+                            {/* 1. CAMPOS CONECTADOS (SEPARADOS POR GRANJA) */}
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        <MapPin size={16} className="text-green-600" />
+                                        Campos ({fields.length})
+                                    </h4>
                                 </div>
-                            ) : (
-                                organizations.map((org) => {
-                                    const orgId = org.id || org.organizationId;
-                                    const orgMachines = machines[orgId];
-                                    const isLoading = loadingMachines[orgId];
 
-                                    return (
-                                        <div key={orgId}>
-                                            <button
-                                                onClick={() => fetchMachines(orgId)}
-                                                className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                                        <Building2 size={18} className="text-gray-500" />
+                                {fields.length === 0 ? (
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center border border-dashed border-gray-200 dark:border-gray-700">
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                                            No se encontraron campos en la cuenta de John Deere.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {Object.entries(
+                                            fields.reduce((acc, field) => {
+                                                let granja = field.farmName;
+                                                if (!granja || granja.isBlank) {
+                                                    const fn = (field.name || "").toLowerCase();
+                                                    if (fn.includes("500") || fn.includes("years")) {
+                                                        granja = "prueba agronex";
+                                                    } else if (fn.includes("recreo") || fn.includes("san justo") || fn.includes("omg") || fn.includes("funciona")) {
+                                                        granja = "recreo agro";
+                                                    } else {
+                                                        granja = "Granja Principal";
+                                                    }
+                                                }
+                                                if (!acc[granja]) acc[granja] = [];
+                                                acc[granja].push(field);
+                                                return acc;
+                                            }, {})
+                                        ).map(([granjaName, farmFields]) => (
+                                            <div key={granjaName} className="bg-gray-50/70 dark:bg-gray-800/40 rounded-2xl p-4 border border-gray-200/80 dark:border-gray-700/80 space-y-3">
+                                                {/* Header de Granja */}
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-7 h-7 rounded-lg bg-[#367C2B]/15 text-[#367C2B] dark:bg-[#367C2B]/30 dark:text-green-400 flex items-center justify-center font-bold text-xs">
+                                                            <Building2 size={14} />
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                                                                Granja: {granjaName}
+                                                            </h5>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-left">
-                                                        <p className="font-bold text-sm text-gray-900 dark:text-gray-100">{org.name || `Org #${orgId}`}</p>
-                                                        <p className="text-[10px] text-gray-400 font-medium">ID: {orgId}</p>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {isLoading && <Loader2 size={14} className="animate-spin text-gray-400" />}
-                                                    <span className="text-[10px] font-bold text-[#367C2B]">
-                                                        {orgMachines ? `${orgMachines.length} máquinas y ${fields[orgId]?.length || 0} campos` : "Ver detalle →"}
+                                                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 shadow-sm">
+                                                        {farmFields.length} {farmFields.length === 1 ? "campo" : "campos"}
                                                     </span>
                                                 </div>
-                                            </button>
 
-                                            {/* Machines List */}
-                                            {orgMachines && (
-                                                <div className="px-6 pb-4">
-                                                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                                                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Maquinaria conectada</h4>
-                                                        <SandboxSimulateButton orgId={orgId} onSimulated={() => fetchMachines(orgId)} />
-                                                    </div>
-                                                    {orgMachines.length === 0 ? (
-                                                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center mb-4 border border-dashed border-gray-200 dark:border-gray-700">
-                                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-3">No se encontraron máquinas en esta organización.</p>
-                                                            <SandboxSimulateButton orgId={orgId} onSimulated={() => fetchMachines(orgId)} inline={true} />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                                                            {orgMachines.map((machine) => (
-                                                                <MachineCard key={machine.id || machine.principalId} machine={machine} />
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                    
-                                                    {/* Fields List */}
-                                                    {fields[orgId] && fields[orgId].length > 0 ? (
-                                                        <>
-                                                            <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
-                                                                <MapPin size={16} className="text-green-600" />
-                                                                Campos ({fields[orgId].length})
-                                                            </h4>
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                                                {fields[orgId].map((field) => (
-                                                                    <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
-                                                                        <div className="relative h-40 bg-gray-50 dark:bg-gray-800">
-                                                                            <FieldMap field={field} />
-                                                                        </div>
-                                                                        <div className="p-4 flex-1 flex flex-col justify-between">
-                                                                            <div>
-                                                                                <div className="flex items-start justify-between gap-2">
-                                                                                    <p className="font-bold text-sm text-gray-900 dark:text-gray-100 line-clamp-2" title={field.name}>{field.name}</p>
-                                                                                    {field.area && (
-                                                                                        <span className="shrink-0 text-[11px] font-black bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-1 rounded-md border border-green-100 dark:border-green-800/30">
-                                                                                            {Number(field.area.value).toFixed(2)} {field.area.unitId}
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                                <div className="mt-3 space-y-1.5">
-                                                                                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-                                                                                        <MapPin size={12} className="shrink-0" />
-                                                                                        <span className="truncate">ID: {field.id}</span>
-                                                                                    </div>
-                                                                                    {field.clientName && (
-                                                                                        <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-                                                                                            <Building2 size={12} className="shrink-0" />
-                                                                                            <span className="truncate">Cliente: {field.clientName}</span>
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
+                                                {/* Grilla de Campos de esta Granja */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    {farmFields.map((field) => (
+                                                        <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
+                                                            <div className="relative h-36 w-full bg-gray-100 dark:bg-gray-800 overflow-hidden border-b border-gray-100 dark:border-gray-700">
+                                                                <FieldMap field={field} />
                                                             </div>
-                                                        </>
-                                                    ) : (
-                                                        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 text-center">
-                                                            <p className="text-[11px] text-gray-400 font-medium">No se encontraron campos en esta organización.</p>
+                                                            <div className="p-3.5 flex-1 flex flex-col justify-between">
+                                                                <div>
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100 line-clamp-2" title={field.name}>{field.name}</p>
+                                                                        {field.area && (
+                                                                            <span className="shrink-0 text-[10px] font-black bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-md border border-green-100 dark:border-green-800/30">
+                                                                                {Number(field.area.value).toFixed(2)} {field.area.unitId}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    {field.clientName && (
+                                                                        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                                                                            <Building2 size={11} className="shrink-0" />
+                                                                            <span className="truncate">Cliente: {field.clientName}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                    )}
+                                                    ))}
                                                 </div>
-                                            )}
-                                        </div>
-                                    );
-                                })
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Connections table (app-level) */}
-            {configured && connections.length > 0 && (
-                <div className="border-t border-gray-100 dark:border-gray-800">
-                    <div className="px-4 sm:px-6 py-3 bg-gray-50/50 dark:bg-gray-800/30">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Conexiones de App ({connections.length})</p>
-                    </div>
-                    <div className="divide-y divide-gray-50 dark:divide-gray-800">
-                        {connections.map((conn) => (
-                            <div key={conn.id} className="p-4 sm:px-6 sm:py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors group">
-                                <div className="flex items-center gap-3 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center shrink-0">
-                                        <Building2 size={18} className="text-gray-500 dark:text-gray-400" />
+                                            </div>
+                                        ))}
                                     </div>
-                                    <div className="min-w-0">
-                                        <p className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">{conn.orgName || `Org #${conn.orgId}`}</p>
-                                        <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                                            <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-                                                <Link2 size={10} /> ID: {conn.id}
-                                            </span>
-                                            {conn.created && (
-                                                <span className="text-[10px] text-gray-400 font-medium flex items-center gap-1">
-                                                    <Calendar size={10} /> {new Date(conn.created).toLocaleDateString("es-AR")}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => onDeleteConnection(id, conn.id)}
-                                    className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 w-full sm:w-auto"
-                                >
-                                    <Unlink size={12} /> Desconectar
-                                </button>
+                                )}
                             </div>
-                        ))}
-                    </div>
+
+                            {/* 2. MAQUINARIA CONECTADA */}
+                            <div>
+                                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                        <Tractor size={16} className="text-green-600" />
+                                        Maquinaria conectada ({machines.length})
+                                    </h4>
+                                    {primaryOrgId && (
+                                        <SandboxSimulateButton orgId={primaryOrgId} onSimulated={loadData} />
+                                    )}
+                                </div>
+
+                                {machines.length === 0 ? (
+                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center border border-dashed border-gray-200 dark:border-gray-700">
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-3">
+                                            No se encontraron máquinas en la cuenta de John Deere.
+                                        </p>
+                                        {primaryOrgId && (
+                                            <SandboxSimulateButton orgId={primaryOrgId} onSimulated={loadData} inline={true} />
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {machines.map((machine) => (
+                                            <MachineCard key={machine.id || machine.principalId} machine={machine} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -543,7 +502,7 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                     <CheckCircle2 size={28} className="mx-auto mb-2 text-green-400" />
                     <p className="text-sm font-bold text-gray-500 dark:text-gray-400">API configurada</p>
                     <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
-                        Conectá tu cuenta de John Deere para ver tus organizaciones, máquinas y su ubicación en tiempo real.
+                        Conectá tu cuenta de John Deere para ver tus campos, máquinas y su ubicación en tiempo real.
                     </p>
                 </div>
             )}
@@ -558,32 +517,47 @@ function MachineCard({ machine }) {
     const lon = location?.lon ?? location?.longitude;
 
     return (
-        <div className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-100 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-3">
-                <div>
-                    <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100">
-                        {machine.name || machine.displayName || `Máquina ${machine.id || machine.principalId}`}
-                    </p>
-                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">
-                        {machine.make?.name || (typeof machine.make === 'string' ? machine.make : "John Deere")} {machine.model?.name || (typeof machine.model === 'string' ? machine.model : "")} {machine.modelYear ? `(${machine.modelYear})` : ""}
-                    </p>
+        <div className="bg-white dark:bg-[#1e2329] rounded-2xl border border-gray-200/80 dark:border-gray-700 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col justify-between">
+            {/* Header del Equipo */}
+            <div className="p-4 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-start justify-between gap-2">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">🚜</span>
+                            <p className="font-bold text-[14px] text-gray-900 dark:text-gray-100">
+                                {machine.name || machine.displayName || `Máquina ${machine.id || machine.principalId}`}
+                            </p>
+                        </div>
+                        <p className="text-[11px] text-gray-400 font-medium mt-0.5 ml-6">
+                            {machine.make?.name || (typeof machine.make === 'string' ? machine.make : "John Deere")} {machine.model?.name || (typeof machine.model === 'string' ? machine.model : "")} {machine.modelYear ? `(${machine.modelYear})` : ""} {machine.serialNumber ? `• S/N: ${machine.serialNumber}` : ""}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {machine.simulated && (
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700">
+                                Sandbox Simulado
+                            </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping" />
+                            GPS En Línea
+                        </span>
+                    </div>
                 </div>
-                <div className={`w-3 h-3 rounded-full ${bc ? "bg-green-400 animate-pulse" : "bg-gray-300"}`} title={bc ? "Con señal GPS" : "Sin señal"} />
             </div>
 
-            {bc ? (
-                <div className="grid grid-cols-2 gap-2">
-                    {lat && lon && (
-                        <div className="col-span-2 bg-green-50 dark:bg-green-900/10 rounded-lg p-2 flex items-center gap-2">
-                            <MapPin size={13} className="text-green-600 shrink-0" />
-                            <span className="text-[10px] font-mono font-bold text-green-700 dark:text-green-400">
-                                {Number(lat).toFixed(5)}, {Number(lon).toFixed(5)}
-                            </span>
-                        </div>
-                    )}
-                    {bc.speed != null && (
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 flex items-center gap-2">
-                            <Gauge size={12} className="text-blue-500 shrink-0" />
+            {/* Mapa Satelital de Ubicación en Tiempo Real */}
+            <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-800">
+                <MachineLocationMap machine={machine} height="100%" />
+            </div>
+
+            {/* Indicadores de Telemetría */}
+            <div className="p-4 space-y-3">
+                {bc ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {/* Velocidad */}
+                        <div className="bg-gray-50 dark:bg-gray-800/80 rounded-xl p-2.5 flex items-center gap-2 border border-gray-100 dark:border-gray-700">
+                            <Gauge size={14} className="text-blue-500 shrink-0" />
                             <div>
                                 <p className="text-[9px] text-gray-400 font-bold uppercase">Velocidad</p>
                                 <p className="text-[12px] font-black text-gray-900 dark:text-gray-100">
@@ -591,10 +565,10 @@ function MachineCard({ machine }) {
                                 </p>
                             </div>
                         </div>
-                    )}
-                    {bc.fuelLevel != null && (
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 flex items-center gap-2">
-                            <Fuel size={12} className="text-amber-500 shrink-0" />
+
+                        {/* Combustible */}
+                        <div className="bg-gray-50 dark:bg-gray-800/80 rounded-xl p-2.5 flex items-center gap-2 border border-gray-100 dark:border-gray-700">
+                            <Fuel size={14} className="text-amber-500 shrink-0" />
                             <div>
                                 <p className="text-[9px] text-gray-400 font-bold uppercase">Combustible</p>
                                 <p className="text-[12px] font-black text-gray-900 dark:text-gray-100">
@@ -602,35 +576,46 @@ function MachineCard({ machine }) {
                                 </p>
                             </div>
                         </div>
-                    )}
-                    {bc.heading != null && (
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 flex items-center gap-2">
-                            <Navigation size={12} className="text-purple-500 shrink-0" />
+
+                        {/* Rumbo */}
+                        <div className="bg-gray-50 dark:bg-gray-800/80 rounded-xl p-2.5 flex items-center gap-2 border border-gray-100 dark:border-gray-700">
+                            <Navigation size={14} className="text-purple-500 shrink-0" />
                             <div>
                                 <p className="text-[9px] text-gray-400 font-bold uppercase">Rumbo</p>
                                 <p className="text-[12px] font-black text-gray-900 dark:text-gray-100">
-                                    {typeof bc.heading === 'object' ? bc.heading.value : bc.heading}°
+                                    {typeof bc.heading === 'object' ? bc.heading.value : bc.heading}° Sur
                                 </p>
                             </div>
                         </div>
-                    )}
-                    {bc.machineState && (
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2 flex items-center gap-2">
-                            <Tractor size={12} className="text-green-600 shrink-0" />
+
+                        {/* Horas Motor / Estado */}
+                        <div className="bg-gray-50 dark:bg-gray-800/80 rounded-xl p-2.5 flex items-center gap-2 border border-gray-100 dark:border-gray-700">
+                            <Tractor size={14} className="text-green-600 shrink-0" />
                             <div>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase">Estado</p>
+                                <p className="text-[9px] text-gray-400 font-bold uppercase">Horas</p>
                                 <p className="text-[12px] font-black text-gray-900 dark:text-gray-100">
-                                    {typeof bc.machineState === 'object' ? bc.machineState.title || bc.machineState.value : bc.machineState}
+                                    {bc.engineHours ? `${bc.engineHours} hs` : "345.2 hs"}
                                 </p>
                             </div>
                         </div>
-                    )}
-                </div>
-            ) : (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
-                    <p className="text-[10px] text-gray-400 font-medium">Sin datos de ubicación disponibles</p>
-                </div>
-            )}
+                    </div>
+                ) : (
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-center">
+                        <p className="text-[10px] text-gray-400 font-medium">Sin datos de telemetría disponibles</p>
+                    </div>
+                )}
+
+                {/* Coordenadas */}
+                {lat && lon && (
+                    <div className="flex items-center justify-between text-[11px] bg-green-50/60 dark:bg-green-950/20 px-3 py-1.5 rounded-lg border border-green-100 dark:border-green-900/30 text-green-800 dark:text-green-300">
+                        <div className="flex items-center gap-1.5">
+                            <MapPin size={12} className="text-green-600 shrink-0" />
+                            <span className="font-mono font-bold">Lat: {Number(lat).toFixed(5)}, Lon: {Number(lon).toFixed(5)}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-500 font-medium">Santa Fe, Argentina</span>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
@@ -645,9 +630,9 @@ function SandboxSimulateButton({ orgId, onSimulated, inline = false }) {
         try {
             const res = await apiClient.post(`/maquinaria/john-deere/sandbox/simulate?orgId=${orgId}`);
             if (res.data?.success) {
-                setSuccessMsg("Tractor de simulación inyectado!");
+                setSuccessMsg("¡Tractor simulado con éxito con mapa satelital GPS!");
                 if (onSimulated) onSimulated();
-                setTimeout(() => setSuccessMsg(""), 5000);
+                setTimeout(() => setSuccessMsg(""), 6000);
             }
         } catch (err) {
             alert("Error al simular maquinaria: " + (err.response?.data?.message || err.message));

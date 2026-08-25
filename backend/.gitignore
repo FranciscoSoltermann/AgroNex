@@ -38,6 +38,8 @@ build/
 !.env.example
 *.class
 flyway_debug.log
+sim_debug.txt
+*.log
 maven_output.txt
 *_logs.txt
 backend_logs.txt

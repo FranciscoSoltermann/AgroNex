@@ -21,74 +21,132 @@ function MapFitter({ bounds }) {
     return null;
 }
 
-/**
- * Convierte boundaries de John Deere a GeoJSON estándar.
- * GeoJSON usa [longitud, latitud], JD usa { lat, lon }.
- */
-function jdBoundariesToGeoJson(field) {
-    if (!field.boundaries || !Array.isArray(field.boundaries) || field.boundaries.length === 0) return null;
+function extractLeafletCoords(field) {
+    const polys = [];
+    const allPoints = [];
+    if (!field) return { polys, allPoints };
 
-    const allRings = [];
-    field.boundaries.forEach(boundary => {
-        if (boundary.multipolygons && Array.isArray(boundary.multipolygons)) {
-            boundary.multipolygons.forEach(mp => {
-                if (mp.rings && Array.isArray(mp.rings)) {
-                    mp.rings.forEach(ring => {
-                        if (ring.points && Array.isArray(ring.points)) {
-                            const coords = ring.points
-                                .map(p => {
-                                    const lat = p.lat !== undefined ? p.lat : p.latitude;
-                                    const lon = p.lon !== undefined ? p.lon : p.longitude;
-                                    if (lat === undefined || lon === undefined) return null;
-                                    return [lon, lat];
-                                })
-                                .filter(Boolean);
-                            if (coords.length > 2) {
-                                const first = coords[0];
-                                const last = coords[coords.length - 1];
-                                if (first[0] !== last[0] || first[1] !== last[1]) coords.push([...first]);
-                                allRings.push(coords);
-                            }
+    const rawBoundaries = field.boundaries 
+        ? (Array.isArray(field.boundaries) ? field.boundaries : [field.boundaries])
+        : (field.boundary ? [field.boundary] : (field.activeBoundary ? [field.activeBoundary] : []));
+
+    const parseRing = (ring) => {
+        if (!ring) return null;
+        let points = [];
+        if (Array.isArray(ring.points)) {
+            points = ring.points.map(p => {
+                const lat = p.lat !== undefined ? p.lat : p.latitude;
+                const lon = p.lon !== undefined ? p.lon : p.longitude;
+                return (lat !== undefined && lon !== undefined) ? [Number(lat), Number(lon)] : null;
+            }).filter(Boolean);
+        } else if (Array.isArray(ring)) {
+            points = ring.map(p => {
+                if (Array.isArray(p) && p.length >= 2) {
+                    return [Number(p[1]), Number(p[0])];
+                }
+                if (p && typeof p === 'object') {
+                    const lat = p.lat !== undefined ? p.lat : p.latitude;
+                    const lon = p.lon !== undefined ? p.lon : p.longitude;
+                    return (lat !== undefined && lon !== undefined) ? [Number(lat), Number(lon)] : null;
+                }
+                return null;
+            }).filter(Boolean);
+        }
+        return points.length > 2 ? points : null;
+    };
+
+    rawBoundaries.forEach(boundary => {
+        if (!boundary) return;
+
+        const mps = boundary.multipolygons || (boundary.multipolygon ? [boundary.multipolygon] : []);
+        if (Array.isArray(mps) && mps.length > 0) {
+            mps.forEach(mp => {
+                const rings = mp.rings || (Array.isArray(mp) ? mp : []);
+                if (Array.isArray(rings)) {
+                    rings.forEach(r => {
+                        const poly = parseRing(r);
+                        if (poly) {
+                            polys.push(poly);
+                            allPoints.push(...poly);
                         }
                     });
                 }
             });
         }
+
+        if (boundary.rings && Array.isArray(boundary.rings)) {
+            boundary.rings.forEach(r => {
+                const poly = parseRing(r);
+                if (poly) {
+                    polys.push(poly);
+                    allPoints.push(...poly);
+                }
+            });
+        }
+
+        const geometry = boundary.geometry || (boundary.type === 'Polygon' || boundary.type === 'MultiPolygon' ? boundary : null);
+        if (geometry && geometry.coordinates) {
+            if (geometry.type === 'Polygon') {
+                geometry.coordinates.forEach(r => {
+                    const poly = parseRing(r);
+                    if (poly) {
+                        polys.push(poly);
+                        allPoints.push(...poly);
+                    }
+                });
+            } else if (geometry.type === 'MultiPolygon') {
+                geometry.coordinates.forEach(mp => {
+                    if (Array.isArray(mp)) {
+                        mp.forEach(r => {
+                            const poly = parseRing(r);
+                            if (poly) {
+                                polys.push(poly);
+                                allPoints.push(...poly);
+                            }
+                        });
+                    }
+                });
+            }
+        }
     });
+
+    return { polys, allPoints };
+}
+
+/**
+ * Convierte boundaries de John Deere a GeoJSON estándar.
+ * GeoJSON usa [longitud, latitud], JD usa { lat, lon }.
+ */
+function jdBoundariesToGeoJson(field) {
+    const { polys } = extractLeafletCoords(field);
+    if (!polys || polys.length === 0) return null;
+
+    const allRings = polys.map(poly => {
+        const coords = poly.map(([lat, lon]) => [lon, lat]);
+        if (coords.length > 2) {
+            const first = coords[0];
+            const last = coords[coords.length - 1];
+            if (first[0] !== last[0] || first[1] !== last[1]) {
+                coords.push([...first]);
+            }
+        }
+        return coords;
+    }).filter(r => r.length >= 4);
 
     if (allRings.length === 0) return null;
 
     return {
         type: 'Feature',
         geometry: { type: 'Polygon', coordinates: allRings },
-        properties: { name: field.name || 'Campo JD', source: 'john-deere', jdFieldId: field.id }
-    };
-}
-
-function extractLeafletCoords(field) {
-    const polys = [];
-    const allPoints = [];
-    if (!field.boundaries || !Array.isArray(field.boundaries)) return { polys: [], allPoints: [] };
-
-    field.boundaries.forEach(boundary => {
-        if (boundary.multipolygons && Array.isArray(boundary.multipolygons)) {
-            boundary.multipolygons.forEach(mp => {
-                if (mp.rings && Array.isArray(mp.rings)) {
-                    mp.rings.forEach(ring => {
-                        if (ring.points && Array.isArray(ring.points)) {
-                            const poly = ring.points.map(p => {
-                                const lat = p.lat !== undefined ? p.lat : p.latitude;
-                                const lon = p.lon !== undefined ? p.lon : p.longitude;
-                                return [lat, lon];
-                            }).filter(p => p[0] !== undefined && p[1] !== undefined);
-                            if (poly.length > 0) { polys.push(poly); allPoints.push(...poly); }
-                        }
-                    });
-                }
-            });
+        properties: {
+            name: field.name || 'Campo JD',
+            source: 'john-deere',
+            provider: 'Operations Center',
+            farmName: field.farmName || null,
+            farmId: field.farmId || null,
+            jdFieldId: field.id
         }
-    });
-    return { polys, allPoints };
+    };
 }
 
 function FieldMiniMap({ field }) {
@@ -372,6 +430,9 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, in
                                                             </div>
                                                             <div className="px-3 py-2">
                                                                 <p className="text-[12px] font-bold text-gray-800 dark:text-gray-100 truncate">{field.name || `Campo #${field.id}`}</p>
+                                                                {field.farmName && (
+                                                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Granja: {field.farmName}</p>
+                                                                )}
                                                                 <div className="flex items-center justify-between mt-0.5">
                                                                     {areaValue && <span className="text-[10px] font-black text-[#2D6A4F]">{Number(areaValue).toFixed(1)} {areaUnit}</span>}
                                                                     {!hasGeometry && <span className="text-[9px] text-red-400 font-medium">Sin límites</span>}

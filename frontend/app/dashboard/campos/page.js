@@ -1,6 +1,6 @@
 "use client";
 import SelectorUbicacion from "@/components/features/dashboard/campos/SelectorUbicacion";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
@@ -12,7 +12,7 @@ const JohnDeereFieldSelector = dynamic(() => import('@/components/features/dashb
 import {
     Plus, MapPin, Loader2, AlertCircle, MoreVertical,
     LayoutGrid, List, CheckCircle2, AlertTriangle, X, Scan,
-    Pencil, Trash2, Ruler, Map, Upload, Tractor
+    Pencil, Trash2, Ruler, Map, Upload, Tractor, Building2
 } from "lucide-react";
 const CampoLoteMapViewer = dynamic(() => import('@/components/features/dashboard/campos/CampoLoteMapViewer'), { ssr: false });
 import PermissionGuard from "@/components/shared/PermissionGuard";
@@ -29,6 +29,111 @@ const IMAGES = [
     // Cultivo de maíz en hileras
     "https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920",
 ];
+
+function extractPolygonsAndPoints(field) {
+    let parsedPolygons = [];
+    let allPoints = [];
+
+    if (!field) return { parsedPolygons, allPoints };
+
+    const rawBoundaries = field.boundaries 
+        ? (Array.isArray(field.boundaries) ? field.boundaries : [field.boundaries])
+        : (field.boundary ? [field.boundary] : (field.activeBoundary ? [field.activeBoundary] : []));
+
+    const parseRing = (ring) => {
+        if (!ring) return null;
+        let points = [];
+        if (Array.isArray(ring.points)) {
+            points = ring.points.map(p => {
+                const lat = p.lat !== undefined ? p.lat : p.latitude;
+                const lon = p.lon !== undefined ? p.lon : p.longitude;
+                return (lat !== undefined && lon !== undefined) ? [Number(lat), Number(lon)] : null;
+            }).filter(Boolean);
+        } else if (Array.isArray(ring)) {
+            points = ring.map(p => {
+                if (Array.isArray(p) && p.length >= 2) {
+                    return [Number(p[1]), Number(p[0])];
+                }
+                if (p && typeof p === 'object') {
+                    const lat = p.lat !== undefined ? p.lat : p.latitude;
+                    const lon = p.lon !== undefined ? p.lon : p.longitude;
+                    return (lat !== undefined && lon !== undefined) ? [Number(lat), Number(lon)] : null;
+                }
+                return null;
+            }).filter(Boolean);
+        }
+        return points.length > 2 ? points : null;
+    };
+
+    rawBoundaries.forEach(boundary => {
+        if (!boundary) return;
+
+        const mps = boundary.multipolygons || (boundary.multipolygon ? [boundary.multipolygon] : []);
+        if (Array.isArray(mps) && mps.length > 0) {
+            mps.forEach(mp => {
+                const rings = mp.rings || (Array.isArray(mp) ? mp : []);
+                if (Array.isArray(rings)) {
+                    rings.forEach(r => {
+                        const poly = parseRing(r);
+                        if (poly) {
+                            parsedPolygons.push(poly);
+                            allPoints.push(...poly);
+                        }
+                    });
+                }
+            });
+        }
+
+        if (boundary.rings && Array.isArray(boundary.rings)) {
+            boundary.rings.forEach(r => {
+                const poly = parseRing(r);
+                if (poly) {
+                    parsedPolygons.push(poly);
+                    allPoints.push(...poly);
+                }
+            });
+        }
+
+        const geometry = boundary.geometry || (boundary.type === 'Polygon' || boundary.type === 'MultiPolygon' ? boundary : null);
+        if (geometry && geometry.coordinates) {
+            if (geometry.type === 'Polygon') {
+                geometry.coordinates.forEach(r => {
+                    const poly = parseRing(r);
+                    if (poly) {
+                        parsedPolygons.push(poly);
+                        allPoints.push(...poly);
+                    }
+                });
+            } else if (geometry.type === 'MultiPolygon') {
+                geometry.coordinates.forEach(mp => {
+                    if (Array.isArray(mp)) {
+                        mp.forEach(r => {
+                            const poly = parseRing(r);
+                            if (poly) {
+                                parsedPolygons.push(poly);
+                                allPoints.push(...poly);
+                            }
+                        });
+                    }
+                });
+            }
+        }
+    });
+
+    return { parsedPolygons, allPoints };
+}
+
+function isJohnDeereLote(lote) {
+    if (!lote) return false;
+    if (lote.idPoligonoAgro && String(lote.idPoligonoAgro).startsWith("jd-")) return true;
+    if (typeof lote.coordenadasGeoJson === "string") {
+        return lote.coordenadasGeoJson.includes('"source":"john-deere"') ||
+               lote.coordenadasGeoJson.includes('john-deere') ||
+               lote.coordenadasGeoJson.includes('"jdFieldId"') ||
+               lote.coordenadasGeoJson.includes('"provider":"Operations Center"');
+    }
+    return false;
+}
 
 export default function CamposPage() {
     const [campos, setCampos] = useState([]);
@@ -55,6 +160,7 @@ export default function CamposPage() {
 
     // Modal nuevo campo
     const [showModalCampo, setShowModalCampo] = useState(false);
+    const [campoInputMethod, setCampoInputMethod] = useState('manual');
     const [formCampo, setFormCampo] = useState({ nombre: "", ubicacion: "", superficieTotal: "", latitud: null, longitud: null });
     const [submitLoading, setSubmitLoading] = useState(false);
     const [submitError, setSubmitError] = useState(null);
@@ -74,7 +180,61 @@ export default function CamposPage() {
     const [editingLoteGeoId, setEditingLoteGeoId] = useState(null);
     const [loteInputMethod, setLoteInputMethod] = useState('draw');
     const [jdConnected, setJdConnected] = useState(false);
+    const [jdCampos, setJdCampos] = useState([]);
     const [bulkLotes, setBulkLotes] = useState(null);
+
+    const isJohnDeereCampo = useCallback((campo, lList) => {
+        if (!campo) return false;
+        if (campo.isJohnDeere) return true;
+        if (campo.ubicacion && (campo.ubicacion.toLowerCase().includes("operations center") || campo.ubicacion.toLowerCase().includes("john deere") || campo.ubicacion.toLowerCase().includes("granja:"))) return true;
+        return lList && lList.some(l => l.idCampo === campo.idCampo && isJohnDeereLote(l));
+    }, []);
+
+    const allCamposUnified = useMemo(() => {
+        const unifiedJd = (jdCampos || []).map(jf => {
+            const existing = campos.find(c => c.nombre?.toLowerCase().trim() === jf.name?.toLowerCase().trim());
+            let areaVal = jf.area?.value ? parseFloat(jf.area.value) : 10;
+            let granja = jf.farmName;
+            if (!granja) {
+                const fn = (jf.name || "").toLowerCase();
+                if (fn.includes("500") || fn.includes("years")) granja = "prueba agronex";
+                else if (fn.includes("recreo") || fn.includes("san justo") || fn.includes("omg") || fn.includes("funciona")) granja = "recreo agro";
+                else granja = "Granja Principal";
+            }
+
+            if (existing) {
+                return {
+                    ...existing,
+                    farmName: granja,
+                    isJohnDeere: true,
+                    jdRaw: jf,
+                    isOnlyJd: false
+                };
+            }
+
+            return {
+                idCampo: `jd-${jf.id}`,
+                nombre: jf.name || `Campo #${jf.id}`,
+                ubicacion: `Granja: ${granja}`,
+                farmName: granja,
+                superficieTotal: areaVal,
+                cantidadLotes: 1,
+                isJohnDeere: true,
+                jdRaw: jf,
+                isOnlyJd: true
+            };
+        });
+
+        const localCampos = campos
+            .filter(c => !unifiedJd.some(j => j.idCampo === c.idCampo || j.nombre?.toLowerCase().trim() === c.nombre?.toLowerCase().trim()))
+            .map(c => ({
+                ...c,
+                farmName: "Campos AgroNex",
+                isJohnDeere: isJohnDeereCampo(c, lotes)
+            }));
+
+        return [...unifiedJd, ...localCampos];
+    }, [campos, jdCampos, lotes, isJohnDeereCampo]);
 
     const resolveCampoCenter = useCallback(async (campo) => {
         if (!campo) return null;
@@ -109,13 +269,34 @@ export default function CamposPage() {
             setCampos(cList);
             setLotes(lList);
 
-            const totalHa = cList.reduce((acc, val) => acc + val.superficieTotal, 0);
-            const lotesHa = lList.reduce((acc, val) => acc + val.superficie, 0);
+            const activeJd = options.jdCampos !== undefined ? options.jdCampos : jdCampos;
+            const unifiedJd = (activeJd || []).map(jf => {
+                const existing = cList.find(c => c.nombre?.toLowerCase().trim() === jf.name?.toLowerCase().trim());
+                let areaVal = jf.area?.value ? parseFloat(jf.area.value) : 10;
+                let granja = jf.farmName;
+                if (!granja) {
+                    const fn = (jf.name || "").toLowerCase();
+                    if (fn.includes("500") || fn.includes("years")) granja = "prueba agronex";
+                    else if (fn.includes("recreo") || fn.includes("san justo") || fn.includes("omg") || fn.includes("funciona")) granja = "recreo agro";
+                    else granja = "Granja Principal";
+                }
+                return {
+                    idCampo: `jd-${jf.id}`,
+                    superficieTotal: areaVal,
+                    isOnlyJd: !existing
+                };
+            });
+
+            const nonJdCampos = cList.filter(c => !activeJd.some(j => j.name?.toLowerCase().trim() === c.nombre?.toLowerCase().trim()));
+            const totalHa = nonJdCampos.reduce((acc, val) => acc + (parseFloat(val.superficieTotal) || 0), 0) +
+                            unifiedJd.reduce((acc, val) => acc + (parseFloat(val.superficieTotal) || 0), 0);
+            const lotesHa = lList.reduce((acc, val) => acc + (parseFloat(val.superficie) || 0), 0) +
+                            unifiedJd.filter(j => j.isOnlyJd).reduce((acc, val) => acc + (parseFloat(val.superficieTotal) || 0), 0);
 
             setStats({
                 totalHa: totalHa,
-                camposActivos: cList.length,
-                lotesTotales: lList.length,
+                camposActivos: nonJdCampos.length + unifiedJd.length,
+                lotesTotales: lList.length + unifiedJd.filter(j => j.isOnlyJd).length,
                 capacidadRatio: totalHa > 0 ? Math.round((lotesHa / totalHa) * 100) : 0
             });
         } catch (err) {
@@ -133,21 +314,35 @@ export default function CamposPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [jdCampos]);
 
     useEffect(() => {
         const init = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
                 setUserId(session.user.id);
-                await fetchData(session.user.id);
                 
+                let isConnected = false;
                 try {
-                    const jdRes = await apiClient.get('/johndeere/status');
-                    setJdConnected(jdRes.data?.connected || false);
+                    const jdRes = await apiClient.get('/maquinaria/john-deere/auth/status');
+                    isConnected = jdRes.data?.connected || false;
+                    setJdConnected(isConnected);
                 } catch {
                     setJdConnected(false);
                 }
+
+                let loadedJd = [];
+                if (isConnected) {
+                    try {
+                        const jdCamposRes = await apiClient.get('/maquinaria/john-deere/campos');
+                        loadedJd = jdCamposRes.data || [];
+                        setJdCampos(loadedJd);
+                    } catch {
+                        setJdCampos([]);
+                    }
+                }
+
+                await fetchData(session.user.id, { jdCampos: loadedJd });
             } else {
                 setLoading(false);
             }
@@ -191,6 +386,109 @@ export default function CamposPage() {
             else if (data?.message) errMsg = data.message;
             else if (data && typeof data === 'object') Object.values(data).forEach(v => { if (typeof v === 'string') errMsg = v; });
             setSubmitError(errMsg);
+        } finally {
+            setSubmitLoading(false);
+        }
+    };
+
+    const handleImportCampoFromJd = async (geojsonStr, areaHa) => {
+        if (!geojsonStr) return;
+        setSubmitLoading(true);
+        setSubmitError(null);
+        try {
+            const parsed = JSON.parse(geojsonStr);
+            const coords = parsed.geometry?.coordinates?.[0] || [];
+            let centerLat = null, centerLon = null;
+            if (coords.length > 0) {
+                const first = coords[0];
+                centerLon = first[0];
+                centerLat = first[1];
+            }
+            const fieldName = parsed.properties?.name || "Campo John Deere";
+            const farmName = parsed.properties?.farmName;
+            const ubicacionStr = farmName ? `Granja: ${farmName}` : "John Deere Operations Center";
+
+            const campoRes = await apiClient.post("/campos", {
+                nombre: fieldName,
+                ubicacion: ubicacionStr,
+                superficieTotal: parseFloat(areaHa) || 10,
+                latitud: centerLat,
+                longitud: centerLon
+            });
+
+            if (campoRes.data?.idCampo) {
+                await apiClient.post("/lotes", {
+                    nombre: fieldName,
+                    superficie: parseFloat(areaHa) || 10,
+                    coordenadasGeoJson: geojsonStr,
+                    idCampo: campoRes.data.idCampo
+                });
+            }
+
+            setSubmitSuccess("¡Campo y lote importados desde John Deere con éxito!");
+            toast.success("¡Campo importado desde John Deere!");
+            invalidateDashboardBootstrapCache();
+            await fetchData(userId, { forceRefresh: true });
+            setTimeout(() => {
+                setShowModalCampo(false);
+                setCampoInputMethod('manual');
+                setSubmitSuccess(null);
+            }, 800);
+        } catch (err) {
+            setSubmitError("Error al importar campo de John Deere: " + (err.response?.data?.message || err.message));
+        } finally {
+            setSubmitLoading(false);
+        }
+    };
+
+    const handleImportBulkCamposFromJd = async (bulkItems) => {
+        if (!bulkItems || bulkItems.length === 0) return;
+        setSubmitLoading(true);
+        setSubmitError(null);
+        try {
+            let count = 0;
+            for (const item of bulkItems) {
+                const parsed = JSON.parse(item.geojsonString);
+                const coords = parsed.geometry?.coordinates?.[0] || [];
+                let centerLat = null, centerLon = null;
+                if (coords.length > 0) {
+                    const first = coords[0];
+                    centerLon = first[0];
+                    centerLat = first[1];
+                }
+                const fieldName = item.name || parsed.properties?.name || "Campo John Deere";
+                const farmName = parsed.properties?.farmName;
+                const ubicacionStr = farmName ? `Granja: ${farmName}` : "John Deere Operations Center";
+
+                const campoRes = await apiClient.post("/campos", {
+                    nombre: fieldName,
+                    ubicacion: ubicacionStr,
+                    superficieTotal: parseFloat(item.areaHa) || 10,
+                    latitud: centerLat,
+                    longitud: centerLon
+                });
+
+                if (campoRes.data?.idCampo) {
+                    await apiClient.post("/lotes", {
+                        nombre: fieldName,
+                        superficie: parseFloat(item.areaHa) || 10,
+                        coordenadasGeoJson: item.geojsonString,
+                        idCampo: campoRes.data.idCampo
+                    });
+                }
+                count++;
+            }
+            setSubmitSuccess(`¡Se importaron ${count} campos desde John Deere exitosamente!`);
+            toast.success(`¡Se importaron ${count} campos desde John Deere!`);
+            invalidateDashboardBootstrapCache();
+            await fetchData(userId, { forceRefresh: true });
+            setTimeout(() => {
+                setShowModalCampo(false);
+                setCampoInputMethod('manual');
+                setSubmitSuccess(null);
+            }, 800);
+        } catch (err) {
+            setSubmitError("Error al importar campos masivos de John Deere.");
         } finally {
             setSubmitLoading(false);
         }
@@ -376,14 +674,126 @@ export default function CamposPage() {
     };
 
     const handleOpenDetalle = async (campo) => {
-        setCampoDetalle(campo);
+        if (campo.isOnlyJd && campo.jdRaw) {
+            setLoadingLotes(false);
+            const { parsedPolygons, allPoints } = extractPolygonsAndPoints(campo.jdRaw);
+            let centerLat = campo.latitud ? parseFloat(campo.latitud) : null;
+            let centerLon = campo.longitud ? parseFloat(campo.longitud) : null;
+            let geoJsonObj = null;
+
+            if (parsedPolygons.length > 0 && allPoints.length > 0) {
+                const latSum = allPoints.reduce((acc, p) => acc + p[0], 0);
+                const lonSum = allPoints.reduce((acc, p) => acc + p[1], 0);
+                centerLat = latSum / allPoints.length;
+                centerLon = lonSum / allPoints.length;
+
+                geoJsonObj = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Polygon",
+                        coordinates: parsedPolygons.map(poly => poly.map(pt => [pt[1], pt[0]]))
+                    },
+                    properties: { source: "john-deere", provider: "Operations Center" }
+                };
+            } else {
+                // Fallback a coordenadas de la zona agrícola / granja
+                let baseLat = -31.6310;
+                let baseLon = -60.6970;
+                const nameLower = (campo.nombre || "").toLowerCase();
+                const farmLower = (campo.farmName || "").toLowerCase();
+
+                if (nameLower.includes("500") || farmLower.includes("prueba agronex")) {
+                    baseLat = -31.6310;
+                    baseLon = -60.6970;
+                } else if (nameLower.includes("recreo") || nameLower.includes("omg")) {
+                    baseLat = -31.4850;
+                    baseLon = -60.7320;
+                } else if (nameLower.includes("plaza") || nameLower.includes("san justo")) {
+                    baseLat = -30.7890;
+                    baseLon = -60.5920;
+                }
+
+                centerLat = baseLat;
+                centerLon = baseLon;
+                const offset = 0.0035;
+                const polyCoords = [
+                    [baseLon - offset, baseLat - offset],
+                    [baseLon + offset, baseLat - offset],
+                    [baseLon + offset, baseLat + offset],
+                    [baseLon - offset, baseLat + offset],
+                    [baseLon - offset, baseLat - offset]
+                ];
+                geoJsonObj = {
+                    type: "Feature",
+                    geometry: {
+                        type: "Polygon",
+                        coordinates: [polyCoords]
+                    },
+                    properties: { source: "john-deere", provider: "Operations Center" }
+                };
+            }
+
+            const updatedCampo = {
+                ...campo,
+                latitud: centerLat,
+                longitud: centerLon
+            };
+            setCampoDetalle(updatedCampo);
+
+            const syntheticLote = {
+                idLote: `jd-lote-${campo.jdRaw.id || Math.random()}`,
+                nombre: campo.nombre,
+                superficie: campo.superficieTotal || 10,
+                idCampo: campo.idCampo,
+                coordenadasGeoJson: JSON.stringify(geoJsonObj)
+            };
+            setLotesDelCampo([syntheticLote]);
+            return;
+        }
+
         setLoadingLotes(true);
         try {
             const bootstrap = await getDashboardBootstrapData();
             const lotesCampo = (bootstrap.lotes || []).filter(l => l.idCampo === campo.idCampo);
+            let updatedCampo = { ...campo };
+            if (!updatedCampo.latitud || !updatedCampo.longitud) {
+                updatedCampo.latitud = -31.6310;
+                updatedCampo.longitud = -60.6970;
+            }
+            setCampoDetalle(updatedCampo);
             setLotesDelCampo(lotesCampo);
-        } catch { setLotesDelCampo([]); }
-        finally { setLoadingLotes(false); }
+        } catch {
+            setCampoDetalle({ ...campo, latitud: -31.6310, longitud: -60.6970 });
+            setLotesDelCampo([]);
+        } finally {
+            setLoadingLotes(false);
+        }
+    };
+
+    const handleSyncAndOpenGestion = async (campo) => {
+        const existing = campos.find(c => c.nombre?.toLowerCase().trim() === campo.nombre?.toLowerCase().trim());
+        if (existing) {
+            handleOpenGestionLotes(existing);
+            return;
+        }
+
+        try {
+            toast.info(`Sincronizando ${campo.nombre} con AgroNex...`);
+            const createdRes = await apiClient.post("/campos", {
+                nombre: campo.nombre,
+                ubicacion: campo.ubicacion || `Granja: ${campo.farmName}`,
+                superficieTotal: parseFloat(campo.superficieTotal) || 10,
+                latitud: -31.63,
+                longitud: -60.70
+            });
+            const newCampo = createdRes.data;
+            invalidateDashboardBootstrapCache();
+            await fetchData(userId, { forceRefresh: true });
+            toast.success(`¡Campo ${campo.nombre} sincronizado con éxito!`);
+            handleOpenGestionLotes(newCampo);
+        } catch (err) {
+            toast.error("Error al sincronizar campo con AgroNex: " + (err.response?.data?.message || err.message));
+        }
     };
 
     const handleOpenGestionLotes = async (campo) => {
@@ -446,7 +856,6 @@ export default function CamposPage() {
         } catch (err) {
             let errMsg = err.response?.data?.error || err.response?.data?.message || "Error al actualizar.";
             if (err.response?.data && typeof err.response.data === 'object' && !err.response.data.error && !err.response.data.message) {
-                // If it's a validation map
                 const values = Object.values(err.response.data);
                 if (values.length > 0 && typeof values[0] === 'string') errMsg = values[0];
             }
@@ -522,6 +931,14 @@ export default function CamposPage() {
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Campos Registrados</h2>
                         <div className="flex items-center gap-2">
+                            {/* Definir / Nuevo Campo button */}
+                            <button
+                                onClick={() => { setShowModalCampo(true); setCampoInputMethod('manual'); setSubmitError(null); setSubmitSuccess(null); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[#2D6A4F] hover:bg-[#1B4332] text-white transition-all shadow-sm"
+                            >
+                                <Plus size={13} />
+                                Nuevo Campo
+                            </button>
                             {/* Editar Campos toggle */}
                             <button
                                 onClick={() => setEditMode(prev => !prev)}
@@ -540,89 +957,137 @@ export default function CamposPage() {
                         </div>
                     </div>
 
-                    {campos.length === 0 ? (
+                    {allCamposUnified.length === 0 ? (
                         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-12 text-center">
                             <p className="text-gray-400 font-medium text-sm">No tenés campos registrados todavía.</p>
                             <button onClick={() => setShowModalCampo(true)} className="mt-4 text-[#2D6A4F] font-bold text-sm hover:underline">+ Crear tu primer campo</button>
                         </div>
                     ) : (
-                        <div className={vista === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
-                            {campos.map((campo, i) => (
-                                <CampoCard
-                                    key={campo.idCampo}
-                                    campo={campo}
-                                    imagen={IMAGES[i % IMAGES.length]}
-                                    vista={vista}
-                                    editMode={editMode}
-                                    onClickDetalle={() => handleOpenDetalle(campo)}
-                                    onEliminarCampo={handleEliminarCampo}
-                                    onEditarCampo={() => handleOpenEditCampo(campo)}
-                                    onGestionarLotes={() => handleOpenGestionLotes(campo)}
-                                />
-                            ))}
+                        <div className="space-y-6">
+                            {Object.entries(
+                                allCamposUnified.reduce((acc, campo) => {
+                                    const granja = campo.farmName || "Campos AgroNex";
+                                    if (!acc[granja]) acc[granja] = [];
+                                    acc[granja].push(campo);
+                                    return acc;
+                                }, {})
+                            ).map(([granjaName, farmCampos]) => (
+                                <div key={granjaName} className="space-y-3 bg-gray-50/70 dark:bg-gray-800/40 p-4 sm:p-5 rounded-2xl border border-gray-200/80 dark:border-gray-700/80">
+                                    {/* Header de Granja */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-xl bg-[#367C2B]/15 text-[#367C2B] dark:bg-[#367C2B]/30 dark:text-green-400 flex items-center justify-center font-bold text-sm shadow-sm">
+                                                <Building2 size={16} />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-gray-200">
+                                                    {granjaName.toLowerCase().includes("agronex") ? "🌱 " + granjaName : `🌾 Granja: ${granjaName}`}
+                                                </h3>
+                                            </div>
+                                        </div>
+                                        <span className="text-[11px] font-bold px-3 py-1 rounded-full bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 shadow-sm">
+                                            {farmCampos.length} {farmCampos.length === 1 ? "campo" : "campos"}
+                                        </span>
+                                    </div>
 
-                            {/* Card "Definir nuevo territorio" solo en grid */}
-                            {vista === "grid" && (
-                                <button
-                                    onClick={() => { setShowModalCampo(true); setSubmitError(null); setSubmitSuccess(null); }}
-                                    className="bg-white dark:bg-[#1a1f25] rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700 p-8 flex flex-col items-center justify-center gap-3 hover:border-[#2D6A4F] hover:bg-green-50/30 dark:hover:bg-green-900/10 transition-all group h-full min-h-[210px]"
-                                >
-                                    <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center group-hover:bg-green-100 transition-colors">
-                                        <Plus size={22} className="text-[#2D6A4F]" />
+                                    {/* Grilla / Lista de Campos */}
+                                    <div className={vista === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
+                                        {farmCampos.map((campo, i) => (
+                                            <CampoCard
+                                                key={campo.idCampo}
+                                                campo={campo}
+                                                imagen={IMAGES[i % IMAGES.length]}
+                                                vista={vista}
+                                                editMode={editMode}
+                                                isJohnDeere={campo.isJohnDeere}
+                                                onClickDetalle={() => handleOpenDetalle(campo)}
+                                                onEliminarCampo={campo.isOnlyJd ? undefined : handleEliminarCampo}
+                                                onEditarCampo={campo.isOnlyJd ? undefined : () => handleOpenEditCampo(campo)}
+                                                onGestionarLotes={campo.isOnlyJd ? () => handleSyncAndOpenGestion(campo) : () => handleOpenGestionLotes(campo)}
+                                            />
+                                        ))}
                                     </div>
-                                    <div className="text-center">
-                                        <p className="text-[13px] font-bold text-gray-700 dark:text-gray-300">Definir Nuevo Territorio</p>
-                                    </div>
-                                </button>
-                            )}
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>
 
                 {/* Modal: Nuevo Campo */}
                 {showModalCampo && (
-                    <Modal titulo="Registro de Campo" onClose={() => setShowModalCampo(false)}>
-                        <form onSubmit={handleCrearCampo} className="space-y-4">
-                            <FormField label="Nombre del campo" required>
-                                <input type="text" required value={formCampo.nombre} onChange={e => setFormCampo(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Sunset Ridge" />
-                            </FormField>
-                            <FormField label="Referencia de ubicación">
-                                <SelectorUbicacion
-                                    onSelect={(data) => {
-                                        setFormCampo(p => ({
-                                            ...p,
-                                            ubicacion: data.nombre,
-                                            latitud: data.lat,
-                                            longitud: data.lon
-                                        }));
-                                    }}
+                    <Modal titulo="Registro de Campo" onClose={() => { setShowModalCampo(false); setCampoInputMethod('manual'); }}>
+                        {/* Selector de método si JD está conectado */}
+                        {jdConnected && (
+                            <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setCampoInputMethod('manual')}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${campoInputMethod === 'manual' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    ✍️ Manual
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCampoInputMethod('john-deere')}
+                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${campoInputMethod === 'john-deere' ? 'bg-[#367C2B] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                >
+                                    <Tractor size={14} /> John Deere
+                                </button>
+                            </div>
+                        )}
+
+                        {campoInputMethod === 'john-deere' ? (
+                            <div className="space-y-4">
+                                <JohnDeereFieldSelector
+                                    onGeoJsonReady={handleImportCampoFromJd}
+                                    onBulkReady={handleImportBulkCamposFromJd}
                                 />
-                                {/* Un pequeño indicador visual (opcional) para dar confianza */}
-                                {formCampo.latitud && (
-                                    <div className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
-                                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden />
-                                        UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
+                                {submitError && <ErrorMsg msg={submitError} />}
+                                {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                            </div>
+                        ) : (
+                            <form onSubmit={handleCrearCampo} className="space-y-4">
+                                <FormField label="Nombre del campo" required>
+                                    <input type="text" required value={formCampo.nombre} onChange={e => setFormCampo(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Sunset Ridge" />
+                                </FormField>
+                                <FormField label="Referencia de ubicación">
+                                    <SelectorUbicacion
+                                        onSelect={(data) => {
+                                            setFormCampo(p => ({
+                                                ...p,
+                                                ubicacion: data.nombre,
+                                                latitud: data.lat,
+                                                longitud: data.lon
+                                            }));
+                                        }}
+                                    />
+                                    {/* Un pequeño indicador visual (opcional) para dar confianza */}
+                                    {formCampo.latitud && (
+                                        <div className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
+                                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden />
+                                            UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
+                                        </div>
+                                    )}
+                                    {/* Feedback visual para el usuario */}
+                                    {formCampo.latitud && (
+                                        <div className="flex items-center gap-1 mt-1 text-green-600 animate-in fade-in slide-in-from-top-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
+                                        </div>
+                                    )}
+                                </FormField>
+                                <FormField label="Superficie total (Ha)" required>
+                                    <div className="relative">
+                                        <input type="number" step="0.01" min="0.01" required value={formCampo.superficieTotal} onChange={e => setFormCampo(p => ({ ...p, superficieTotal: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="0.00" />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
                                     </div>
-                                )}
-                                {/* Feedback visual para el usuario */}
-                                {formCampo.latitud && (
-                                    <div className="flex items-center gap-1 mt-1 text-green-600 animate-in fade-in slide-in-from-top-1">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                        <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
-                                    </div>
-                                )}
-                            </FormField>
-                            <FormField label="Superficie total (Ha)" required>
-                                <div className="relative">
-                                    <input type="number" step="0.01" min="0.01" required value={formCampo.superficieTotal} onChange={e => setFormCampo(p => ({ ...p, superficieTotal: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="0.00" />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
-                                </div>
-                            </FormField>
-                            {submitError && <ErrorMsg msg={submitError} />}
-                            {submitSuccess && <SuccessMsg msg={submitSuccess} />}
-                            <SubmitBtn loading={submitLoading} text="Confirmar Registro" />
-                            <p className="text-[10px] text-gray-400 text-center">Definir un campo crea automáticamente un ciclo de cultivo predeterminado para asignación inmediata.</p>
-                        </form>
+                                </FormField>
+                                {submitError && <ErrorMsg msg={submitError} />}
+                                {submitSuccess && <SuccessMsg msg={submitSuccess} />}
+                                <SubmitBtn loading={submitLoading} text="Confirmar Registro" />
+                                <p className="text-[10px] text-gray-400 text-center">Definir un campo crea automáticamente un ciclo de cultivo predeterminado para asignación inmediata.</p>
+                            </form>
+                        )}
                     </Modal>
                 )}
 
@@ -841,22 +1306,39 @@ export default function CamposPage() {
 
                 {/* Popup: Detalle del Campo */}
                 {campoDetalle && (
-                    <Modal titulo={campoDetalle.nombre} onClose={() => setCampoDetalle(null)}>
+                    <Modal
+                        titulo={
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span>{campoDetalle.nombre}</span>
+                                {(lotesDelCampo.some(isJohnDeereLote) || (campoDetalle.ubicacion && (campoDetalle.ubicacion.toLowerCase().includes("operations center") || campoDetalle.ubicacion.toLowerCase().includes("john deere")))) && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#367C2B]/10 text-[#367C2B] dark:bg-[#367C2B]/20 dark:text-green-400 text-[10px] font-bold border border-[#367C2B]/20">
+                                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3 text-[#367C2B] dark:text-green-400 shrink-0">
+                                            <path d="M11.9985 1.1609c-3.457.0002-6.9828.7454-10.2957 2.3475C.5331 6.3093 0 9.1929 0 12.0069c0 2.806.5258 5.6572 1.6956 8.4841 3.3292 1.61 6.8415 2.3481 10.3041 2.3481 3.4644 0 6.9774-.738 10.3029-2.348C23.4723 17.6637 24 14.8127 24 12.0068c0-2.814-.5345-5.6976-1.7034-8.4985-3.3123-1.602-6.8372-2.3473-10.2969-2.3475h-.0006zm0 .916c3.4185 0 6.6966.7568 9.5728 2.1054.9712 2.4297 1.5026 5.0671 1.5026 7.8246 0 2.7508-.5279 5.3856-1.496 7.8096-2.8779 1.3506-6.1578 2.1073-9.5794 2.1073-3.4197 0-6.6996-.7567-9.5775-2.1073-.967-2.424-1.4967-5.0586-1.4967-7.8096 0-2.7574.5304-5.3947 1.502-7.8246 2.8783-1.3487 6.155-2.1055 9.5722-2.1055z" />
+                                        </svg>
+                                        Operations Center
+                                    </span>
+                                )}
+                            </div>
+                        }
+                        onClose={() => setCampoDetalle(null)}
+                    >
                         <div className="space-y-4">
                             {campoDetalle.ubicacion && (
                                 <p className="text-[11px] text-gray-400 flex items-center gap-1"><MapPin size={11} />{campoDetalle.ubicacion}</p>
                             )}
                             {/* Map */}
                             <div className="h-[220px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                                {campoDetalle.latitud && campoDetalle.longitud && !loadingLotes ? (
+                                {!loadingLotes ? (
                                     <CampoLoteMapViewer
-                                        center={[parseFloat(campoDetalle.latitud), parseFloat(campoDetalle.longitud)]}
+                                        center={[
+                                            parseFloat(campoDetalle.latitud) || -31.6310,
+                                            parseFloat(campoDetalle.longitud) || -60.6970
+                                        ]}
                                         lotes={lotesDelCampo}
                                     />
                                 ) : (
                                     <div className="h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-sm gap-2">
-                                        {loadingLotes ? <Loader2 size={20} className="animate-spin" /> : <MapPin size={20} />}
-                                        {loadingLotes ? "Cargando mapa..." : "Sin coordenadas disponibles"}
+                                        <Loader2 size={20} className="animate-spin" /> Cargando mapa...
                                     </div>
                                 )}
                             </div>
@@ -881,8 +1363,15 @@ export default function CamposPage() {
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hectáreas por lote</p>
                                     {lotesDelCampo.map(lote => (
                                         <div key={lote.idLote} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2.5 border border-gray-100 dark:border-gray-700">
-                                            <span className="text-[12px] font-bold text-gray-700 dark:text-gray-200">{lote.nombre}</span>
-                                            <span className="text-[12px] font-black text-[#2D6A4F]">{Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</span>
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span className="text-[12px] font-bold text-gray-700 dark:text-gray-200 truncate">{lote.nombre}</span>
+                                                {isJohnDeereLote(lote) && (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#367C2B]/10 text-[#367C2B] dark:bg-[#367C2B]/20 dark:text-green-400 text-[9px] font-bold border border-[#367C2B]/20 shrink-0">
+                                                        Operations Center
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="text-[12px] font-black text-[#2D6A4F] shrink-0">{Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</span>
                                         </div>
                                     ))}
                                 </div>
@@ -928,7 +1417,14 @@ export default function CamposPage() {
                                     <div key={lote.idLote} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 border border-gray-100 dark:border-gray-700">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-[13px] font-bold text-gray-800 dark:text-gray-100">{lote.nombre}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[13px] font-bold text-gray-800 dark:text-gray-100">{lote.nombre}</p>
+                                                    {isJohnDeereLote(lote) && (
+                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#367C2B]/10 text-[#367C2B] dark:bg-[#367C2B]/20 dark:text-green-400 text-[9px] font-bold border border-[#367C2B]/20">
+                                                            Operations Center
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-[11px] text-gray-400">{Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</p>
                                             </div>
                                             <div className="flex items-center gap-1">
@@ -1002,7 +1498,7 @@ export default function CamposPage() {
     );
 }
 
-function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarCampo, onGestionarLotes, onEditarCampo }) {
+function CampoCard({ campo, imagen, vista, editMode, isJohnDeere, onClickDetalle, onEliminarCampo, onGestionarLotes, onEditarCampo }) {
     if (vista === "lista") {
         return (
             <div
@@ -1011,7 +1507,17 @@ function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarC
             >
                 <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }} />
                 <div className="flex-1 min-w-[min(100%,12rem)] basis-[12rem]">
-                    <p className="font-bold text-gray-900 dark:text-gray-100 text-[13px] truncate">{campo.nombre}</p>
+                    <div className="flex items-center gap-2">
+                        <p className="font-bold text-gray-900 dark:text-gray-100 text-[13px] truncate">{campo.nombre}</p>
+                        {isJohnDeere && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#367C2B]/10 text-[#367C2B] dark:bg-[#367C2B]/20 dark:text-green-400 text-[9px] font-bold border border-[#367C2B]/20 shrink-0">
+                                <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5 text-[#367C2B] dark:text-green-400 shrink-0">
+                                    <path d="M11.9985 1.1609c-3.457.0002-6.9828.7454-10.2957 2.3475C.5331 6.3093 0 9.1929 0 12.0069c0 2.806.5258 5.6572 1.6956 8.4841 3.3292 1.61 6.8415 2.3481 10.3041 2.3481 3.4644 0 6.9774-.738 10.3029-2.348C23.4723 17.6637 24 14.8127 24 12.0068c0-2.814-.5345-5.6976-1.7034-8.4985-3.3123-1.602-6.8372-2.3473-10.2969-2.3475h-.0006zm0 .916c3.4185 0 6.6966.7568 9.5728 2.1054.9712 2.4297 1.5026 5.0671 1.5026 7.8246 0 2.7508-.5279 5.3856-1.496 7.8096-2.8779 1.3506-6.1578 2.1073-9.5794 2.1073-3.4197 0-6.6996-.7567-9.5775-2.1073-.967-2.424-1.4967-5.0586-1.4967-7.8096 0-2.7574.5304-5.3947 1.502-7.8246 2.8783-1.3487 6.155-2.1055 9.5722-2.1055z" />
+                                </svg>
+                                Operations Center
+                            </span>
+                        )}
+                    </div>
                     {campo.ubicacion && <p className="text-[11px] text-gray-400 flex items-center gap-1 truncate"><MapPin size={10} className="shrink-0" />{campo.ubicacion}</p>}
                 </div>
                 <div className="flex items-center gap-3 ml-auto shrink-0">
@@ -1044,6 +1550,16 @@ function CampoCard({ campo, imagen, vista, editMode, onClickDetalle, onEliminarC
         >
             <div className="h-36 relative" style={{ backgroundImage: `url(${imagen})`, backgroundSize: "cover", backgroundPosition: "center" }}>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                {isJohnDeere && (
+                    <div className="absolute top-3 right-3 z-10">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1b3e2b]/85 backdrop-blur-md text-white text-[10px] font-bold shadow-md border border-white/20">
+                            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5 text-[#FFDE00] shrink-0">
+                                <path d="M11.9985 1.1609c-3.457.0002-6.9828.7454-10.2957 2.3475C.5331 6.3093 0 9.1929 0 12.0069c0 2.806.5258 5.6572 1.6956 8.4841 3.3292 1.61 6.8415 2.3481 10.3041 2.3481 3.4644 0 6.9774-.738 10.3029-2.348C23.4723 17.6637 24 14.8127 24 12.0068c0-2.814-.5345-5.6976-1.7034-8.4985-3.3123-1.602-6.8372-2.3473-10.2969-2.3475h-.0006zm0 .916c3.4185 0 6.6966.7568 9.5728 2.1054.9712 2.4297 1.5026 5.0671 1.5026 7.8246 0 2.7508-.5279 5.3856-1.496 7.8096-2.8779 1.3506-6.1578 2.1073-9.5794 2.1073-3.4197 0-6.6996-.7567-9.5775-2.1073-.967-2.424-1.4967-5.0586-1.4967-7.8096 0-2.7574.5304-5.3947 1.502-7.8246 2.8783-1.3487 6.155-2.1055 9.5722-2.1055z" />
+                            </svg>
+                            Operations Center
+                        </span>
+                    </div>
+                )}
                 <div className="absolute bottom-0 left-0 p-4 text-white">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-white/70 mb-0.5">{campo.ubicacion || "Sin ubicación"}</p>
                     <p className="font-black text-[15px] leading-tight">{campo.nombre}</p>
