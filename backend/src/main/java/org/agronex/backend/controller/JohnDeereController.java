@@ -8,6 +8,7 @@ import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.JohnDeereAuthService;
 import org.agronex.backend.service.JohnDeereConnectionService;
 import org.agronex.backend.service.JohnDeereMachineService;
+import org.agronex.backend.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,6 +49,7 @@ public class JohnDeereController {
     private final JohnDeereAuthService authService;
     private final JohnDeereMachineService machineService;
     private final OAuthStateStore oAuthStateStore;
+    private final UsuarioService usuarioService;
 
     @Value("${john-deere.redirect-uri:http://localhost:8080/api/maquinaria/john-deere/auth/callback}")
     private String redirectUri;
@@ -63,7 +65,8 @@ public class JohnDeereController {
     public ResponseEntity<Map<String, Object>> status(@AuthenticationPrincipal Jwt jwt) {
         boolean configured = connectionService.isConfigured();
         UUID userId = SecurityUtils.requireUserId(jwt);
-        boolean userConnected = authService.isUserConnected(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        boolean userConnected = authService.isUserConnected(idDatos);
 
         return ResponseEntity.ok(Map.of(
                 "provider", "john-deere",
@@ -99,7 +102,8 @@ public class JohnDeereController {
     @GetMapping("/auth/authorize")
     public ResponseEntity<Map<String, String>> authorize(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
-        String nonce = oAuthStateStore.generateNonce(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String nonce = oAuthStateStore.generateNonce(idDatos);
         String authUrl = authService.buildAuthorizationUrl(redirectUri, nonce);
         return ResponseEntity.ok(Map.of("authorizationUrl", authUrl, "state", nonce));
     }
@@ -113,7 +117,8 @@ public class JohnDeereController {
     @GetMapping("/auth/connect")
     public ResponseEntity<Map<String, String>> connect(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
-        String nonce = oAuthStateStore.generateNonce(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        String nonce = oAuthStateStore.generateNonce(idDatos);
         String authUrl = authService.buildAuthorizationUrl(redirectUri, nonce);
         return ResponseEntity.ok(Map.of("authorizationUrl", authUrl));
     }
@@ -124,7 +129,8 @@ public class JohnDeereController {
     @DeleteMapping("/auth/disconnect")
     public ResponseEntity<Map<String, String>> disconnect(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
-        authService.disconnectUser(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        authService.disconnectUser(idDatos);
         return ResponseEntity.ok(Map.of("status", "disconnected"));
     }
 
@@ -134,7 +140,8 @@ public class JohnDeereController {
     @GetMapping("/auth/status")
     public ResponseEntity<Map<String, Object>> authStatus(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = SecurityUtils.requireUserId(jwt);
-        boolean connected = authService.isUserConnected(userId);
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
+        boolean connected = authService.isUserConnected(idDatos);
         return ResponseEntity.ok(Map.of(
                 "connected", connected,
                 "userId", userId.toString()

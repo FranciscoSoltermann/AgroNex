@@ -87,7 +87,7 @@ public class JohnDeereMachineService {
             String rawResponse = executeGet(userId, url);
 
             // VUL-B02: solo DEBUG en producción, no INFO
-            log.debug("Respuesta de organizaciones JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);
+            log.info("JD ORGS RAW RESPONSE: {}", rawResponse);
 
             if (rawResponse == null || rawResponse.isBlank()) return List.of();
 
