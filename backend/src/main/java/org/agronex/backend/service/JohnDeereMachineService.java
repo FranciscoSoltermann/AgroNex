@@ -36,6 +36,92 @@ public class JohnDeereMachineService {
     private static final String ACCEPT_HEADER = "application/vnd.deere.axiom.v3+json";
 
     /**
+     * Extrae la URI de un link HATEOAS dado su 'rel' desde un objeto JD (org, machine, etc.).
+     * John Deere usa HATEOAS: las URLs correctas vienen en el campo "links" de cada recurso.
+     * NOTA: JD retorna links apuntando a api.deere.com incluso en sandbox.
+     *       Reescribimos el host para que coincida con el apiBaseUrl configurado.
+     */
+    @SuppressWarnings("unchecked")
+    private Optional<String> extractLink(Map<String, Object> resource, String rel) {
+        List<Map<String, Object>> links = (List<Map<String, Object>>) resource.get("links");
+        if (links == null) return Optional.empty();
+        return links.stream()
+                .filter(l -> rel.equalsIgnoreCase(String.valueOf(l.get("rel"))))
+                .map(l -> rewriteUrl(String.valueOf(l.get("uri"))))
+                .findFirst();
+    }
+
+    /**
+     * Reescribe URLs de la API de John Deere para usar el host correcto según la configuración.
+     * Ejemplo: Si apiBaseUrl = "https://sandboxapi.deere.com/platform"
+     *          y la URL recibida es "https://api.deere.com/platform/organizations/123"
+     *          se reescribe a "https://sandboxapi.deere.com/platform/organizations/123"
+     */
+    private String rewriteUrl(String originalUrl) {
+        if (originalUrl == null) return null;
+        String baseUrl = config.getApiBaseUrl(); // e.g. "https://sandboxapi.deere.com/platform"
+
+        // Reemplazar los hosts conocidos de producción por nuestro host configurado
+        String[] productionHosts = {
+            "https://api.deere.com/platform",
+            "https://partnerapi.deere.com/platform"
+        };
+
+        for (String prodHost : productionHosts) {
+            if (originalUrl.startsWith(prodHost)) {
+                String rewritten = baseUrl + originalUrl.substring(prodHost.length());
+                log.debug("JD URL rewrite: {} -> {}", originalUrl, rewritten);
+                return rewritten;
+            }
+        }
+        return originalUrl;
+    }
+
+    /**
+     * Obtiene el detalle de una organización específica siguiendo su link 'self',
+     * para obtener todos los sub-links (fields, machines, etc.).
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getOrganizationDetail(UUID userId, String orgId) {
+        // Primero obtener la org desde el listado para extraer su self link
+        String listUrl = config.getApiBaseUrl() + "/organizations";
+        try {
+            String rawResponse = executeGet(userId, listUrl);
+            if (rawResponse != null && !rawResponse.isBlank()) {
+                Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
+                List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
+                if (values != null) {
+                    for (Map<String, Object> org : values) {
+                        if (orgId.equals(String.valueOf(org.get("id")))) {
+                            // Seguir el link self (reescrito) para obtener todos sus sub-links
+                            Optional<String> selfLink = extractLink(org, "self");
+                            if (selfLink.isPresent()) {
+                                log.info("JD HATEOAS: Siguiendo self link (reescrito) de org {}: {}", orgId, selfLink.get());
+                                String detailRaw = executeGet(userId, selfLink.get());
+                                if (detailRaw != null && !detailRaw.isBlank()) {
+                                    Map<String, Object> detail = objectMapper.readValue(detailRaw, Map.class);
+                                    List<Map<String, Object>> detailLinks = (List<Map<String, Object>>) detail.get("links");
+                                    if (detailLinks != null) {
+                                        log.info("JD HATEOAS: Links disponibles para org {}: {}",
+                                                orgId, detailLinks.stream()
+                                                        .map(l -> l.get("rel") + " -> " + rewriteUrl(String.valueOf(l.get("uri"))))
+                                                        .toList());
+                                    }
+                                    return detail;
+                                }
+                            }
+                            return org;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error obteniendo detalle HATEOAS de org {}: {}", orgId, e.getMessage());
+        }
+        return Map.of();
+    }
+
+    /**
      * Realiza una consulta GET firmada a la API de John Deere.
      * Si la API retorna un 401, intenta refrescar el token de forma forzada y reintentar una vez.
      * Si el reintento o el refresh fallan, desconecta al usuario en BD (autocleanup) y lanza una excepción limpia.
@@ -61,15 +147,17 @@ public class JohnDeereMachineService {
                         .header("Accept", ACCEPT_HEADER)
                         .retrieve()
                         .body(String.class);
-            } catch (Exception refreshEx) {
-                log.warn("Fallo el refresh o reintento de token JD para usuario {}. Desconectando cuenta...", idDatos, refreshEx);
+            } catch (HttpClientErrorException e2) {
+                log.error("Fallo tras refresh. Status: {}. Headers: {}. Body: {}", e2.getStatusCode(), e2.getResponseHeaders(), e2.getResponseBodyAsString());
                 authService.disconnectUser(idDatos);
                 throw new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED,
-                        "La sesión de John Deere ha expirado. Por favor, vuelve a conectar tu cuenta.",
-                        refreshEx
+                        "La sesión de John Deere ha expirado. Por favor, vuelve a conectar tu cuenta."
                 );
             }
+        } catch (HttpClientErrorException e) {
+            log.error("Error JD en GET {}. Status: {}. Headers: {}. Body: {}", url, e.getStatusCode(), e.getResponseHeaders(), e.getResponseBodyAsString());
+            throw e;
         }
     }
 
@@ -112,20 +200,31 @@ public class JohnDeereMachineService {
 
     /**
      * Lista las máquinas de una organización.
+     * Usa HATEOAS: primero intenta seguir los links de la org, luego fallback manual.
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listMachines(UUID userId, String orgId) {
-        List<String> endpointsToTry = List.of(
-            config.getApiBaseUrl() + "/organizations/" + orgId + "/machines",
-            config.getApiBaseUrl() + "/organizations/" + orgId + "/equipment"
-        );
+        // 1. Intentar obtener URLs desde HATEOAS
+        List<String> endpointsToTry = new ArrayList<>();
+        try {
+            Map<String, Object> orgDetail = getOrganizationDetail(userId, orgId);
+            extractLink(orgDetail, "machines").ifPresent(endpointsToTry::add);
+            extractLink(orgDetail, "equipment").ifPresent(endpointsToTry::add);
+        } catch (Exception e) {
+            log.warn("No se pudieron obtener links HATEOAS para equipos de org {}: {}", orgId, e.getMessage());
+        }
+
+        // 2. Fallback: URLs construidas manualmente
+        if (endpointsToTry.isEmpty()) {
+            endpointsToTry.add(config.getApiBaseUrl() + "/organizations/" + orgId + "/machines");
+            endpointsToTry.add(config.getApiBaseUrl() + "/organizations/" + orgId + "/equipment");
+        }
 
         for (String url : endpointsToTry) {
-            log.debug("Consultando equipos JD en org {}", orgId);
+            log.info("Consultando equipos JD en org {} via: {}", orgId, url);
             try {
                 String rawResponse = executeGet(userId, url);
 
-                // VUL-B02: respuesta completa solo a nivel DEBUG
                 log.debug("Respuesta equipos JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);
 
                 if (rawResponse == null || rawResponse.isBlank()) continue;
@@ -134,11 +233,11 @@ public class JohnDeereMachineService {
 
                 if (response.containsKey("values")) {
                     List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
-                    log.debug("JD: {} equipos encontrados.", values.size());
+                    log.info("JD: {} equipos encontrados via {}", values.size(), url);
                     return values;
                 } else if (response.containsKey("elements")) {
                     List<Map<String, Object>> elements = (List<Map<String, Object>>) response.get("elements");
-                    log.debug("JD: {} equipos encontrados (elements).", elements.size());
+                    log.info("JD: {} equipos encontrados (elements) via {}", elements.size(), url);
                     return elements;
                 }
 
@@ -203,17 +302,35 @@ public class JohnDeereMachineService {
 
     /**
      * Lista los campos (fields) de una organización.
+     * Usa HATEOAS: primero intenta seguir los links de la org, luego fallback manual.
      */
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> listFields(UUID userId, String orgId) {
-        String url = config.getApiBaseUrl() + "/organizations/" + orgId + "/fields?embed=boundaries";
+        // 1. Intentar obtener URL desde HATEOAS
+        String url = null;
+        try {
+            Map<String, Object> orgDetail = getOrganizationDetail(userId, orgId);
+            Optional<String> fieldsLink = extractLink(orgDetail, "fields");
+            if (fieldsLink.isPresent()) {
+                url = fieldsLink.get();
+                log.info("JD HATEOAS: Usando link de fields para org {}: {}", orgId, url);
+            }
+        } catch (Exception e) {
+            log.warn("No se pudo obtener link HATEOAS de fields para org {}: {}", orgId, e.getMessage());
+        }
 
-        log.debug("Consultando campos JD en org {}", orgId);
+        // 2. Fallback: URL construida manualmente
+        if (url == null) {
+            url = config.getApiBaseUrl() + "/organizations/" + orgId + "/fields";
+            log.info("JD: Usando URL manual de fields para org {}: {}", orgId, url);
+        }
+
+        // Remover temporalmente embed=boundaries para probar permisos basicos
+        log.info("Consultando campos JD (SIN BOUNDARIES) en org {} via: {}", orgId, url);
         try {
             String rawResponse = executeGet(userId, url);
 
-            // VUL-B02: solo DEBUG
-            log.debug("Respuesta campos JD recibida ({} chars)", rawResponse != null ? rawResponse.length() : 0);
+            log.info("JD FIELDS RAW RESPONSE: {}", rawResponse);
 
             if (rawResponse == null || rawResponse.isBlank()) return List.of();
 
@@ -221,17 +338,17 @@ public class JohnDeereMachineService {
 
             if (response.containsKey("values")) {
                 List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
-                log.debug("JD: {} campos encontrados.", values.size());
+                log.info("JD: {} campos encontrados via {}", values.size(), url);
                 return values;
             } else if (response.containsKey("elements")) {
                 List<Map<String, Object>> elements = (List<Map<String, Object>>) response.get("elements");
-                log.debug("JD: {} campos encontrados (elements).", elements.size());
+                log.info("JD: {} campos encontrados (elements) via {}", elements.size(), url);
                 return elements;
             }
 
             return List.of(response);
         } catch (Exception e) {
-            log.warn("Fallo al consultar campos JD en org {}: {}", orgId, e.getMessage());
+            log.warn("Fallo al consultar campos JD en org {} via {}: {}", orgId, url, e.getMessage());
             return List.of();
         }
     }
