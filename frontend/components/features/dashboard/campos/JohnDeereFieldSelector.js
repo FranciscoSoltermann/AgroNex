@@ -174,7 +174,7 @@ function FieldMiniMap({ field }) {
  *   - onBulkReady([{ name, geojsonString, areaHa }, ...]): callback para múltiples campos
  *   - initialCenter: [lat, lon]
  */
-export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, initialCenter }) {
+export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, onConfirm, initialCenter }) {
     const [jdStatus, setJdStatus] = useState(null);
     const [organizations, setOrganizations] = useState([]);
     const [fields, setFields] = useState({});
@@ -225,16 +225,45 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, in
         else { setExpandedOrg(orgId); fetchFields(orgId); }
     };
 
-    const isFieldSelected = (fieldId) => selectedFields.some(sf => sf.field.id === fieldId);
-
     const handleToggleField = (field) => {
-        const hasGeometry = field.boundaries && field.boundaries.length > 0;
-        if (!hasGeometry) return;
+        const { polys } = extractLeafletCoords(field);
+        const hasGeometry = polys && polys.length > 0;
+        if (!hasGeometry) {
+            setError('Este campo no contiene límites geométricos definidos en John Deere.');
+            return;
+        }
+        setError(null);
 
+        let nextSelected;
         if (isFieldSelected(field.id)) {
-            setSelectedFields(prev => prev.filter(sf => sf.field.id !== field.id));
+            nextSelected = selectedFields.filter(sf => sf.field.id !== field.id);
         } else {
-            setSelectedFields(prev => [...prev, { field }]);
+            nextSelected = [...selectedFields, { field }];
+        }
+        setSelectedFields(nextSelected);
+
+        // Notificar en tiempo real al componente padre
+        if (nextSelected.length === 0) {
+            if (onGeoJsonReady) onGeoJsonReady("", "", "");
+            if (onBulkReady) onBulkReady(null);
+        } else if (nextSelected.length === 1) {
+            const f = nextSelected[0].field;
+            const geojson = jdBoundariesToGeoJson(f);
+            if (geojson) {
+                const areaHa = f.area?.value ? Number(f.area.value).toFixed(2) : (turf.area(geojson) / 10000).toFixed(2);
+                if (onGeoJsonReady) onGeoJsonReady(JSON.stringify(geojson), areaHa, f.name);
+            }
+            if (onBulkReady) onBulkReady(null);
+        } else {
+            const bulk = nextSelected.map(({ field: f }) => {
+                const geojson = jdBoundariesToGeoJson(f);
+                return {
+                    name: f.name || `Campo JD ${f.id}`,
+                    geojsonString: geojson ? JSON.stringify(geojson) : '',
+                    areaHa: f.area?.value ? Number(f.area.value).toFixed(2) : (geojson ? (turf.area(geojson) / 10000).toFixed(2) : '0')
+                };
+            }).filter(item => item.geojsonString);
+            if (onBulkReady) onBulkReady(bulk);
         }
     };
 
@@ -246,8 +275,10 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, in
             const { field } = selectedFields[0];
             const geojson = jdBoundariesToGeoJson(field);
             if (!geojson) { setError('Este campo no tiene datos de límites.'); return; }
-            const areaHa = (turf.area(geojson) / 10000).toFixed(2);
-            onGeoJsonReady(JSON.stringify(geojson), areaHa);
+            const areaHa = field.area?.value ? Number(field.area.value).toFixed(2) : (turf.area(geojson) / 10000).toFixed(2);
+            if (onGeoJsonReady) onGeoJsonReady(JSON.stringify(geojson), areaHa, field.name);
+            if (onBulkReady) onBulkReady(null);
+            if (onConfirm) onConfirm({ geojsonString: JSON.stringify(geojson), areaHa, fieldName: field.name, field });
         } else {
             // Modo masivo
             const bulk = selectedFields.map(({ field }) => {
@@ -255,19 +286,17 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, in
                 return {
                     name: field.name || `Campo JD ${field.id}`,
                     geojsonString: geojson ? JSON.stringify(geojson) : '',
-                    areaHa: geojson ? (turf.area(geojson) / 10000).toFixed(2) : '0'
+                    areaHa: field.area?.value ? Number(field.area.value).toFixed(2) : (geojson ? (turf.area(geojson) / 10000).toFixed(2) : '0')
                 };
             }).filter(item => item.geojsonString);
             if (onBulkReady) onBulkReady(bulk);
+            if (onConfirm) onConfirm({ bulkItems: bulk });
         }
         setConfirmed(true);
     };
 
     const handleBack = () => {
         setConfirmed(false);
-        setSelectedFields([]);
-        onGeoJsonReady("", "");
-        if (onBulkReady) onBulkReady(null);
     };
 
     // ── Loading ──────────────────────────────────────────────────────────
@@ -396,7 +425,8 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, in
                                         ) : (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                 {orgFields.map(field => {
-                                                    const hasGeometry = field.boundaries && field.boundaries.length > 0;
+                                                    const { polys } = extractLeafletCoords(field);
+                                                    const hasGeometry = polys && polys.length > 0;
                                                     const areaValue = field.area?.value;
                                                     const areaUnit = field.area?.unitId || 'ha';
                                                     const selected = isFieldSelected(field.id);

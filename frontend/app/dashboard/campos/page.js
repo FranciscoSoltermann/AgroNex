@@ -1039,8 +1039,13 @@ export default function CamposPage() {
                         {campoInputMethod === 'john-deere' ? (
                             <div className="space-y-4">
                                 <JohnDeereFieldSelector
-                                    onGeoJsonReady={handleImportCampoFromJd}
-                                    onBulkReady={handleImportBulkCamposFromJd}
+                                    onConfirm={({ geojsonString, areaHa, bulkItems }) => {
+                                        if (bulkItems && bulkItems.length > 1) {
+                                            handleImportBulkCamposFromJd(bulkItems);
+                                        } else if (geojsonString) {
+                                            handleImportCampoFromJd(geojsonString, areaHa);
+                                        }
+                                    }}
                                 />
                                 {submitError && <ErrorMsg msg={submitError} />}
                                 {submitSuccess && <SuccessMsg msg={submitSuccess} />}
@@ -1167,11 +1172,32 @@ export default function CamposPage() {
                                 {loteInputMethod === 'john-deere' && (
                                     <JohnDeereFieldSelector
                                         initialCenter={loteInitialCenter}
-                                        onGeoJsonReady={(geojsonStr, areaHa) => {
+                                        onGeoJsonReady={(geojsonStr, areaHa, fieldName) => {
                                             setBulkLotes(null);
-                                            setFormLote(p => ({ ...p, coordenadasGeoJson: geojsonStr || "", superficie: areaHa || "" }));
+                                            setFormLote(p => ({
+                                                ...p,
+                                                nombre: (!p.nombre || p.nombre === 'Lote 1' || p.nombre.startsWith('Lote ')) && fieldName ? fieldName : (p.nombre || fieldName || ""),
+                                                coordenadasGeoJson: geojsonStr || "",
+                                                superficie: areaHa || p.superficie
+                                            }));
+                                            setSubmitError(null);
                                         }}
-                                        onBulkReady={(items) => { if (items) setBulkLotes(items); else setBulkLotes(null); }}
+                                        onBulkReady={(items) => {
+                                            if (items && items.length > 1) {
+                                                setBulkLotes(items);
+                                            } else if (items && items.length === 1) {
+                                                setBulkLotes(null);
+                                                setFormLote(p => ({
+                                                    ...p,
+                                                    nombre: (!p.nombre || p.nombre === 'Lote 1' || p.nombre.startsWith('Lote ')) && items[0].name ? items[0].name : (p.nombre || items[0].name || ""),
+                                                    coordenadasGeoJson: items[0].geojsonString || "",
+                                                    superficie: items[0].areaHa || p.superficie
+                                                }));
+                                            } else {
+                                                setBulkLotes(null);
+                                            }
+                                            setSubmitError(null);
+                                        }}
                                     />
                                 )}
                                 {submitError && <ErrorMsg msg={submitError} />}
@@ -1185,7 +1211,7 @@ export default function CamposPage() {
                                     <input type="text" required value={formLote.nombre} onChange={e => setFormLote(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Lote A-01" />
                                 </FormField>
 
-                                {(!formLote.coordenadasGeoJson || editingLoteGeoId) ? (
+                                {(!formLote.coordenadasGeoJson || editingLoteGeoId || loteInputMethod === 'john-deere' || loteInputMethod === 'upload') ? (
                                     <>
                                         {/* ── Tabs: método de entrada ─────────────────────── */}
                                         <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
@@ -1256,18 +1282,46 @@ export default function CamposPage() {
                                             />
                                         )}
                                         {loteInputMethod === 'john-deere' && (
-                                            <JohnDeereFieldSelector
-                                                initialCenter={loteInitialCenter}
-                                                onGeoJsonReady={(geojsonStr, areaHa) => {
-                                                    setBulkLotes(null);
-                                                    setFormLote(p => ({
-                                                        ...p,
-                                                        coordenadasGeoJson: geojsonStr || "",
-                                                        superficie: areaHa || ""
-                                                    }));
-                                                }}
-                                                onBulkReady={(items) => { if (items) setBulkLotes(items); }}
-                                            />
+                                            <div className="space-y-3">
+                                                <JohnDeereFieldSelector
+                                                    initialCenter={loteInitialCenter}
+                                                    onGeoJsonReady={(geojsonStr, areaHa, fieldName) => {
+                                                        setBulkLotes(null);
+                                                        setFormLote(p => ({
+                                                            ...p,
+                                                            nombre: (!p.nombre || p.nombre === 'Lote 1' || p.nombre.startsWith('Lote ')) && fieldName ? fieldName : (p.nombre || fieldName || ""),
+                                                            coordenadasGeoJson: geojsonStr || "",
+                                                            superficie: areaHa || p.superficie
+                                                        }));
+                                                        setSubmitError(null);
+                                                    }}
+                                                    onBulkReady={(items) => {
+                                                        if (items && items.length > 1) {
+                                                            setBulkLotes(items);
+                                                        } else if (items && items.length === 1) {
+                                                            setBulkLotes(null);
+                                                            setFormLote(p => ({
+                                                                ...p,
+                                                                nombre: (!p.nombre || p.nombre === 'Lote 1' || p.nombre.startsWith('Lote ')) && items[0].name ? items[0].name : (p.nombre || items[0].name || ""),
+                                                                coordenadasGeoJson: items[0].geojsonString || "",
+                                                                superficie: items[0].areaHa || p.superficie
+                                                            }));
+                                                        } else {
+                                                            setBulkLotes(null);
+                                                        }
+                                                        setSubmitError(null);
+                                                    }}
+                                                />
+                                                {formLote.coordenadasGeoJson && (
+                                                    <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-[11px] font-bold px-3 py-2.5 rounded-xl border border-green-200 dark:border-green-800 animate-in fade-in">
+                                                        <CheckCircle2 size={16} className="shrink-0 text-[#367C2B]" />
+                                                        <div className="flex-1">
+                                                            <p>✓ Límites y ubicación de John Deere vinculados automáticamente.</p>
+                                                            <p className="text-[10px] font-normal text-green-600 dark:text-green-400">Superficie calculada: {formLote.superficie || 0} Ha. No es necesario dibujar en el mapa.</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         )}
                                     </>
                                 ) : (
