@@ -251,10 +251,13 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
                         const orgsRes = await apiClient.get('/maquinaria/john-deere/organizations');
                         const orgs = orgsRes.data || [];
                         setOrganizations(orgs);
-                        if (orgs.length === 1) {
-                            const orgId = orgs[0].id || orgs[0].organizationId;
-                            setExpandedOrg(orgId);
-                            fetchFields(orgId);
+                        orgs.forEach(o => {
+                            const oId = o.id || o.organizationId;
+                            if (oId) fetchFields(oId);
+                        });
+                        if (orgs.length > 0) {
+                            const firstOrgId = orgs[0].id || orgs[0].organizationId;
+                            setExpandedOrg(firstOrgId);
                         }
                     } catch { setError('No se pudieron obtener las organizaciones de John Deere.'); }
                     finally { setLoadingOrgs(false); }
@@ -264,7 +267,7 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
         checkStatus();
     }, []);
 
-    const fetchFields = async (orgId) => {
+    const fetchFields = useCallback(async (orgId) => {
         if (fields[orgId]) return;
         setLoadingFields(prev => ({ ...prev, [orgId]: true }));
         try {
@@ -272,7 +275,7 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
             setFields(prev => ({ ...prev, [orgId]: res.data || [] }));
         } catch { setFields(prev => ({ ...prev, [orgId]: [] })); }
         finally { setLoadingFields(prev => ({ ...prev, [orgId]: false })); }
-    };
+    }, [fields]);
 
     const handleToggleOrg = (orgId) => {
         if (expandedOrg === orgId) { setExpandedOrg(null); }

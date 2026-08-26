@@ -214,7 +214,7 @@ public class JohnDeereController {
     }
 
     /**
-     * Endpoint unificado que busca la primera organización y devuelve sus equipos.
+     * Endpoint unificado que busca todas las organizaciones del usuario y devuelve sus equipos agregados.
      */
     @GetMapping("/equipos")
     public ResponseEntity<List<Map<String, Object>>> getEquiposUnificados(@AuthenticationPrincipal Jwt jwt) {
@@ -226,13 +226,29 @@ public class JohnDeereController {
                 return ResponseEntity.ok(List.of());
             }
 
-            Map<String, Object> firstOrg = orgs.get(0);
-            String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
-            if (orgId == null) {
-                return ResponseEntity.ok(List.of());
+            List<Map<String, Object>> allMachines = new ArrayList<>();
+            Set<String> seenIds = new HashSet<>();
+
+            for (Map<String, Object> org : orgs) {
+                String orgId = org.containsKey("id") ? String.valueOf(org.get("id")) : null;
+                if (orgId != null && !"null".equalsIgnoreCase(orgId)) {
+                    try {
+                        List<Map<String, Object>> orgMachines = machineService.listMachines(userId, orgId);
+                        if (orgMachines != null) {
+                            for (Map<String, Object> m : orgMachines) {
+                                String mId = String.valueOf(m.get("id"));
+                                if (mId == null || "null".equalsIgnoreCase(mId) || seenIds.add(mId)) {
+                                    allMachines.add(m);
+                                }
+                            }
+                        }
+                    } catch (Exception orgEx) {
+                        log.debug("Error listando equipos para org {}: {}", orgId, orgEx.getMessage());
+                    }
+                }
             }
 
-            return ResponseEntity.ok(machineService.listMachines(userId, orgId));
+            return ResponseEntity.ok(allMachines);
         } catch (Exception e) {
             log.warn("Error al obtener equipos unificados para usuario {}: {}", userId, e.getMessage());
             return ResponseEntity.ok(List.of());
@@ -240,7 +256,7 @@ public class JohnDeereController {
     }
 
     /**
-     * Endpoint unificado que busca la primera organización y devuelve sus campos.
+     * Endpoint unificado que busca todas las organizaciones del usuario y devuelve sus campos agregados.
      */
     @GetMapping("/campos")
     public ResponseEntity<List<Map<String, Object>>> getCamposUnificados(@AuthenticationPrincipal Jwt jwt) {
@@ -252,13 +268,29 @@ public class JohnDeereController {
                 return ResponseEntity.ok(List.of());
             }
 
-            Map<String, Object> firstOrg = orgs.get(0);
-            String orgId = firstOrg.containsKey("id") ? firstOrg.get("id").toString() : null;
-            if (orgId == null) {
-                return ResponseEntity.ok(List.of());
+            List<Map<String, Object>> allFields = new ArrayList<>();
+            Set<String> seenIds = new HashSet<>();
+
+            for (Map<String, Object> org : orgs) {
+                String orgId = org.containsKey("id") ? String.valueOf(org.get("id")) : null;
+                if (orgId != null && !"null".equalsIgnoreCase(orgId)) {
+                    try {
+                        List<Map<String, Object>> orgFields = machineService.listFields(userId, orgId);
+                        if (orgFields != null) {
+                            for (Map<String, Object> f : orgFields) {
+                                String fId = String.valueOf(f.get("id"));
+                                if (fId == null || "null".equalsIgnoreCase(fId) || seenIds.add(fId)) {
+                                    allFields.add(f);
+                                }
+                            }
+                        }
+                    } catch (Exception orgEx) {
+                        log.debug("Error listando campos para org {}: {}", orgId, orgEx.getMessage());
+                    }
+                }
             }
 
-            return ResponseEntity.ok(machineService.listFields(userId, orgId));
+            return ResponseEntity.ok(allFields);
         } catch (Exception e) {
             log.warn("Error al obtener campos unificados para usuario {}: {}", userId, e.getMessage());
             return ResponseEntity.ok(List.of());
