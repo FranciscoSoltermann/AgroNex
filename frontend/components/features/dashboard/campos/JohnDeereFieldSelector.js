@@ -259,6 +259,8 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
                 const geojson = jdBoundariesToGeoJson(f);
                 return {
                     name: f.name || `Campo JD ${f.id}`,
+                    farmName: f.farmName || null,
+                    farmId: f.farmId || null,
                     geojsonString: geojson ? JSON.stringify(geojson) : '',
                     areaHa: f.area?.value ? Number(f.area.value).toFixed(2) : (geojson ? (turf.area(geojson) / 10000).toFixed(2) : '0')
                 };
@@ -278,13 +280,15 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
             const areaHa = field.area?.value ? Number(field.area.value).toFixed(2) : (turf.area(geojson) / 10000).toFixed(2);
             if (onGeoJsonReady) onGeoJsonReady(JSON.stringify(geojson), areaHa, field.name);
             if (onBulkReady) onBulkReady(null);
-            if (onConfirm) onConfirm({ geojsonString: JSON.stringify(geojson), areaHa, fieldName: field.name, field });
+            if (onConfirm) onConfirm({ geojsonString: JSON.stringify(geojson), areaHa, fieldName: field.name, farmName: field.farmName, field });
         } else {
             // Modo masivo
             const bulk = selectedFields.map(({ field }) => {
                 const geojson = jdBoundariesToGeoJson(field);
                 return {
                     name: field.name || `Campo JD ${field.id}`,
+                    farmName: field.farmName || null,
+                    farmId: field.farmId || null,
                     geojsonString: geojson ? JSON.stringify(geojson) : '',
                     areaHa: field.area?.value ? Number(field.area.value).toFixed(2) : (geojson ? (turf.area(geojson) / 10000).toFixed(2) : '0')
                 };
@@ -423,54 +427,70 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
                                         ) : orgFields.length === 0 ? (
                                             <p className="text-[11px] text-gray-400 text-center py-3">No se encontraron campos en esta organización.</p>
                                         ) : (
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                {orgFields.map(field => {
-                                                    const { polys } = extractLeafletCoords(field);
-                                                    const hasGeometry = polys && polys.length > 0;
-                                                    const areaValue = field.area?.value;
-                                                    const areaUnit = field.area?.unitId || 'ha';
-                                                    const selected = isFieldSelected(field.id);
+                                            <div className="space-y-3">
+                                                {Object.entries(
+                                                    orgFields.reduce((acc, field) => {
+                                                        const farm = field.farmName || "Granja General";
+                                                        if (!acc[farm]) acc[farm] = [];
+                                                        acc[farm].push(field);
+                                                        return acc;
+                                                    }, {})
+                                                ).map(([farmName, farmFields]) => (
+                                                    <div key={farmName} className="space-y-1.5">
+                                                        <div className="flex items-center gap-1.5 px-1">
+                                                            <span className="text-[11px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                                                                🌾 Granja: {farmName}
+                                                            </span>
+                                                            <span className="text-[10px] text-gray-400 font-bold">({farmFields.length} {farmFields.length === 1 ? 'lote' : 'lotes'})</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                            {farmFields.map(field => {
+                                                                const { polys } = extractLeafletCoords(field);
+                                                                const hasGeometry = polys && polys.length > 0;
+                                                                const areaValue = field.area?.value;
+                                                                const areaUnit = field.area?.unitId || 'ha';
+                                                                const selected = isFieldSelected(field.id);
 
-                                                    return (
-                                                        <button
-                                                            key={field.id}
-                                                            type="button"
-                                                            onClick={() => handleToggleField(field)}
-                                                            disabled={!hasGeometry}
-                                                            className={`
-                                                                text-left rounded-xl border overflow-hidden transition-all relative
-                                                                ${!hasGeometry ? 'border-gray-100 dark:border-gray-800 opacity-50 cursor-not-allowed' :
-                                                                    selected ? 'border-[#367C2B] ring-2 ring-[#367C2B]/30 shadow-md' :
-                                                                    'border-gray-200 dark:border-gray-700 hover:border-[#367C2B] hover:shadow-md cursor-pointer'
-                                                                }
-                                                            `}
-                                                        >
-                                                            {/* Checkbox overlay */}
-                                                            {hasGeometry && (
-                                                                <div className={`absolute top-2 right-2 z-10 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
-                                                                    selected ? 'bg-[#367C2B] border-[#367C2B]' : 'bg-white/80 border-gray-300'
-                                                                }`}>
-                                                                    {selected && <Check size={12} className="text-white" strokeWidth={3} />}
-                                                                </div>
-                                                            )}
-                                                            <div className="h-24 bg-gray-100 dark:bg-gray-800 relative">
-                                                                {hasGeometry ? <FieldMiniMap field={field} /> : (
-                                                                    <div className="w-full h-full flex items-center justify-center"><MapPin size={18} className="text-gray-300" /></div>
-                                                                )}
-                                                            </div>
-                                                            <div className="px-3 py-2">
-                                                                <p className="text-[12px] font-bold text-gray-800 dark:text-gray-100 truncate">{field.name || `Campo #${field.id}`}</p>
-                                                                {field.farmName && (
-                                                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Granja: {field.farmName}</p>
-                                                                )}
-                                                                <div className="flex items-center justify-between mt-0.5">
-                                                                    {areaValue && <span className="text-[10px] font-black text-[#2D6A4F]">{Number(areaValue).toFixed(1)} {areaUnit}</span>}
-                                                                    {!hasGeometry && <span className="text-[9px] text-red-400 font-medium">Sin límites</span>}
-                                                                </div>
-                                                            </div>
-                                                        </button>
-                                                    );
-                                                })}
+                                                                return (
+                                                                    <button
+                                                                        key={field.id}
+                                                                        type="button"
+                                                                        onClick={() => handleToggleField(field)}
+                                                                        disabled={!hasGeometry}
+                                                                        className={`
+                                                                            text-left rounded-xl border overflow-hidden transition-all relative
+                                                                            ${!hasGeometry ? 'border-gray-100 dark:border-gray-800 opacity-50 cursor-not-allowed' :
+                                                                                selected ? 'border-[#367C2B] ring-2 ring-[#367C2B]/30 shadow-md' :
+                                                                                'border-gray-200 dark:border-gray-700 hover:border-[#367C2B] hover:shadow-md cursor-pointer'
+                                                                            }
+                                                                        `}
+                                                                    >
+                                                                        {/* Checkbox overlay */}
+                                                                        {hasGeometry && (
+                                                                            <div className={`absolute top-2 right-2 z-10 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                                                                                selected ? 'bg-[#367C2B] border-[#367C2B]' : 'bg-white/80 border-gray-300'
+                                                                            }`}>
+                                                                                {selected && <Check size={12} className="text-white" strokeWidth={3} />}
+                                                                            </div>
+                                                                        )}
+                                                                        <div className="h-24 bg-gray-100 dark:bg-gray-800 relative">
+                                                                            {hasGeometry ? <FieldMiniMap field={field} /> : (
+                                                                                <div className="w-full h-full flex items-center justify-center"><MapPin size={18} className="text-gray-300" /></div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="px-3 py-2">
+                                                                            <p className="text-[12px] font-bold text-gray-800 dark:text-gray-100 truncate">{field.name || `Campo #${field.id}`}</p>
+                                                                            <div className="flex items-center justify-between mt-0.5">
+                                                                                {areaValue && <span className="text-[10px] font-black text-[#2D6A4F]">{Number(areaValue).toFixed(1)} {areaUnit}</span>}
+                                                                                {!hasGeometry && <span className="text-[9px] text-red-400 font-medium">Sin límites</span>}
+                                                                            </div>
+                                                                        </div>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
                                     </div>
