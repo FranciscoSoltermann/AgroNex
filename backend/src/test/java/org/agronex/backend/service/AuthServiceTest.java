@@ -1,9 +1,6 @@
 package org.agronex.backend.service;
 
-import org.agronex.backend.dto.request.PersonaFisicaRequest;
-import org.agronex.backend.dto.response.PersonaFisicaResponse;
-import org.agronex.backend.entity.PersonaFisica;
-import org.agronex.backend.enums.RolUsuario;
+
 import org.agronex.backend.mapper.PersonaFisicaMapper;
 import org.agronex.backend.mapper.PersonaJuridicaMapper;
 import org.agronex.backend.repository.PersonaFisicaRepository;
@@ -16,11 +13,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.UUID;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

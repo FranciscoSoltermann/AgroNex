@@ -87,7 +87,7 @@ public class CampaniaService {
         Campania guardada = campaniaRepository.save(campania);
 
         // Auditoría
-        String nombresLotes = lotesValidados.stream().map(Lote::getNombre).collect(Collectors.joining(", "));
+        String nombresLotes = lotesValidados.stream().map(lote -> lote.getNombre()).collect(Collectors.joining(", "));
         auditService.registrar(
                 idUsuarioToken, lotesValidados.get(0).getCampo().getUsuario().getEmail(),
                 EntidadAudit.CAMPANIA, guardada.getIdCampania().toString(),
@@ -178,7 +178,7 @@ public class CampaniaService {
 
         // Sincronizar campaniaLotes in-place sin violar constraints de unicidad
         Set<UUID> nuevosLotesIds = lotesReq.stream()
-                .map(CampaniaLoteRequest::getIdLote)
+                .map(req -> req.getIdLote())
                 .collect(Collectors.toSet());
 
         // 1. Eliminar de la colección los lotes que ya no fueron seleccionados
@@ -208,7 +208,7 @@ public class CampaniaService {
         Campania guardada = campaniaRepository.save(campania);
 
         String nombresLotes = lotesEditValidados.stream()
-                .map(Lote::getNombre)
+                .map(lote -> lote.getNombre())
                 .collect(Collectors.joining(", "));
         String emailOwner = lotesEditValidados.get(0).getCampo() != null && lotesEditValidados.get(0).getCampo().getUsuario() != null
                 ? lotesEditValidados.get(0).getCampo().getUsuario().getEmail()

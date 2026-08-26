@@ -88,11 +88,11 @@ public class CampoService {
                     if (c.getLotes() != null && !c.getLotes().isEmpty()) {
                         return c.getLotes().stream()
                                 .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
-                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
                     }
                     return BigDecimal.ZERO;
                 })
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("camposActivos", camposActivos);
@@ -120,9 +120,9 @@ public class CampoService {
 
         if (campo.getLotes() != null && !campo.getLotes().isEmpty()) {
             BigDecimal superficieLotesTotal = campo.getLotes().stream()
-                    .map(org.agronex.backend.entity.Lote::getSuperficie)
+                    .map(l -> l.getSuperficie())
                     .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
 
             if (request.getSuperficieTotal() != null && request.getSuperficieTotal().compareTo(superficieLotesTotal) < 0) {
                 throw new IllegalArgumentException(

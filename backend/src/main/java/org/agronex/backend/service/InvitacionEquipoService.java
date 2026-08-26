@@ -76,7 +76,7 @@ public class InvitacionEquipoService {
         }
 
         List<String> permisosStr = request.getPermisos() != null
-                ? request.getPermisos().stream().map(Enum::name).collect(Collectors.toList())
+                ? request.getPermisos().stream().map(p -> p.name()).collect(Collectors.toList())
                 : new ArrayList<>();
 
         InvitacionEquipo invitacion = InvitacionEquipo.builder()

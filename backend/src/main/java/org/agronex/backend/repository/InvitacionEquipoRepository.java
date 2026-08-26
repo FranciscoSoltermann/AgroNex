@@ -3,13 +3,13 @@ package org.agronex.backend.repository;
 import org.agronex.backend.entity.EstadoInvitacion;
 import org.agronex.backend.entity.InvitacionEquipo;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@Repository
+
 public interface InvitacionEquipoRepository extends JpaRepository<InvitacionEquipo, UUID> {
 
     List<InvitacionEquipo> findByUsuarioInvitado_IdUsuarioAndEstado(UUID idUsuarioInvitado, EstadoInvitacion estado);
