@@ -52,6 +52,10 @@ public class Insumo {
     private Boolean alertaStockBajoEnviada = Boolean.FALSE;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_usuario")
+    private Usuario usuario;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_campo")
     private Campo campo;
 

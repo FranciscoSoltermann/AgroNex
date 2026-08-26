@@ -10,6 +10,7 @@ import org.agronex.backend.mapper.InsumoMapper;
 import org.agronex.backend.repository.CampoRepository;
 import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.InsumoRepository;
+import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,23 +25,30 @@ public class InsumoService {
     private final InsumoRepository insumoRepository;
     private final CampoRepository campoRepository;
     private final CampaniaRepository campaniaRepository;
+    private final UsuarioRepository usuarioRepository;
     private final InsumoMapper insumoMapper;
     private final AuditService auditService;
     private final UsuarioService usuarioService;
 
     @Transactional
     public InsumoResponse crearInsumo(InsumoRequest request, UUID idUsuarioToken) {
-        Campo campo = campoRepository.findById(request.getIdCampo())
-                .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
-
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
-
-        if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
-            throw new AccessDeniedException("No tenés permiso para cargar insumos en este campo");
-        }
+        Usuario usuario = usuarioRepository.findById(idDatos)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
 
         Insumo nuevoInsumo = insumoMapper.toEntity(request);
-        nuevoInsumo.setCampo(campo);
+        nuevoInsumo.setUsuario(usuario);
+
+        Campo campo = null;
+        if (request.getIdCampo() != null) {
+            campo = campoRepository.findById(request.getIdCampo())
+                    .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
+
+            if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
+                throw new AccessDeniedException("No tenés permiso para cargar insumos en este campo");
+            }
+            nuevoInsumo.setCampo(campo);
+        }
 
         // Asociar campaña si viene en el request
         if (request.getIdCampania() != null) {
@@ -51,19 +59,22 @@ public class InsumoService {
                 throw new AccessDeniedException("No tenés permiso para vincular insumos a esta campaña");
             }
             nuevoInsumo.setCampania(campania);
+            if (nuevoInsumo.getCampo() == null && campania.getLote() != null && campania.getLote().getCampo() != null) {
+                nuevoInsumo.setCampo(campania.getLote().getCampo());
+            }
         }
 
         Insumo guardado = insumoRepository.save(nuevoInsumo);
 
         String detalle = "Stock inicial: " + guardado.getCantidad() + " " + guardado.getUnidad()
                 + ". Precio unitario: " + guardado.getPrecioUnitario()
-                + ". Campo: " + campo.getNombre();
+                + (campo != null ? ". Campo: " + campo.getNombre() : ". General (sin campo asignado)");
         if (guardado.getCampania() != null) {
             detalle += ". Campaña: " + guardado.getCampania().getCultivo();
         }
 
         auditService.registrar(
-                idUsuarioToken, campo.getUsuario().getEmail(),
+                idUsuarioToken, usuario.getEmail(),
                 EntidadAudit.INSUMO, guardado.getIdInsumo().toString(),
                 guardado.getNombre(),
                 AccionAudit.CREAR,
@@ -93,8 +104,8 @@ public class InsumoService {
             }
             list = insumoRepository.findByCampoIdCampo(idCampo);
         } else {
-            // Todos los insumos del usuario
-            list = insumoRepository.findByCampoUsuarioIdUsuario(idDatos);
+            // Todos los insumos del usuario (con o sin campo asignado)
+            list = insumoRepository.findByUsuarioOrCampoUsuario(idDatos);
         }
 
         return list.stream()
@@ -108,10 +119,8 @@ public class InsumoService {
                 .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en el catálogo"));
         
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        validarAccesoInsumo(insumo, idDatos, "No tenés acceso a este insumo");
         
-        if (insumo.getCampo() == null || !insumo.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
-            throw new AccessDeniedException("No tenés acceso a este insumo");
-        }
         return insumoMapper.toResponse(insumo);
     }
 
@@ -121,10 +130,7 @@ public class InsumoService {
                 .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado"));
 
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
-
-        if (insumo.getCampo() == null || !insumo.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
-            throw new AccessDeniedException("No tenés permiso para editar este insumo");
-        }
+        validarAccesoInsumo(insumo, idDatos, "No tenés permiso para editar este insumo");
 
         insumo.setNombre(request.getNombre());
         insumo.setTipoArticulo(request.getTipoArticulo());
@@ -134,6 +140,18 @@ public class InsumoService {
         insumo.setPesoBolsaKg(request.getPesoBolsaKg());
         insumo.setCantidad(request.getCantidad());
 
+        // Actualizar campo si viene
+        if (request.getIdCampo() != null) {
+            Campo campo = campoRepository.findById(request.getIdCampo())
+                    .orElseThrow(() -> new EntityNotFoundException("Campo no encontrado"));
+            if (!campo.getUsuario().getIdUsuario().equals(idDatos)) {
+                throw new AccessDeniedException("No tenés permiso para asignar este campo");
+            }
+            insumo.setCampo(campo);
+        } else {
+            insumo.setCampo(null);
+        }
+
         // Actualizar campaña si viene
         if (request.getIdCampania() != null) {
             Campania campania = campaniaRepository.findById(request.getIdCampania())
@@ -142,14 +160,18 @@ public class InsumoService {
                 throw new AccessDeniedException("No tenés permiso para vincular insumos a esta campaña");
             }
             insumo.setCampania(campania);
+            if (insumo.getCampo() == null && campania.getLote() != null && campania.getLote().getCampo() != null) {
+                insumo.setCampo(campania.getLote().getCampo());
+            }
         } else {
             insumo.setCampania(null);
         }
 
         Insumo guardado = insumoRepository.save(insumo);
 
+        String email = obtenerEmailPropietario(insumo);
         auditService.registrar(
-                idUsuarioToken, insumo.getCampo().getUsuario().getEmail(),
+                idUsuarioToken, email,
                 EntidadAudit.INSUMO, guardado.getIdInsumo().toString(),
                 guardado.getNombre(),
                 AccionAudit.ACTUALIZAR,
@@ -165,13 +187,10 @@ public class InsumoService {
                 .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado"));
 
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
-
-        if (insumo.getCampo() == null || !insumo.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
-            throw new AccessDeniedException("No tenés permiso para eliminar este insumo");
-        }
+        validarAccesoInsumo(insumo, idDatos, "No tenés permiso para eliminar este insumo");
 
         String nombre = insumo.getNombre();
-        String email = insumo.getCampo().getUsuario().getEmail();
+        String email = obtenerEmailPropietario(insumo);
 
         insumoRepository.delete(insumo);
 
@@ -182,5 +201,25 @@ public class InsumoService {
                 AccionAudit.ELIMINAR,
                 "Insumo eliminado del catálogo"
         );
+    }
+
+    private void validarAccesoInsumo(Insumo insumo, UUID idDatos, String errorMsg) {
+        UUID idPropietario = insumo.getUsuario() != null
+                ? insumo.getUsuario().getIdUsuario()
+                : (insumo.getCampo() != null ? insumo.getCampo().getUsuario().getIdUsuario() : null);
+
+        if (idPropietario == null || !idPropietario.equals(idDatos)) {
+            throw new AccessDeniedException(errorMsg);
+        }
+    }
+
+    private String obtenerEmailPropietario(Insumo insumo) {
+        if (insumo.getUsuario() != null && insumo.getUsuario().getEmail() != null) {
+            return insumo.getUsuario().getEmail();
+        }
+        if (insumo.getCampo() != null && insumo.getCampo().getUsuario() != null) {
+            return insumo.getCampo().getUsuario().getEmail();
+        }
+        return "usuario@agronex.com";
     }
 }

@@ -38,7 +38,7 @@ public class InsumoRequest {
     @PositiveOrZero(message = "La cantidad no puede ser negativa")
     private BigDecimal cantidad;
 
-    @NotNull(message = "El campo es obligatorio")
+    // Opcional: si no se asigna, pertenece al inventario general del usuario
     private UUID idCampo;
 
     // Opcional: si se asigna, el insumo pertenece a esta campaña

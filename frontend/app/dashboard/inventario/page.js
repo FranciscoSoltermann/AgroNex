@@ -342,7 +342,7 @@ export default function InventarioPage() {
             precioUnitario: precioEnARS,
             unidad: formInsumo.unidad,
             cantidad: parseFloat(formInsumo.cantidad),
-            idCampo: formInsumo.idCampo
+            idCampo: formInsumo.idCampo || null
         };
         if (formInsumo.tipoArticulo) body.tipoArticulo = formInsumo.tipoArticulo;
         if (formInsumo.subtipo) body.subtipo = formInsumo.subtipo;
@@ -413,10 +413,10 @@ export default function InventarioPage() {
         mutationEliminar.mutate(confirmModal.id);
     };
 
-    // Campañas filtradas por campo seleccionado en el modal
+    // Campañas filtradas por campo seleccionado en el modal (o todas si no hay campo seleccionado)
     const campaniasDelCampo = formInsumo.idCampo
         ? campanias.filter(c => c.idCampo === formInsumo.idCampo || c.lotes?.some(l => l.idCampo === formInsumo.idCampo))
-        : [];
+        : campanias;
 
     // Campañas para el filtro global
     const campaniasParaFiltro = filtroCampoId !== "Todos"
@@ -981,19 +981,31 @@ export default function InventarioPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Campo Asociado</label>
-                                    <select required value={formInsumo.idCampo} onChange={e => setFormInsumo(p => ({ ...p, idCampo: e.target.value, idCampania: "" }))}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
-                                        <option value="" disabled>-- Seleccionar Campo --</option>
+                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                                        Campo Asociado <span className="text-gray-400 normal-case tracking-normal">(opcional)</span>
+                                    </label>
+                                    <select value={formInsumo.idCampo} onChange={e => setFormInsumo(p => ({ ...p, idCampo: e.target.value, idCampania: "" }))}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none">
+                                        <option value="">Sin campo asignado (Inventario general)</option>
                                         {campos.map(c => <option key={c.idCampo} value={c.idCampo}>{c.nombre}</option>)}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Campaña <span className="text-gray-400 normal-case tracking-normal">(opcional)</span></label>
-                                    <select value={formInsumo.idCampania} onChange={e => setFormInsumo(p => ({ ...p, idCampania: e.target.value }))}
-                                        className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none"
-                                        disabled={!formInsumo.idCampo || campaniasDelCampo.length === 0}>
-                                        <option value="">Sin campaña (general del campo)</option>
+                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">
+                                        Campaña <span className="text-gray-400 normal-case tracking-normal">(opcional)</span>
+                                    </label>
+                                    <select value={formInsumo.idCampania} onChange={e => {
+                                        const selectedCampaniaId = e.target.value;
+                                        const selectedCampania = campanias.find(c => c.idCampania === selectedCampaniaId);
+                                        setFormInsumo(p => ({
+                                            ...p,
+                                            idCampania: selectedCampaniaId,
+                                            idCampo: p.idCampo || selectedCampania?.idCampo || (selectedCampania?.lotes?.[0]?.idCampo || p.idCampo)
+                                        }));
+                                    }}
+                                        className="w-full bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-4 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none"
+                                        disabled={campaniasDelCampo.length === 0}>
+                                        <option value="">{formInsumo.idCampo ? "Sin campaña (general del campo)" : "Sin campaña asignada"}</option>
                                         {campaniasDelCampo.map(c => <option key={c.idCampania} value={c.idCampania}>{c.cultivo} ({c.nombreLote})</option>)}
                                     </select>
                                     {formInsumo.idCampo && campaniasDelCampo.length === 0 && (
