@@ -76,14 +76,27 @@ public class CampoService {
         List<Campo> campos = campoRepository.findByUsuarioIdUsuario(idDatos);
 
         long camposActivos = campos.size();
+        long lotesTotales = campos.stream()
+                .mapToLong(c -> c.getLotes() != null ? c.getLotes().size() : 0)
+                .sum();
 
         BigDecimal hectareasTotales = campos.stream()
-                .map(c -> c.getSuperficieTotal())
-                .filter(Objects::nonNull)
-                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
+                .map(c -> {
+                    if (c.getSuperficieTotal() != null && c.getSuperficieTotal().compareTo(BigDecimal.ZERO) > 0) {
+                        return c.getSuperficieTotal();
+                    }
+                    if (c.getLotes() != null && !c.getLotes().isEmpty()) {
+                        return c.getLotes().stream()
+                                .map(l -> l.getSuperficie() != null ? l.getSuperficie() : BigDecimal.ZERO)
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    }
+                    return BigDecimal.ZERO;
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("camposActivos", camposActivos);
+        stats.put("lotesTotales", lotesTotales);
         stats.put("hectareasTotales", hectareasTotales);
         stats.put("actividadesHoy", 0);
 

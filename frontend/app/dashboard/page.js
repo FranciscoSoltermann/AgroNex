@@ -118,7 +118,8 @@ export default function DashboardHome() {
     const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
 
     const stats = {
-        camposActivos: d.camposActivos ?? 0,
+        camposActivos: d.camposActivos ?? (campos.length || 0),
+        lotesTotales: d.lotesTotales ?? (queryData?.bootstrap?.lotes?.length || 0),
         hectareasTotales: d.hectareasTotales ?? 0,
         gastosAcumulados: totalCostosActs + totalGastosFijos,
         ciclosActivos: camps.length,
@@ -241,7 +242,7 @@ export default function DashboardHome() {
                 <StatCard
                     label="Cantidad de Campos"
                     value={stats.camposActivos || 0}
-                    sub={stats.camposActivos === 1 ? "1 campo activo" : stats.camposActivos > 0 ? `${stats.camposActivos} campos activos` : "Sin campos registrados"}
+                    sub={stats.camposActivos > 0 ? `${stats.camposActivos} ${stats.camposActivos === 1 ? 'campo' : 'campos'} (${stats.lotesTotales || 0} ${stats.lotesTotales === 1 ? 'lote' : 'lotes'})` : "Sin campos registrados"}
                     subColor="text-gray-400"
                     icon={<Grid2x2 size={14} className="text-indigo-600" />}
                     iconBg="bg-indigo-50"

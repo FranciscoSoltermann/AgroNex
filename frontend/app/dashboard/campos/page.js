@@ -263,79 +263,21 @@ export default function CamposPage() {
     }, []);
 
     const allCamposUnified = useMemo(() => {
-        // 1. Agrupar todos los campos de John Deere por Granja (farmName)
-        const farmsMap = {};
-        (jdCampos || []).forEach(jf => {
-            let granja = jf.farmName;
-            if (!granja) {
-                const fn = (jf.name || "").toLowerCase();
-                if (fn.includes("500") || fn.includes("years")) granja = "prueba agronex";
-                else if (fn.includes("recreo") || fn.includes("san justo") || fn.includes("omg") || fn.includes("funciona")) granja = "recreo agro";
-                else granja = "Granja Principal";
-            }
-            if (!farmsMap[granja]) farmsMap[granja] = [];
-            farmsMap[granja].push(jf);
-        });
-
-        // 2. Cada Granja de John Deere representa 1 Campo en AgroNex
-        const unifiedJd = Object.entries(farmsMap).map(([granjaName, farmFields]) => {
-            const existing = campos.find(c =>
-                c.nombre?.toLowerCase().trim() === granjaName.toLowerCase().trim() ||
-                (c.ubicacion && c.ubicacion.toLowerCase().includes(granjaName.toLowerCase().trim())) ||
-                (c.farmName && c.farmName.toLowerCase().trim() === granjaName.toLowerCase().trim())
-            );
-
-            const totalAreaVal = Number(farmFields.reduce((sum, f) => sum + calculateFieldAreaHa(f), 0).toFixed(2));
-
-            if (existing) {
-                const existingLotesCount = lotes.filter(l => l.idCampo === existing.idCampo).length;
-                return {
-                    ...existing,
-                    farmName: granjaName,
-                    isJohnDeere: true,
-                    jdFields: farmFields,
-                    cantidadLotes: existingLotesCount || farmFields.length,
-                    isOnlyJd: false
-                };
-            }
-
-            // Calcular centro estimado
-            let firstLat = -31.6310, firstLon = -60.6970;
-            for (const f of farmFields) {
-                const { allPoints } = extractPolygonsAndPoints(f);
-                if (allPoints && allPoints.length > 0) {
-                    firstLat = allPoints[0][0];
-                    firstLon = allPoints[0][1];
-                    break;
-                }
-            }
+        return (campos || []).map(c => {
+            const lotesDelCampo = lotes.filter(l => l.idCampo === c.idCampo);
+            const isJd = isJohnDeereCampo(c, lotes);
+            const supLotes = lotesDelCampo.reduce((sum, l) => sum + (parseFloat(l.superficie) || 0), 0);
+            const supTotal = (parseFloat(c.superficieTotal) > 0) ? parseFloat(c.superficieTotal) : supLotes;
 
             return {
-                idCampo: `jd-farm-${granjaName.replace(/\s+/g, '-').toLowerCase()}`,
-                nombre: granjaName,
-                ubicacion: `Granja: ${granjaName}`,
-                farmName: granjaName,
-                superficieTotal: totalAreaVal,
-                cantidadLotes: farmFields.length,
-                latitud: firstLat,
-                longitud: firstLon,
-                isJohnDeere: true,
-                jdFields: farmFields,
-                isOnlyJd: true
+                ...c,
+                superficieTotal: Number(supTotal.toFixed(2)),
+                cantidadLotes: lotesDelCampo.length,
+                isJohnDeere: isJd,
+                isOnlyJd: false
             };
         });
-
-        // 3. Campos locales registrados en AgroNex
-        const localCampos = campos
-            .filter(c => !unifiedJd.some(j => j.idCampo === c.idCampo || j.nombre?.toLowerCase().trim() === c.nombre?.toLowerCase().trim()))
-            .map(c => ({
-                ...c,
-                farmName: "Campos AgroNex",
-                isJohnDeere: isJohnDeereCampo(c, lotes)
-            }));
-
-        return [...unifiedJd, ...localCampos];
-    }, [campos, jdCampos, lotes, isJohnDeereCampo]);
+    }, [campos, lotes, isJohnDeereCampo]);
 
     const resolveCampoCenter = useCallback(async (campo) => {
         if (!campo) return null;
@@ -370,40 +312,20 @@ export default function CamposPage() {
             setCampos(cList);
             setLotes(lList);
 
-            const activeJd = options.jdCampos !== undefined ? options.jdCampos : jdCampos;
-            const farmsMap = {};
-            (activeJd || []).forEach(jf => {
-                let granja = jf.farmName;
-                if (!granja) {
-                    const fn = (jf.name || "").toLowerCase();
-                    if (fn.includes("500") || fn.includes("years")) granja = "prueba agronex";
-                    else if (fn.includes("recreo") || fn.includes("san justo") || fn.includes("omg") || fn.includes("funciona")) granja = "recreo agro";
-                    else granja = "Granja Principal";
-                }
-                if (!farmsMap[granja]) farmsMap[granja] = [];
-                farmsMap[granja].push(jf);
-            });
-
-            const unimportedFarms = Object.entries(farmsMap).filter(([granjaName]) => {
-                return !cList.some(c => 
-                    c.nombre?.toLowerCase().trim() === granjaName.toLowerCase().trim() ||
-                    (c.ubicacion && c.ubicacion.toLowerCase().includes(granjaName.toLowerCase().trim()))
-                );
-            });
-
-            const unimportedFarmsHa = unimportedFarms.reduce((sum, [, fields]) => {
-                return sum + fields.reduce((fSum, f) => fSum + calculateFieldAreaHa(f), 0);
+            const totalHa = cList.reduce((acc, val) => {
+                const sup = parseFloat(val.superficieTotal) || 0;
+                if (sup > 0) return acc + sup;
+                const campoLotes = lList.filter(l => l.idCampo === val.idCampo);
+                const lotesSum = campoLotes.reduce((sum, l) => sum + (parseFloat(l.superficie) || 0), 0);
+                return acc + lotesSum;
             }, 0);
-            const unimportedLotesCount = unimportedFarms.reduce((sum, [, fields]) => sum + fields.length, 0);
-
-            const totalHa = cList.reduce((acc, val) => acc + (parseFloat(val.superficieTotal) || 0), 0) + unimportedFarmsHa;
-            const lotesHa = lList.reduce((acc, val) => acc + (parseFloat(val.superficie) || 0), 0) + unimportedFarmsHa;
+            const lotesHa = lList.reduce((acc, val) => acc + (parseFloat(val.superficie) || 0), 0);
 
             setStats({
-                totalHa: totalHa,
-                camposActivos: cList.length + unimportedFarms.length,
-                lotesTotales: lList.length + unimportedLotesCount,
-                capacidadRatio: totalHa > 0 ? Math.round((lotesHa / totalHa) * 100) : 0
+                totalHa: Number(totalHa.toFixed(2)),
+                camposActivos: cList.length,
+                lotesTotales: lList.length,
+                capacidadRatio: totalHa > 0 ? Math.min(100, Math.round((lotesHa / totalHa) * 100)) : 0
             });
         } catch (err) {
             const status = err?.response?.status;
@@ -420,7 +342,7 @@ export default function CamposPage() {
         } finally {
             setLoading(false);
         }
-    }, [jdCampos]);
+    }, []);
 
     useEffect(() => {
         const init = async () => {
@@ -515,8 +437,11 @@ export default function CamposPage() {
             const ubicacionStr = `Granja: ${farmName}`;
             const loteSuperficie = Number((parseFloat(areaHa) || calculateFieldAreaHa(parsed) || 1).toFixed(2));
 
-            // 1. Buscar si ya existe un Campo con el nombre de la Granja en AgroNex
-            let targetCampo = campos.find(c => 
+            // Consultar lista fresca de campos para evitar duplicaciones
+            const freshCamposRes = await apiClient.get('/campos');
+            const currentCampos = freshCamposRes.data || [];
+
+            let targetCampo = currentCampos.find(c => 
                 c.nombre?.toLowerCase().trim() === farmName.toLowerCase().trim() ||
                 (c.ubicacion && c.ubicacion.toLowerCase().includes(farmName.toLowerCase().trim()))
             );
@@ -526,20 +451,21 @@ export default function CamposPage() {
                 const campoRes = await apiClient.post("/campos", {
                     nombre: farmName,
                     ubicacion: ubicacionStr,
-                    superficieTotal: Math.ceil(loteSuperficie * 1.5),
+                    superficieTotal: loteSuperficie,
                     latitud: centerLat,
                     longitud: centerLon
                 });
                 idCampo = campoRes.data?.idCampo;
             } else {
                 idCampo = targetCampo.idCampo;
-                const lotesDelCampo = lotes.filter(l => l.idCampo === idCampo);
+                const freshLotesRes = await apiClient.get('/lotes');
+                const lotesDelCampo = (freshLotesRes.data || []).filter(l => l.idCampo === idCampo);
                 const supOcupada = lotesDelCampo.reduce((sum, l) => sum + (parseFloat(l.superficie) || 0), 0);
-                if (supOcupada + loteSuperficie > parseFloat(targetCampo.superficieTotal)) {
+                if (supOcupada + loteSuperficie > parseFloat(targetCampo.superficieTotal || 0)) {
                     await apiClient.put(`/campos/${idCampo}`, {
                         nombre: targetCampo.nombre,
                         ubicacion: targetCampo.ubicacion,
-                        superficieTotal: Math.ceil(supOcupada + loteSuperficie * 1.2),
+                        superficieTotal: Number((supOcupada + loteSuperficie).toFixed(2)),
                         latitud: targetCampo.latitud || centerLat,
                         longitud: targetCampo.longitud || centerLon
                     });
@@ -547,12 +473,18 @@ export default function CamposPage() {
             }
 
             if (idCampo) {
-                await apiClient.post("/lotes", {
-                    nombre: fieldName,
-                    superficie: loteSuperficie,
-                    coordenadasGeoJson: geojsonStr,
-                    idCampo: idCampo
-                });
+                const freshLotesRes = await apiClient.get('/lotes');
+                const existingLote = (freshLotesRes.data || []).find(l => 
+                    l.idCampo === idCampo && l.nombre?.toLowerCase().trim() === fieldName.toLowerCase().trim()
+                );
+                if (!existingLote) {
+                    await apiClient.post("/lotes", {
+                        nombre: fieldName,
+                        superficie: loteSuperficie,
+                        coordenadasGeoJson: geojsonStr,
+                        idCampo: idCampo
+                    });
+                }
             }
 
             setSubmitSuccess(`¡Lote "${fieldName}" importado en el campo "${farmName}" con éxito!`);
@@ -576,7 +508,7 @@ export default function CamposPage() {
         setSubmitLoading(true);
         setSubmitError(null);
         try {
-            // Agrupar los campos por Granja (farmName)
+            // Agrupar los lotes por Granja (farmName)
             const farmGroups = {};
             for (const item of bulkItems) {
                 const parsed = JSON.parse(item.geojsonString);
@@ -591,7 +523,6 @@ export default function CamposPage() {
             }
 
             let totalLotesCount = 0;
-            let totalCamposCount = 0;
 
             for (const [farmName, items] of Object.entries(farmGroups)) {
                 const firstItemCoords = items[0].parsed.geometry?.coordinates?.[0] || [];
@@ -602,7 +533,10 @@ export default function CamposPage() {
                 }
                 const totalFarmHa = items.reduce((sum, it) => sum + it.areaHa, 0);
 
-                let targetCampo = campos.find(c => 
+                const freshCamposRes = await apiClient.get('/campos');
+                const currentCampos = freshCamposRes.data || [];
+
+                let targetCampo = currentCampos.find(c => 
                     c.nombre?.toLowerCase().trim() === farmName.toLowerCase().trim() ||
                     (c.ubicacion && c.ubicacion.toLowerCase().includes(farmName.toLowerCase().trim()))
                 );
@@ -612,21 +546,21 @@ export default function CamposPage() {
                     const campoRes = await apiClient.post("/campos", {
                         nombre: farmName,
                         ubicacion: `Granja: ${farmName}`,
-                        superficieTotal: Math.ceil(totalFarmHa * 1.2),
+                        superficieTotal: Number(totalFarmHa.toFixed(2)),
                         latitud: centerLat,
                         longitud: centerLon
                     });
                     idCampo = campoRes.data?.idCampo;
-                    totalCamposCount++;
                 } else {
                     idCampo = targetCampo.idCampo;
-                    const lotesDelCampo = lotes.filter(l => l.idCampo === idCampo);
+                    const freshLotesRes = await apiClient.get('/lotes');
+                    const lotesDelCampo = (freshLotesRes.data || []).filter(l => l.idCampo === idCampo);
                     const supOcupada = lotesDelCampo.reduce((sum, l) => sum + (parseFloat(l.superficie) || 0), 0);
-                    if (supOcupada + totalFarmHa > parseFloat(targetCampo.superficieTotal)) {
+                    if (supOcupada + totalFarmHa > parseFloat(targetCampo.superficieTotal || 0)) {
                         await apiClient.put(`/campos/${idCampo}`, {
                             nombre: targetCampo.nombre,
                             ubicacion: targetCampo.ubicacion,
-                            superficieTotal: Math.ceil(supOcupada + totalFarmHa * 1.2),
+                            superficieTotal: Number((supOcupada + totalFarmHa).toFixed(2)),
                             latitud: targetCampo.latitud || centerLat,
                             longitud: targetCampo.longitud || centerLon
                         });
@@ -634,14 +568,19 @@ export default function CamposPage() {
                 }
 
                 if (idCampo) {
+                    const freshLotesRes = await apiClient.get('/lotes');
+                    const existingLotes = (freshLotesRes.data || []).filter(l => l.idCampo === idCampo);
                     for (const it of items) {
-                        await apiClient.post("/lotes", {
-                            nombre: it.fieldName,
-                            superficie: it.areaHa,
-                            coordenadasGeoJson: it.geojsonString,
-                            idCampo: idCampo
-                        });
-                        totalLotesCount++;
+                        const exists = existingLotes.some(l => l.nombre?.toLowerCase().trim() === it.fieldName.toLowerCase().trim());
+                        if (!exists) {
+                            await apiClient.post("/lotes", {
+                                nombre: it.fieldName,
+                                superficie: it.areaHa,
+                                coordenadasGeoJson: it.geojsonString,
+                                idCampo: idCampo
+                            });
+                            totalLotesCount++;
+                        }
                     }
                 }
             }
