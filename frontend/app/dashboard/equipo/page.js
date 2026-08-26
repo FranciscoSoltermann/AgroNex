@@ -298,7 +298,7 @@ export default function EquipoPage() {
                                     Enviar Invitación de Equipo
                                 </h2>
                                 <p className="text-[12px] text-gray-500 mt-1 mb-5 leading-relaxed">
-                                    Ingresá el correo de un usuario registrado en AgroNex. Recibirá una invitación que podrá aceptar o rechazar desde su panel.
+                                    Ingresá el correo de un colaborador registrado con cuenta de tipo <strong>Empleado</strong> en AgroNex. Las cuentas de tipo Propietario no pueden ser agregadas ya que administran sus propios campos.
                                 </p>
 
                                 <form onSubmit={handleAsignar} className="space-y-5">

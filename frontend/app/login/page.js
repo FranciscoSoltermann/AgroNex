@@ -322,62 +322,24 @@ export default function AuthPage() {
 
         setLoading(true);
         setError(null);
+        setOtpError("");
         try {
-            // Registro directo sin verificación por email (pendiente integrar servicio de mail)
-            console.log("[AgroNex Registro] Registrando usuario en Supabase...");
-            
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: email.trim(),
-                password
-            });
+            console.log("[AgroNex Registro] Enviando código de verificación al correo...");
+            const codigoPayload = tipoUsuario === "FISICA"
+                ? { email: email.trim(), dni: dni.trim() }
+                : { email: email.trim(), cuit: cuit.trim() };
 
-            let session = authData?.session;
+            await apiClient.post("/public/auth/registro/enviar-codigo", codigoPayload);
 
-            if (authError) {
-                if (!isUserAlreadyRegisteredError(authError)) {
-                    throw authError;
-                }
-                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-                    email: email.trim(),
-                    password,
-                });
-                if (signInErr) throw signInErr;
-                session = signInData?.session;
-            }
-
-            if (!session?.access_token) {
-                const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
-                    email: email.trim(),
-                    password,
-                });
-                if (signInErr) throw new Error("No se pudo obtener sesión activa. Iniciá sesión con tus credenciales.");
-                session = signInData?.session;
-            }
-
-            console.log("[AgroNex Registro] Verificando si ya posee perfil registrado...");
-            const registroEstado = await apiClient.get("/usuarios/me/check");
-            if (registroEstado?.data?.registrado === true) {
-                router.push("/dashboard");
-                return;
-            }
-
-            const url = tipoUsuario === "FISICA" ? `/public/auth/registro/fisica` : `/public/auth/registro/juridica`;
-            const payload = tipoUsuario === "FISICA"
-                ? { email: email.trim(), nombre: nombre.trim(), apellido: apellido.trim(), dni: dni.trim(), rol: rolRegistro }
-                : { email: email.trim(), razonSocial: razonSocial.trim(), cuit: cuit.trim(), rol: rolRegistro };
-
-            console.log("[AgroNex Registro] Registrando datos de perfil...");
-            await apiClient.post(url, payload, {
-                headers: { Authorization: `Bearer ${session.access_token}` },
-            });
-
-            router.push("/dashboard");
+            // Abrir modal de verificación OTP
+            setShowOtpChallenge(true);
+            setOtpCode("");
         } catch (err) {
             console.error("[AgroNex Registro] ERROR:", err);
             if (err?.message === "Network Error" || err?.code === "ERR_NETWORK") {
                 setError("No se pudo conectar con el servidor. Verificá que el backend esté corriendo en localhost:8080.");
             } else {
-                setError(resolveAuthError(err));
+                setError(resolveAuthError(err, "No se pudo enviar el código de verificación al correo."));
             }
         } finally {
             setLoading(false);
@@ -788,26 +750,30 @@ export default function AuthPage() {
 
                 {/* ── OTP Challenge Overlay ── */}
                 {showOtpChallenge && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 safe-area-bottom">
-                        <div className="bg-white rounded-[2rem] p-6 sm:p-8 w-full max-w-sm shadow-2xl border border-gray-100 animate-in fade-in zoom-in duration-300">
-                            <div className="flex items-center gap-3 mb-5">
-                                <div className="w-10 h-10 bg-[#2D6A4F] rounded-xl flex items-center justify-center shrink-0">
-                                    <Mail size={20} className="text-white" />
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 safe-area-bottom">
+                        <div className="bg-white dark:bg-[#1a211e] rounded-[2rem] p-6 sm:p-8 w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in duration-300">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-11 h-11 bg-[#2D6A4F] rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-[#2D6A4F]/20">
+                                    <Mail size={22} className="text-white" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-black text-gray-900">Verificá tu correo</h3>
-                                    <p className="text-[11px] text-gray-500 font-medium">Ingresá el código numérico</p>
+                                    <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">Verificá tu correo</h3>
+                                    <p className="text-[11px] text-gray-500 font-medium">Confirmación en 2 pasos</p>
                                 </div>
                             </div>
+
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mb-4 leading-relaxed">
+                                Enviamos un código numérico de 6 dígitos a <strong className="text-gray-900 dark:text-white font-bold">{email}</strong>. Ingresalo para activar tu cuenta:
+                            </p>
 
                             <input
                                 type="text"
                                 inputMode="numeric"
-                                maxLength={8}
+                                maxLength={6}
                                 value={otpCode}
-                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
-                                placeholder="00000000"
-                                className="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl px-4 py-4 text-center text-2xl font-black text-gray-900 tracking-[0.3em] focus:border-[#2D6A4F] outline-none transition-all mb-4"
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                                placeholder="000000"
+                                className="w-full bg-gray-50 dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-4 text-center text-3xl font-black text-gray-900 dark:text-white tracking-[0.3em] focus:border-[#2D6A4F] outline-none transition-all mb-4"
                                 autoFocus
                                 autoComplete="one-time-code"
                                 onKeyDown={(e) => { if (e.key === "Enter") handleOtpVerify(); }}
@@ -820,16 +786,16 @@ export default function AuthPage() {
                             <button
                                 onClick={handleOtpVerify}
                                 disabled={otpCode.length < 6 || otpVerifying}
-                                className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                className="w-full bg-[#2D6A4F] hover:bg-[#1B4332] text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#2D6A4F]/20"
                             >
                                 {otpVerifying ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-                                Verificar Código
+                                Verificar y Crear Cuenta
                             </button>
 
                             <button
                                 onClick={handleResendOtp}
                                 disabled={otpVerifying}
-                                className="w-full mt-3 text-gray-500 py-2 text-[11px] font-bold uppercase tracking-widest hover:text-[#2D6A4F] transition-colors"
+                                className="w-full mt-3 text-gray-500 dark:text-gray-400 py-2 text-[11px] font-bold uppercase tracking-widest hover:text-[#2D6A4F] transition-colors"
                             >
                                 Reenviar código
                             </button>

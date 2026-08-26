@@ -51,8 +51,17 @@ public class InvitacionEquipoService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No podés enviarte una invitación a vos mismo.");
         }
 
+        if (invitado.getRol() == RolUsuario.PROPIETARIO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No podés invitar a un usuario con cuenta de tipo PROPIETARIO ya que administra su propio campo. Solo las cuentas registradas como EMPLEADO pueden unirse al equipo.");
+        }
+
         if (invitado.getRol() == RolUsuario.ADMIN) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No se puede invitar a un administrador como colaborador.");
+        }
+
+        if (invitado.getRol() != RolUsuario.EMPLEADO) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo las cuentas registradas como EMPLEADO pueden unirse a un equipo.");
         }
 
         if (invitado.getRol() == RolUsuario.EMPLEADO && idPropietario.equals(invitado.getIdPropietario())) {

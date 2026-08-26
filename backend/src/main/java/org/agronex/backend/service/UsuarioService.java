@@ -136,13 +136,21 @@ public class UsuarioService {
         Usuario empleado = usuarioRepository.findByEmailIgnoreCase(emailNormalizado)
                 .orElseThrow(() -> new EntityNotFoundException(
                         "El empleado no existe en AgroNex. Debe registrarse primero."));
-
         if (empleado.getIdUsuario().equals(idPropietario)) {
             throw new ResponseStatusException(BAD_REQUEST, "No puede asignarse a sí mismo como empleado.");
         }
 
+        if (empleado.getRol() == RolUsuario.PROPIETARIO) {
+            throw new ResponseStatusException(BAD_REQUEST,
+                    "No podés asignar a un usuario con cuenta de tipo PROPIETARIO ya que administra su propio campo. Solo las cuentas registradas como EMPLEADO pueden unirse al equipo.");
+        }
+
         if (empleado.getRol() == RolUsuario.ADMIN) {
             throw new ResponseStatusException(BAD_REQUEST, "No se puede reasignar un ADMIN como empleado.");
+        }
+
+        if (empleado.getRol() != RolUsuario.EMPLEADO) {
+            throw new ResponseStatusException(BAD_REQUEST, "Solo las cuentas registradas como EMPLEADO pueden unirse a un equipo de trabajo.");
         }
 
         empleado.setRol(RolUsuario.EMPLEADO);
@@ -198,14 +206,14 @@ public class UsuarioService {
             String tipoPersona;
 
             if (emp instanceof PersonaFisica pf) {
-                tipoPersona = "FISICA";
                 nombre = pf.getNombre();
                 apellido = pf.getApellido();
+                tipoPersona = "FISICA";
             } else if (emp instanceof PersonaJuridica pj) {
-                tipoPersona = "JURIDICA";
                 razonSocial = pj.getRazonSocial();
+                tipoPersona = "JURIDICA";
             } else {
-                tipoPersona = "USUARIO";
+                tipoPersona = "DESCONOCIDO";
             }
 
             return EmpleadoResponse.builder()
@@ -225,7 +233,7 @@ public class UsuarioService {
     }
 
     /**
-     * Desvincula un empleado, revirtiendo su rol a PROPIETARIO.
+     * Desvincula un empleado de la cuenta del propietario.
      */
     @Transactional
     public void desvincularEmpleado(UUID idPropietario, UUID idEmpleado) {
@@ -236,7 +244,6 @@ public class UsuarioService {
             throw new ResponseStatusException(BAD_REQUEST, "Este usuario no es un empleado asignado a tu cuenta.");
         }
 
-        empleado.setRol(RolUsuario.PROPIETARIO);
         empleado.setIdPropietario(null);
         empleado.setRolOperativo(null);
         if (empleado.getPermisos() != null) {
@@ -245,4 +252,3 @@ public class UsuarioService {
         usuarioRepository.save(empleado);
     }
 }
-

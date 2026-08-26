@@ -574,10 +574,109 @@ public class JohnDeereMachineService {
             if (resolvedFarmId != null && !resolvedFarmId.isBlank() && !"null".equalsIgnoreCase(resolvedFarmId)) {
                 field.put("farmId", resolvedFarmId);
             }
+
+            // 5. Extraer o calcular la superficie real en hectáreas (Ha)
+            double calculatedHa = extractOrCalculateFieldAreaHa(field);
+            if (calculatedHa > 0.0) {
+                field.put("area", Map.of("value", calculatedHa, "unit", "ha", "unitId", "ha"));
+                field.put("areaHa", calculatedHa);
+            }
         }
 
-        log.info("JD: {} campos encontrados y procesados con boundaries y granjas para org {}", fields.size(), orgId);
+        log.info("JD: {} campos encontrados y procesados con boundaries, áreas reales y granjas para org {}", fields.size(), orgId);
         return fields;
+    }
+
+    /**
+     * Extrae o calcula el área real en hectáreas de un campo o boundary de John Deere.
+     */
+    private double extractOrCalculateFieldAreaHa(Map<String, Object> field) {
+        // 1. Si ya tiene campo 'area' en la raíz
+        if (field.containsKey("area") && field.get("area") instanceof Map<?, ?> areaMap) {
+            double parsed = parseAreaValueToHa(areaMap);
+            if (parsed > 0.0) return parsed;
+        }
+
+        // 2. Buscar en boundaries o activeBoundary
+        if (field.containsKey("boundaries") && field.get("boundaries") instanceof List<?> bList) {
+            for (Object bObj : bList) {
+                if (bObj instanceof Map<?, ?> bMap) {
+                    // Si el boundary tiene 'area'
+                    if (bMap.containsKey("area") && bMap.get("area") instanceof Map<?, ?> areaMap) {
+                        double parsed = parseAreaValueToHa(areaMap);
+                        if (parsed > 0.0) return parsed;
+                    }
+                    // Si no tiene 'area', calcular a partir de los puntos del multipolygon
+                    if (bMap.containsKey("multipolygons") && bMap.get("multipolygons") instanceof List<?> mpList) {
+                        double totalMpArea = 0.0;
+                        for (Object mpObj : mpList) {
+                            if (mpObj instanceof Map<?, ?> mpMap && mpMap.containsKey("rings") && mpMap.get("rings") instanceof List<?> ringsList) {
+                                for (Object ringObj : ringsList) {
+                                    if (ringObj instanceof Map<?, ?> ringMap && ringMap.containsKey("points") && ringMap.get("points") instanceof List<?> ptsList) {
+                                        List<double[]> points = new ArrayList<>();
+                                        for (Object ptObj : ptsList) {
+                                            if (ptObj instanceof Map<?, ?> ptMap) {
+                                                Object latObj = ptMap.get("lat") != null ? ptMap.get("lat") : ptMap.get("latitude");
+                                                Object lonObj = ptMap.get("lon") != null ? ptMap.get("lon") : ptMap.get("longitude");
+                                                if (latObj != null && lonObj != null) {
+                                                    try {
+                                                        points.add(new double[]{Double.parseDouble(String.valueOf(latObj)), Double.parseDouble(String.valueOf(lonObj))});
+                                                    } catch (Exception ignored) {}
+                                                }
+                                            }
+                                        }
+                                        if (points.size() >= 3) {
+                                            totalMpArea += calculatePolygonAreaHa(points);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (totalMpArea > 0.0) {
+                            return Math.round(totalMpArea * 100.0) / 100.0;
+                        }
+                    }
+                }
+            }
+        }
+
+        return 0.0;
+    }
+
+    private double parseAreaValueToHa(Map<?, ?> areaMap) {
+        Object valObj = areaMap.get("value");
+        Object unitObj = areaMap.get("unit") != null ? areaMap.get("unit") : areaMap.get("unitId");
+        if (valObj != null) {
+            try {
+                double val = Double.parseDouble(String.valueOf(valObj));
+                String unit = unitObj != null ? String.valueOf(unitObj).toLowerCase() : "ha";
+                if (unit.startsWith("ac")) return Math.round((val * 0.404686) * 100.0) / 100.0;
+                if (unit.contains("sqm") || unit.contains("m2") || unit.contains("squaremeters")) return Math.round((val / 10000.0) * 100.0) / 100.0;
+                return Math.round(val * 100.0) / 100.0;
+            } catch (Exception ignored) {}
+        }
+        return 0.0;
+    }
+
+    /**
+     * Calcula el área geodésica en hectáreas de un anillo de polígono cerrado en la Tierra (WGS84).
+     */
+    private double calculatePolygonAreaHa(List<double[]> points) {
+        if (points == null || points.size() < 3) return 0.0;
+        double total = 0.0;
+        double R = 6378137.0; // Radio de la Tierra en metros (WGS84)
+        int n = points.size();
+        for (int i = 0; i < n; i++) {
+            double[] p1 = points.get(i);
+            double[] p2 = points.get((i + 1) % n);
+            double lat1 = Math.toRadians(p1[0]);
+            double lon1 = Math.toRadians(p1[1]);
+            double lat2 = Math.toRadians(p2[0]);
+            double lon2 = Math.toRadians(p2[1]);
+            total += (lon2 - lon1) * (2.0 + Math.sin(lat1) + Math.sin(lat2));
+        }
+        double areaSqMeters = Math.abs(total * R * R / 2.0);
+        return areaSqMeters / 10000.0; // metros cuadrados a hectáreas
     }
 
     /**

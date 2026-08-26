@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
+import * as turf from "@turf/turf";
 import dynamic from "next/dynamic";
 const LoteDrawer = dynamic(() => import('@/components/features/dashboard/campos/LoteDrawer'), { ssr: false });
 const ShapefileUploader = dynamic(() => import('@/components/features/dashboard/campos/ShapefileUploader'), { ssr: false });
@@ -123,6 +124,75 @@ function extractPolygonsAndPoints(field) {
     return { parsedPolygons, allPoints };
 }
 
+/**
+ * Extrae o calcula la superficie REAL en hectáreas de un campo o lote de John Deere.
+ */
+function calculateFieldAreaHa(field) {
+    if (!field) return 0;
+
+    // 1. Verificar si viene en field.areaHa directo
+    if (field.areaHa && !isNaN(Number(field.areaHa)) && Number(field.areaHa) > 0) {
+        return Number(Number(field.areaHa).toFixed(2));
+    }
+
+    // 2. Verificar si viene en field.area
+    if (field.area) {
+        const val = typeof field.area === 'object' ? parseFloat(field.area.value) : parseFloat(field.area);
+        const unit = (typeof field.area === 'object' && (field.area.unit || field.area.unitId)) ? String(field.area.unit || field.area.unitId).toLowerCase() : 'ha';
+        if (!isNaN(val) && val > 0) {
+            if (unit.startsWith('ac')) return Number((val * 0.404686).toFixed(2));
+            if (unit.includes('sqm') || unit.includes('m2') || unit.includes('squaremeters')) return Number((val / 10000).toFixed(2));
+            return Number(val.toFixed(2));
+        }
+    }
+
+    // 3. Verificar si viene en field.boundaries o field.activeBoundary
+    const rawBoundaries = field.boundaries 
+        ? (Array.isArray(field.boundaries) ? field.boundaries : [field.boundaries])
+        : (field.boundary ? [field.boundary] : (field.activeBoundary ? [field.activeBoundary] : []));
+
+    for (const b of rawBoundaries) {
+        if (b && b.area) {
+            const val = typeof b.area === 'object' ? parseFloat(b.area.value) : parseFloat(b.area);
+            const unit = (typeof b.area === 'object' && (b.area.unit || b.area.unitId)) ? String(b.area.unit || b.area.unitId).toLowerCase() : 'ha';
+            if (!isNaN(val) && val > 0) {
+                if (unit.startsWith('ac')) return Number((val * 0.404686).toFixed(2));
+                if (unit.includes('sqm') || unit.includes('m2') || unit.includes('squaremeters')) return Number((val / 10000).toFixed(2));
+                return Number(val.toFixed(2));
+            }
+        }
+    }
+
+    // 4. Si no viene en metadatos, calcular el área geodésica real a partir de las coordenadas del polígono GPS
+    const { parsedPolygons } = extractPolygonsAndPoints(field);
+    if (parsedPolygons && parsedPolygons.length > 0) {
+        try {
+            let totalHa = 0;
+            parsedPolygons.forEach(poly => {
+                const coords = poly.map(([lat, lon]) => [lon, lat]);
+                if (coords.length > 2) {
+                    const first = coords[0];
+                    const last = coords[coords.length - 1];
+                    if (first[0] !== last[0] || first[1] !== last[1]) {
+                        coords.push([...first]);
+                    }
+                    if (coords.length >= 4) {
+                        const feat = turf.polygon([coords]);
+                        totalHa += turf.area(feat) / 10000;
+                    }
+                }
+            });
+            if (totalHa > 0) {
+                return Number(totalHa.toFixed(2));
+            }
+        } catch (e) {
+            console.warn("No se pudo calcular área geodésica con turf:", e);
+        }
+    }
+
+    return 0;
+}
+
 function isJohnDeereLote(lote) {
     if (!lote) return false;
     if (lote.idPoligonoAgro && String(lote.idPoligonoAgro).startsWith("jd-")) return true;
@@ -149,6 +219,8 @@ export default function CamposPage() {
     const [campoDetalle, setCampoDetalle] = useState(null);
     const [lotesDelCampo, setLotesDelCampo] = useState([]);
     const [loadingLotes, setLoadingLotes] = useState(false);
+    const [selectedDetalleLoteId, setSelectedDetalleLoteId] = useState(null);
+    const [isMapExpanded, setIsMapExpanded] = useState(false);
 
     // Modal gestionar lotes
     const [showGestionLotes, setShowGestionLotes] = useState(null);
@@ -213,7 +285,7 @@ export default function CamposPage() {
                 (c.farmName && c.farmName.toLowerCase().trim() === granjaName.toLowerCase().trim())
             );
 
-            const totalAreaVal = farmFields.reduce((sum, f) => sum + (f.area?.value ? parseFloat(f.area.value) : 10), 0);
+            const totalAreaVal = Number(farmFields.reduce((sum, f) => sum + calculateFieldAreaHa(f), 0).toFixed(2));
 
             if (existing) {
                 const existingLotesCount = lotes.filter(l => l.idCampo === existing.idCampo).length;
@@ -320,7 +392,7 @@ export default function CamposPage() {
             });
 
             const unimportedFarmsHa = unimportedFarms.reduce((sum, [, fields]) => {
-                return sum + fields.reduce((fSum, f) => fSum + (f.area?.value ? parseFloat(f.area.value) : 10), 0);
+                return sum + fields.reduce((fSum, f) => fSum + calculateFieldAreaHa(f), 0);
             }, 0);
             const unimportedLotesCount = unimportedFarms.reduce((sum, [, fields]) => sum + fields.length, 0);
 
@@ -441,7 +513,7 @@ export default function CamposPage() {
             const fieldName = parsed.properties?.name || "Lote John Deere";
             const farmName = parsed.properties?.farmName || "Granja John Deere";
             const ubicacionStr = `Granja: ${farmName}`;
-            const loteSuperficie = parseFloat(areaHa) || 10;
+            const loteSuperficie = Number((parseFloat(areaHa) || calculateFieldAreaHa(parsed) || 1).toFixed(2));
 
             // 1. Buscar si ya existe un Campo con el nombre de la Granja en AgroNex
             let targetCampo = campos.find(c => 
@@ -514,7 +586,7 @@ export default function CamposPage() {
                     ...item,
                     parsed,
                     fieldName: item.name || parsed.properties?.name || "Lote John Deere",
-                    areaHa: parseFloat(item.areaHa) || 10
+                    areaHa: Number((parseFloat(item.areaHa) || calculateFieldAreaHa(item) || calculateFieldAreaHa(parsed) || 1).toFixed(2))
                 });
             }
 
@@ -795,7 +867,7 @@ export default function CamposPage() {
                 syntheticLotes.push({
                     idLote: `jd-lote-${f.id || idx}`,
                     nombre: f.name || `Lote #${idx + 1}`,
-                    superficie: f.area?.value ? parseFloat(f.area.value) : 10,
+                    superficie: calculateFieldAreaHa(f) || 1,
                     idCampo: campo.idCampo,
                     coordenadasGeoJson: geoJsonObj ? JSON.stringify(geoJsonObj) : null
                 });
@@ -848,10 +920,11 @@ export default function CamposPage() {
 
         try {
             toast.info(`Sincronizando granja ${campo.nombre} con AgroNex...`);
+            const totalArea = Number((campo.jdFields || []).reduce((sum, f) => sum + calculateFieldAreaHa(f), 0).toFixed(2));
             const createdRes = await apiClient.post("/campos", {
                 nombre: campo.nombre,
                 ubicacion: campo.ubicacion || `Granja: ${campo.farmName || campo.nombre}`,
-                superficieTotal: parseFloat(campo.superficieTotal) || 10,
+                superficieTotal: totalArea || parseFloat(campo.superficieTotal) || 1,
                 latitud: campo.latitud || -31.63,
                 longitud: campo.longitud || -60.70
             });
@@ -871,7 +944,7 @@ export default function CamposPage() {
                             properties: { source: "john-deere", provider: "Operations Center", name: field.name }
                         };
                     }
-                    const areaHa = field.area?.value ? parseFloat(field.area.value) : 10;
+                    const areaHa = calculateFieldAreaHa(field) || 1;
                     await apiClient.post("/lotes", {
                         nombre: field.name || `Lote ${field.id}`,
                         superficie: areaHa,
@@ -1468,14 +1541,19 @@ export default function CamposPage() {
                                 )}
                             </div>
                         }
-                        onClose={() => setCampoDetalle(null)}
+                        onClose={() => {
+                            setCampoDetalle(null);
+                            setSelectedDetalleLoteId(null);
+                            setIsMapExpanded(false);
+                        }}
                     >
                         <div className="space-y-4">
                             {campoDetalle.ubicacion && (
                                 <p className="text-[11px] text-gray-400 flex items-center gap-1"><MapPin size={11} />{campoDetalle.ubicacion}</p>
                             )}
-                            {/* Map */}
-                            <div className="h-[220px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+
+                            {/* Map Container */}
+                            <div className="h-[240px] sm:h-[260px] rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 relative shadow-inner">
                                 {!loadingLotes ? (
                                     <CampoLoteMapViewer
                                         center={[
@@ -1483,13 +1561,19 @@ export default function CamposPage() {
                                             parseFloat(campoDetalle.longitud) || -60.6970
                                         ]}
                                         lotes={lotesDelCampo}
+                                        selectedLoteId={selectedDetalleLoteId}
+                                        onSelectLote={(lote) => setSelectedDetalleLoteId(lote ? (selectedDetalleLoteId === lote.idLote ? null : lote.idLote) : null)}
+                                        campoNombre={campoDetalle.nombre}
+                                        campoSuperficie={campoDetalle.superficieTotal}
+                                        isJohnDeere={lotesDelCampo.some(isJohnDeereLote) || (campoDetalle.ubicacion && (campoDetalle.ubicacion.toLowerCase().includes("operations center") || campoDetalle.ubicacion.toLowerCase().includes("john deere")))}
                                     />
                                 ) : (
                                     <div className="h-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 text-sm gap-2">
-                                        <Loader2 size={20} className="animate-spin" /> Cargando mapa...
+                                        <Loader2 size={20} className="animate-spin" /> Cargando mapa satelital...
                                     </div>
                                 )}
                             </div>
+
                             {/* Totals */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 border border-green-100 dark:border-green-800">
@@ -1501,27 +1585,55 @@ export default function CamposPage() {
                                     <p className="text-xl font-black text-blue-700 dark:text-blue-400">{campoDetalle.cantidadLotes || 0}</p>
                                 </div>
                             </div>
-                            {/* Lotes list */}
+
+                            {/* Lotes list with Interactive Click-to-Focus */}
                             {loadingLotes ? (
                                 <div className="flex justify-center p-4"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
                             ) : lotesDelCampo.length === 0 ? (
                                 <p className="text-[12px] text-gray-400 text-center py-3">No hay lotes registrados en este campo.</p>
                             ) : (
                                 <div className="space-y-2">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hectáreas por lote</p>
-                                    {lotesDelCampo.map(lote => (
-                                        <div key={lote.idLote} className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2.5 border border-gray-100 dark:border-gray-700">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                                <span className="text-[12px] font-bold text-gray-700 dark:text-gray-200 truncate">{lote.nombre}</span>
-                                                {isJohnDeereLote(lote) && (
-                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#367C2B]/10 text-[#367C2B] dark:bg-[#367C2B]/20 dark:text-green-400 text-[9px] font-bold border border-[#367C2B]/20 shrink-0">
-                                                        Operations Center
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hectáreas por lote</p>
+                                        <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Hacé clic para enfocar en el mapa</span>
+                                    </div>
+                                    <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-0.5">
+                                        {lotesDelCampo.map(lote => {
+                                            const isSelected = selectedDetalleLoteId === lote.idLote;
+                                            return (
+                                                <button
+                                                    key={lote.idLote}
+                                                    type="button"
+                                                    onClick={() => setSelectedDetalleLoteId(prev => prev === lote.idLote ? null : lote.idLote)}
+                                                    className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 border transition-all text-left group ${
+                                                        isSelected
+                                                            ? 'bg-green-50/90 dark:bg-green-900/40 border-[#2D6A4F] ring-2 ring-[#2D6A4F]/30 shadow-sm'
+                                                            : 'bg-gray-50 dark:bg-gray-800/80 border-gray-100 dark:border-gray-700/80 hover:border-[#2D6A4F]/50 hover:bg-gray-100/80 dark:hover:bg-gray-800'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform ${isSelected ? 'bg-amber-400 ring-2 ring-amber-400/50 scale-110' : 'bg-emerald-500'}`} />
+                                                        <span className={`text-[12px] font-bold truncate ${isSelected ? 'text-green-900 dark:text-green-200' : 'text-gray-700 dark:text-gray-200 group-hover:text-green-800 dark:group-hover:text-green-300'}`}>
+                                                            {lote.nombre}
+                                                        </span>
+                                                        {isJohnDeereLote(lote) && (
+                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#367C2B]/10 text-[#367C2B] dark:bg-[#367C2B]/20 dark:text-green-400 text-[9px] font-bold border border-[#367C2B]/20 shrink-0">
+                                                                Operations Center
+                                                            </span>
+                                                        )}
+                                                        {isSelected && (
+                                                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[9px] font-black border border-amber-500/20 shrink-0 animate-pulse">
+                                                                📍 Enfocado
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[12px] font-black text-[#2D6A4F] dark:text-green-400 shrink-0 ml-2">
+                                                        {Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha
                                                     </span>
-                                                )}
-                                            </div>
-                                            <span className="text-[12px] font-black text-[#2D6A4F] shrink-0">{Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</span>
-                                        </div>
-                                    ))}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             )}
 

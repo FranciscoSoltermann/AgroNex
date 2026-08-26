@@ -95,7 +95,7 @@ class UsuarioServiceTest {
         Usuario empleado = new org.agronex.backend.entity.PersonaFisica();
         empleado.setIdUsuario(UUID.randomUUID());
         empleado.setEmail("empleado@test.com");
-        empleado.setRol(RolUsuario.PROPIETARIO);
+        empleado.setRol(RolUsuario.EMPLEADO);
 
         AsignarEmpleadoRequest request = new AsignarEmpleadoRequest();
         request.setEmail("empleado@test.com");
@@ -110,6 +110,31 @@ class UsuarioServiceTest {
         assertEquals(RolUsuario.EMPLEADO, empleado.getRol());
         assertEquals(idPropietario, empleado.getIdPropietario());
         verify(usuarioRepository).save(empleado);
+    }
+
+    @Test
+    @DisplayName("asignarEmpleado - Lanza excepcion si el usuario objetivo es PROPIETARIO")
+    void asignarEmpleado_lanzaExcepcionSiEsPropietario() {
+        // Arrange
+        UUID idPropietario = UUID.randomUUID();
+        Usuario propietario = new org.agronex.backend.entity.PersonaFisica();
+        propietario.setIdUsuario(idPropietario);
+        propietario.setRol(RolUsuario.PROPIETARIO);
+
+        Usuario otroPropietario = new org.agronex.backend.entity.PersonaFisica();
+        otroPropietario.setIdUsuario(UUID.randomUUID());
+        otroPropietario.setEmail("otro@test.com");
+        otroPropietario.setRol(RolUsuario.PROPIETARIO);
+
+        AsignarEmpleadoRequest request = new AsignarEmpleadoRequest();
+        request.setEmail("otro@test.com");
+
+        when(usuarioRepository.findById(idPropietario)).thenReturn(Optional.of(propietario));
+        when(usuarioRepository.findByEmailIgnoreCase("otro@test.com")).thenReturn(Optional.of(otroPropietario));
+
+        // Act & Assert
+        assertThrows(ResponseStatusException.class, () -> usuarioService.asignarEmpleado(idPropietario, request));
+        verify(usuarioRepository, never()).save(any());
     }
 
     @Test
@@ -150,7 +175,7 @@ class UsuarioServiceTest {
         assertDoesNotThrow(() -> usuarioService.desvincularEmpleado(idPropietario, idEmpleado));
 
         // Assert
-        assertEquals(RolUsuario.PROPIETARIO, empleado.getRol());
+        assertEquals(RolUsuario.EMPLEADO, empleado.getRol());
         assertNull(empleado.getIdPropietario());
         verify(usuarioRepository).save(empleado);
     }

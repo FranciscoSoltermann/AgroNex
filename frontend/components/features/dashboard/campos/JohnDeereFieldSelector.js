@@ -149,6 +149,60 @@ function jdBoundariesToGeoJson(field) {
     };
 }
 
+/**
+ * Extrae o calcula la superficie REAL en hectáreas de un campo de John Deere.
+ */
+function calculateFieldAreaHa(field) {
+    if (!field) return 0;
+
+    // 1. Verificar si viene en field.areaHa directo
+    if (field.areaHa && !isNaN(Number(field.areaHa)) && Number(field.areaHa) > 0) {
+        return Number(Number(field.areaHa).toFixed(2));
+    }
+
+    // 2. Verificar si viene en field.area
+    if (field.area) {
+        const val = typeof field.area === 'object' ? parseFloat(field.area.value) : parseFloat(field.area);
+        const unit = (typeof field.area === 'object' && (field.area.unit || field.area.unitId)) ? String(field.area.unit || field.area.unitId).toLowerCase() : 'ha';
+        if (!isNaN(val) && val > 0) {
+            if (unit.startsWith('ac')) return Number((val * 0.404686).toFixed(2));
+            if (unit.includes('sqm') || unit.includes('m2') || unit.includes('squaremeters')) return Number((val / 10000).toFixed(2));
+            return Number(val.toFixed(2));
+        }
+    }
+
+    // 3. Verificar si viene en field.boundaries o field.activeBoundary
+    const rawBoundaries = field.boundaries 
+        ? (Array.isArray(field.boundaries) ? field.boundaries : [field.boundaries])
+        : (field.boundary ? [field.boundary] : (field.activeBoundary ? [field.activeBoundary] : []));
+
+    for (const b of rawBoundaries) {
+        if (b && b.area) {
+            const val = typeof b.area === 'object' ? parseFloat(b.area.value) : parseFloat(b.area);
+            const unit = (typeof b.area === 'object' && (b.area.unit || b.area.unitId)) ? String(b.area.unit || b.area.unitId).toLowerCase() : 'ha';
+            if (!isNaN(val) && val > 0) {
+                if (unit.startsWith('ac')) return Number((val * 0.404686).toFixed(2));
+                if (unit.includes('sqm') || unit.includes('m2') || unit.includes('squaremeters')) return Number((val / 10000).toFixed(2));
+                return Number(val.toFixed(2));
+            }
+        }
+    }
+
+    // 4. Calcular con GeoJSON y Turf
+    const geojson = jdBoundariesToGeoJson(field);
+    if (geojson) {
+        try {
+            const areaM2 = turf.area(geojson);
+            const ha = areaM2 / 10000;
+            if (!isNaN(ha) && ha > 0) return Number(ha.toFixed(2));
+        } catch (e) {
+            console.warn("Error turf.area:", e);
+        }
+    }
+
+    return 0;
+}
+
 function FieldMiniMap({ field }) {
     const { polys, allPoints } = extractLeafletCoords(field);
     if (polys.length === 0) {
@@ -250,7 +304,7 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
             const f = nextSelected[0].field;
             const geojson = jdBoundariesToGeoJson(f);
             if (geojson) {
-                const areaHa = f.area?.value ? Number(f.area.value).toFixed(2) : (turf.area(geojson) / 10000).toFixed(2);
+                const areaHa = calculateFieldAreaHa(f).toFixed(2);
                 if (onGeoJsonReady) onGeoJsonReady(JSON.stringify(geojson), areaHa, f.name);
             }
             if (onBulkReady) onBulkReady(null);
@@ -262,7 +316,7 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
                     farmName: f.farmName || null,
                     farmId: f.farmId || null,
                     geojsonString: geojson ? JSON.stringify(geojson) : '',
-                    areaHa: f.area?.value ? Number(f.area.value).toFixed(2) : (geojson ? (turf.area(geojson) / 10000).toFixed(2) : '0')
+                    areaHa: calculateFieldAreaHa(f).toFixed(2)
                 };
             }).filter(item => item.geojsonString);
             if (onBulkReady) onBulkReady(bulk);
@@ -277,7 +331,7 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
             const { field } = selectedFields[0];
             const geojson = jdBoundariesToGeoJson(field);
             if (!geojson) { setError('Este campo no tiene datos de límites.'); return; }
-            const areaHa = field.area?.value ? Number(field.area.value).toFixed(2) : (turf.area(geojson) / 10000).toFixed(2);
+            const areaHa = calculateFieldAreaHa(field).toFixed(2);
             if (onGeoJsonReady) onGeoJsonReady(JSON.stringify(geojson), areaHa, field.name);
             if (onBulkReady) onBulkReady(null);
             if (onConfirm) onConfirm({ geojsonString: JSON.stringify(geojson), areaHa, fieldName: field.name, farmName: field.farmName, field });
@@ -290,7 +344,7 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
                     farmName: field.farmName || null,
                     farmId: field.farmId || null,
                     geojsonString: geojson ? JSON.stringify(geojson) : '',
-                    areaHa: field.area?.value ? Number(field.area.value).toFixed(2) : (geojson ? (turf.area(geojson) / 10000).toFixed(2) : '0')
+                    areaHa: calculateFieldAreaHa(field).toFixed(2)
                 };
             }).filter(item => item.geojsonString);
             if (onBulkReady) onBulkReady(bulk);
@@ -481,7 +535,11 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
                                                                         <div className="px-3 py-2">
                                                                             <p className="text-[12px] font-bold text-gray-800 dark:text-gray-100 truncate">{field.name || `Campo #${field.id}`}</p>
                                                                             <div className="flex items-center justify-between mt-0.5">
-                                                                                {areaValue && <span className="text-[10px] font-black text-[#2D6A4F]">{Number(areaValue).toFixed(1)} {areaUnit}</span>}
+                                                                                {calculateFieldAreaHa(field) > 0 && (
+                                                                                    <span className="text-[10px] font-black text-[#2D6A4F]">
+                                                                                        {calculateFieldAreaHa(field).toFixed(2)} Ha
+                                                                                    </span>
+                                                                                )}
                                                                                 {!hasGeometry && <span className="text-[9px] text-red-400 font-medium">Sin límites</span>}
                                                                             </div>
                                                                         </div>

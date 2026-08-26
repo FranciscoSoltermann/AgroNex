@@ -57,9 +57,10 @@ public class AuthService {
         PersonaFisica persona = fisicaMapper.toEntity(request, supabaseUuid);
         persona.setEmail(emailNormalizado);
         persona.setDni(dniNormalizado);
-        // VUL-M03: el registro inicial siempre crea un PROPIETARIO.
-        // Un empleado solo puede ser asignado por un PROPIETARIO mediante UsuarioService#asignarEmpleado.
-        persona.setRol(RolUsuario.PROPIETARIO);
+        // Si el usuario se registra como EMPLEADO, se crea con rol EMPLEADO (sin propietario asignado inicialmente).
+        // En caso contrario, se crea como PROPIETARIO.
+        RolUsuario rolAsignado = (request.getRol() == RolUsuario.EMPLEADO) ? RolUsuario.EMPLEADO : RolUsuario.PROPIETARIO;
+        persona.setRol(rolAsignado);
         persona.setIdPropietario(null);
 
         PersonaFisica guardada = fisicaRepository.save(persona);
@@ -89,8 +90,8 @@ public class AuthService {
         PersonaJuridica empresa = juridicaMapper.toEntity(request, supabaseUuid);
         empresa.setEmail(emailNormalizado);
         empresa.setCuit(cuitNormalizado);
-        // VUL-M03: el registro inicial siempre crea un PROPIETARIO.
-        empresa.setRol(RolUsuario.PROPIETARIO);
+        RolUsuario rolAsignado = (request.getRol() == RolUsuario.EMPLEADO) ? RolUsuario.EMPLEADO : RolUsuario.PROPIETARIO;
+        empresa.setRol(rolAsignado);
         empresa.setIdPropietario(null);
         PersonaJuridica guardada = juridicaRepository.save(empresa);
 
