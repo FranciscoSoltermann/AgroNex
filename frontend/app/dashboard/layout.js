@@ -63,7 +63,11 @@ export default function DashboardLayout({ children }) {
                         return;
                     }
 
-                    const res = await apiClient.get("/usuarios/me/check", { timeout: 15000 });
+                    const [res, settingsRes] = await Promise.all([
+                        apiClient.get("/usuarios/me/check", { timeout: 15000 }),
+                        apiClient.get("/usuarios/settings", { timeout: 15000 }).catch(() => null)
+                    ]);
+                    
                     const data = res?.data;
                     if (data && data.registrado === false) {
                         const { data: idData } = await supabase.auth.getUserIdentities();
@@ -92,7 +96,6 @@ export default function DashboardLayout({ children }) {
                         return;
                     }
 
-                    const settingsRes = await apiClient.get("/usuarios/settings", { timeout: 15000 });
                     if (settingsRes?.data) {
                         setUserName(settingsRes.data.nombreMostrar?.trim() || "Usuario");
                         setUserRole(settingsRes.data.rol);

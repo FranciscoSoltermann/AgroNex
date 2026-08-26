@@ -78,12 +78,12 @@ export default function DashboardHome() {
             
             const [bootstrap, resStats, resActs, resGastos, resCosechas, resInsumos, resSettings] = await Promise.all([
                 getDashboardBootstrapData(),
-                apiClient.get(`/campos/stats?t=${t}`).catch(() => ({ data: {} })),
-                apiClient.get(`/actividades?t=${t}`).catch(() => ({ data: [] })),
-                apiClient.get(`/gastos?t=${t}`).catch(() => ({ data: [] })),
-                apiClient.get(`/cosechas?t=${t}`).catch(() => ({ data: [] })),
-                apiClient.get(`/insumos?t=${t}`).catch(() => ({ data: [] })),
-                apiClient.get(`/usuarios/settings?t=${t}`).catch(() => ({ data: {} })),
+                apiClient.get(`/campos/stats`).catch(() => ({ data: {} })),
+                apiClient.get(`/actividades`).catch(() => ({ data: [] })),
+                apiClient.get(`/gastos`).catch(() => ({ data: [] })),
+                apiClient.get(`/cosechas`).catch(() => ({ data: [] })),
+                apiClient.get(`/insumos`).catch(() => ({ data: [] })),
+                apiClient.get(`/usuarios/settings`).catch(() => ({ data: {} })),
             ]);
 
             return {

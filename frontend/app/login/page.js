@@ -41,7 +41,7 @@ export default function AuthPage() {
     const [password, setPassword] = useState("");
     const [rememberMe, setRememberMe] = useState(false);
 
-    // Si ya hay sesión activa, redirigir al dashboard (con timeout de seguridad para evitar spinner infinito)
+    // Si ya hay sesión activa, redirigir al dashboard
     useEffect(() => {
         let isMounted = true;
         const checkExistingSession = async () => {
@@ -50,24 +50,14 @@ export default function AuthPage() {
                 apiClient.get("/public/auth/health").catch(() => {});
 
                 if (supabase) {
-                    const sessionPromise = supabase.auth.getSession();
-                    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1500));
-
-                    const result = await Promise.race([sessionPromise, timeoutPromise]);
-                    const session = result?.data?.session;
+                    const { data } = await supabase.auth.getSession();
+                    const session = data?.session;
 
                     if (session?.access_token && isMounted) {
-                        try {
-                            const regCheck = await apiClient.get("/usuarios/me/check");
-                            if (regCheck?.data?.registrado === true && isMounted) {
-                                router.replace("/dashboard");
-                                return;
-                            } else {
-                                await supabase.auth.signOut();
-                            }
-                        } catch (e) {
-                            console.warn("[AgroNex Auth] Excepción al verificar registro previo:", e);
-                        }
+                        // Saltamos la verificación de `/usuarios/me/check` aquí para que sea súper rápido.
+                        // El `dashboard/layout.js` ya se encarga de expulsar al usuario si no está registrado.
+                        router.replace("/dashboard");
+                        return;
                     }
                 }
             } catch (err) {
@@ -289,21 +279,23 @@ export default function AuthPage() {
                 return;
             }
 
-            // Verificar si el usuario realmente está registrado en la BD de AgroNex
-            try {
-                const regCheck = await apiClient.get("/usuarios/me/check");
-                if (regCheck?.data?.registrado !== true) {
-                    await supabase.auth.signOut();
-                    setError("Esta cuenta fue eliminada o no se encuentra registrada en AgroNex.");
-                    setLoading(false);
-                    return;
-                }
-            } catch (checkErr) {
-                console.warn("[AgroNex Login] Error al verificar registro:", checkErr);
+            // Ejecutar la verificación de base de datos y MFA en paralelo
+            const [regCheckRes, mfaRes] = await Promise.all([
+                apiClient.get("/usuarios/me/check").catch(e => {
+                    console.warn("[AgroNex Login] Error al verificar registro:", e);
+                    return { data: { registrado: true } }; // fallback optimista
+                }),
+                supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+            ]);
+
+            if (regCheckRes?.data?.registrado !== true) {
+                await supabase.auth.signOut();
+                setError("Esta cuenta fue eliminada o no se encuentra registrada en AgroNex.");
+                setLoading(false);
+                return;
             }
 
-            // Check if MFA challenge is needed
-            const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            const aalData = mfaRes?.data;
             if (aalData?.nextLevel === "aal2" && aalData?.currentLevel !== "aal2") {
                 setShowMfaChallenge(true);
                 setLoading(false);

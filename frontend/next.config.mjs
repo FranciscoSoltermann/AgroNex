@@ -11,6 +11,9 @@ const nextConfig = {
   turbopack: {
     root: __dirname,
   },
+  experimental: {
+    optimizePackageImports: ["lucide-react"]
+  },
   async headers() {
     return [
       {
