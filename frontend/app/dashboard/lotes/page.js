@@ -56,7 +56,7 @@ export default function CiclosPage() {
         idCampania: "",
         hectareasTratadas: "",
         notas: "",
-        insumos: [emptyInsumoRow()],
+        insumos: [],
     });
     const [submitLoading, setSubmitLoading] = useState(false);
     const [submitError, setSubmitError] = useState(null);
@@ -210,7 +210,7 @@ export default function CiclosPage() {
                 costoServicio: "",
                 hectareasTratadas: "",
                 notas: "",
-                insumos: [emptyInsumoRow()],
+                insumos: [],
             }));
             // Refresh insumos to reflect stock changes
             if (loteActual?.idCampo) fetchInsumosCampo(loteActual.idCampo);
@@ -296,7 +296,7 @@ export default function CiclosPage() {
             notas: act.notas || "",
             insumos: act.insumos?.length > 0
                 ? act.insumos.map(ins => ({ idInsumo: ins.idInsumo || "", dosisHa: ins.dosisHa ?? "" }))
-                : [emptyInsumoRow()],
+                : [],
         });
     };
 
@@ -309,7 +309,7 @@ export default function CiclosPage() {
             idCampania: idCampaniaActiva,
             hectareasTratadas: "",
             notas: "",
-            insumos: [emptyInsumoRow()],
+            insumos: [],
         });
     };
 
@@ -435,7 +435,7 @@ export default function CiclosPage() {
     const removeInsumoRow = (idx) =>
         setFormAct((p) => ({
             ...p,
-            insumos: p.insumos.length > 1 ? p.insumos.filter((_, i) => i !== idx) : p.insumos,
+            insumos: p.insumos.filter((_, i) => i !== idx),
         }));
     const setInsumoRow = (idx, field, value) =>
         setFormAct((p) => ({
@@ -631,47 +631,92 @@ export default function CiclosPage() {
 
                         <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-3 items-end">
                             <div>
-                                <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Insumos{TIPOS_CON_DOSIS.includes(formAct.tipoActv) ? ' / dosis (por Ha)' : ''}</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {formAct.insumos.map((row, idx) => (
-                                        <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 w-full sm:w-[240px]">
-                                            {formAct.insumos.length > 1 && (
-                                                <button type="button" onClick={() => removeInsumoRow(idx)} className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-all scale-90 hover:scale-100" aria-label="Quitar insumo">
-                                                    <X size={12} strokeWidth={3} />
-                                                </button>
-                                            )}
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-6 h-6 rounded-md bg-[#2D6A4F] flex items-center justify-center text-green-200 shrink-0"><FlaskConical size={12} /></div>
-                                                <select value={row.idInsumo} onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)} className={`w-full bg-transparent border-none text-[12px] font-black text-white focus:outline-none focus:ring-0 [&>option]:text-gray-900 px-1`}>
-                                                    <option value="" disabled>Seleccionar insumo...</option>
-                                                    {insumos
-                                                        .filter(ins => !ins.idCampania || ins.idCampania === (formAct.idCampania || idCampaniaActiva))
-                                                        .map((ins) => (
-                                                            <option key={ins.idInsumo} value={ins.idInsumo}>
-                                                                {ins.nombre} — {getUnidadLabel(ins.unidad)}{ins.cantidad != null ? ` (Stock: ${ins.cantidad})` : ''}
-                                                            </option>
-                                                        ))}
-                                                </select>
-                                            </div>
-                                            {TIPOS_CON_DOSIS.includes(formAct.tipoActv) && (
-                                                <div className="flex items-center justify-between gap-3 pl-8">
-                                                    <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
-                                                    <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
-                                                        <input type="number" step="0.0001" min="0" placeholder="0.00" value={row.dosisHa} onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)} className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20" />
-                                                        <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all" style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}>
-                                                            {row.idInsumo ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad) : 'kg'}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200">
+                                        Insumos{TIPOS_CON_DOSIS.includes(formAct.tipoActv) ? ' / dosis (por Ha)' : ''}
+                                        <span className="text-green-300/70 font-normal ml-1">(Opcional • Servicio / Labor)</span>
+                                    </label>
+                                    {formAct.insumos.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormAct(p => ({ ...p, insumos: [] }))}
+                                            className="text-[9px] font-bold text-red-200 hover:text-white transition-colors underline"
+                                        >
+                                            Quitar insumos (Servicio tercerizado)
+                                        </button>
+                                    )}
                                 </div>
-                                <button type="button" onClick={addInsumoRow} className="mt-2.5 text-[11px] font-black text-white bg-white/15 hover:bg-white/25 border border-white/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">
-                                    <Plus size={14} /> Añadir insumo
-                                </button>
-                                {insumos.length === 0 && loteActual && (
-                                    <p className="text-[9px] text-amber-200/90 mt-1">No hay insumos en el catálogo de este campo. Cargalos en Inventario.</p>
+
+                                {formAct.insumos.length === 0 ? (
+                                    <div className="bg-[#1B4332]/40 border border-white/15 p-3 rounded-xl flex items-center justify-between gap-3 text-green-100">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-green-300 shrink-0">
+                                                <Tractor size={16} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[11px] font-bold text-white">Labor o Servicio Tercerizado (Sin insumos)</p>
+                                                <p className="text-[9px] text-green-200/70">Ideal para contratistas externos, arado, picado, cosecha o labores sin insumos propios.</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={addInsumoRow}
+                                            className="shrink-0 text-[10px] font-black text-white bg-white/15 hover:bg-white/25 border border-white/20 px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all"
+                                        >
+                                            <Plus size={13} /> Añadir insumo
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <div className="flex flex-wrap gap-2">
+                                            {formAct.insumos.map((row, idx) => (
+                                                <div key={idx} className="bg-[#1B4332]/50 border border-white/10 p-3 rounded-xl flex flex-col gap-2 relative group transition-all hover:bg-[#1B4332]/80 w-full sm:w-[240px]">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeInsumoRow(idx)}
+                                                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white p-1 rounded-full shadow-md transition-all scale-90 hover:scale-100"
+                                                        aria-label="Quitar insumo"
+                                                        title="Quitar este insumo"
+                                                    >
+                                                        <X size={12} strokeWidth={3} />
+                                                    </button>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-md bg-[#2D6A4F] flex items-center justify-center text-green-200 shrink-0"><FlaskConical size={12} /></div>
+                                                        <select value={row.idInsumo} onChange={(e) => setInsumoRow(idx, "idInsumo", e.target.value)} className={`w-full bg-transparent border-none text-[12px] font-black text-white focus:outline-none focus:ring-0 [&>option]:text-gray-900 px-1`}>
+                                                            <option value="" disabled>Seleccionar insumo...</option>
+                                                            {insumos
+                                                                .filter(ins => !ins.idCampania || ins.idCampania === (formAct.idCampania || idCampaniaActiva))
+                                                                .map((ins) => (
+                                                                    <option key={ins.idInsumo} value={ins.idInsumo}>
+                                                                        {ins.nombre} — {getUnidadLabel(ins.unidad)}{ins.cantidad != null ? ` (Stock: ${ins.cantidad})` : ''}
+                                                                    </option>
+                                                                ))}
+                                                        </select>
+                                                    </div>
+                                                    {TIPOS_CON_DOSIS.includes(formAct.tipoActv) && (
+                                                        <div className="flex items-center justify-between gap-3 pl-8">
+                                                            <span className="text-[9px] text-green-200/60 font-black uppercase tracking-widest">Dosis por Ha</span>
+                                                            <div className="flex items-center gap-1.5 bg-white/5 rounded-lg border border-white/10 px-2 py-0.5">
+                                                                <input type="number" step="0.0001" min="0" placeholder="0.00" value={row.dosisHa} onChange={(e) => setInsumoRow(idx, "dosisHa", e.target.value)} className="w-16 bg-transparent text-[13px] font-black text-white text-right py-1 focus:outline-none placeholder:text-white/20" />
+                                                                <span className="text-[9px] font-bold uppercase min-w-[18px] text-center transition-all" style={{ color: row.idInsumo ? '#6ee7b7' : 'rgba(187,247,208,0.4)' }}>
+                                                                    {row.idInsumo ? getUnidadLabel(insumos.find(i => i.idInsumo === row.idInsumo)?.unidad) : 'kg'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button type="button" onClick={addInsumoRow} className="text-[11px] font-black text-white bg-white/15 hover:bg-white/25 border border-white/20 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all">
+                                                <Plus size={14} /> Añadir otro insumo
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {insumos.length === 0 && loteActual && formAct.insumos.length > 0 && (
+                                    <p className="text-[9px] text-amber-200/90 mt-1.5">No hay insumos en el catálogo de este campo. Podés registrar la labor sin insumos o cargarlos en Inventario.</p>
                                 )}
                             </div>
                             <div className="flex flex-col gap-2 min-w-[200px]">
@@ -943,7 +988,7 @@ function ActividadCard({ actividad, onEliminar, onEditar }) {
                                 </span>
                             )}
                         </div>
-                        {insumos.length > 0 && (
+                        {insumos.length > 0 ? (
                             <ul className="mt-2 space-y-1 text-[11px] text-gray-700 dark:text-gray-300 border-t border-gray-100 dark:border-gray-800 pt-2">
                                 {insumos.map((ins) => (
                                     <li key={ins.idActividadInsumo || `${ins.idInsumo}-${ins.dosisHa}`} className="flex justify-between gap-2">
@@ -952,6 +997,11 @@ function ActividadCard({ actividad, onEliminar, onEditar }) {
                                     </li>
                                 ))}
                             </ul>
+                        ) : (
+                            <div className="mt-2 pt-1.5 border-t border-gray-100 dark:border-gray-800/60 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                <Tractor size={12} className="text-[#2D6A4F] dark:text-[#52B788] shrink-0" />
+                                <span>Servicio tercerizado / labor sin insumos</span>
+                            </div>
                         )}
                         {actividad.notas && (
                             <p className="mt-2 text-[10px] text-gray-500 dark:text-gray-400 italic border-l-2 border-[#2D6A4F]/30 pl-2">{actividad.notas}</p>
