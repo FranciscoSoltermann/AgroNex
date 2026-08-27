@@ -110,6 +110,8 @@ jobs:
         working-directory: ./frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8080/api
+          NEXT_PUBLIC_SUPABASE_URL: https://mock-supabase.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-anon-key
         run: npm run build
 
   docker-build:
