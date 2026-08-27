@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import apiClient from "@/lib/api-client";
 import {
     Tractor, Link2, Unlink, Loader2, AlertCircle, CheckCircle2,
-    RefreshCw, Shield, Building2, Calendar, Wifi, WifiOff,
+    RefreshCw, Shield, Building2, Calendar,
     MapPin, Fuel, Gauge, Navigation, LogIn, LogOut, ChevronDown, ChevronUp, Maximize, Globe
 } from "lucide-react";
 import ConfirmModal from "@/components/shared/ConfirmModal";
@@ -147,36 +147,36 @@ export default function EcosistemaPage() {
 
     return (
         <PermissionGuard requiredPermission="GESTION_MAQUINARIA">
-        <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-            {/* Providers */}
-            {providers.map((provider) => (
-                <ProviderCard
-                    key={provider.id}
-                    provider={provider}
-                    onConnect={handleConnect}
-                    onDisconnect={handleDisconnect}
-                    onDeleteConnection={handleDeleteConnection}
+            <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+                {/* Providers */}
+                {providers.map((provider) => (
+                    <ProviderCard
+                        key={provider.id}
+                        provider={provider}
+                        onConnect={handleConnect}
+                        onDisconnect={handleDisconnect}
+                        onDeleteConnection={handleDeleteConnection}
+                    />
+                ))}
+
+                {/* Placeholder futuro */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 text-center">
+                    <Globe size={32} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                    <p className="text-sm font-bold text-gray-400 dark:text-gray-500 mb-1">Más integraciones próximamente</p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-600">
+                        Case IH, New Holland, CLAAS y más marcas del ecosistema estarán disponibles en futuras actualizaciones.
+                    </p>
+                </div>
+
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    title={confirmModal.title}
+                    message={confirmModal.message}
+                    onConfirm={confirmModal.onConfirm}
+                    onCancel={() => setConfirmModal({ isOpen: false, title: "", message: "", onConfirm: null })}
+                    confirmText="Desconectar"
                 />
-            ))}
-
-            {/* Placeholder futuro */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-8 border-2 border-dashed border-gray-200 dark:border-gray-700 text-center">
-                <Globe size={32} className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                <p className="text-sm font-bold text-gray-400 dark:text-gray-500 mb-1">Más integraciones próximamente</p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-600">
-                    Case IH, New Holland, CLAAS y más marcas del ecosistema estarán disponibles en futuras actualizaciones.
-                </p>
             </div>
-
-            <ConfirmModal
-                isOpen={confirmModal.isOpen}
-                title={confirmModal.title}
-                message={confirmModal.message}
-                onConfirm={confirmModal.onConfirm}
-                onCancel={() => setConfirmModal({ isOpen: false, title: "", message: "", onConfirm: null })}
-                confirmText="Desconectar"
-            />
-        </div>
         </PermissionGuard>
     );
 }
@@ -297,17 +297,8 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                     <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-black text-gray-900 dark:text-gray-100 break-words">{name}</h3>
-                            {configured ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-bold border border-green-100 dark:border-green-800">
-                                    <Wifi size={10} /> API
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-50 dark:bg-gray-800 text-gray-500 text-[10px] font-bold border border-gray-200 dark:border-gray-700">
-                                    <WifiOff size={10} /> Sin API
-                                </span>
-                            )}
                             {userConnected && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-[10px] font-bold border border-blue-100 dark:border-blue-800">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-bold border border-green-100 dark:border-green-800">
                                     <LogIn size={10} /> Cuenta conectada
                                 </span>
                             )}
