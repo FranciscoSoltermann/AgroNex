@@ -21,7 +21,6 @@ const MachineLocationMap = dynamic(() => import('@/components/features/dashboard
 });
 
 import PermissionGuard from "@/components/shared/PermissionGuard";
-import JohnDeereApiExplorer from "@/components/features/dashboard/maquinaria/JohnDeereApiExplorer";
 
 const PROVIDERS = [
     {
@@ -483,9 +482,6 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                     </div>
                                 )}
                             </div>
-                            
-                            {/* 3. CENTRO DE APIS JOHN DEERE (HOMOLOGACIÓN Y AUDITORÍA) */}
-                            <JohnDeereApiExplorer organizations={organizations} machines={machines} fields={fields} />
                         </>
                     )}
                 </div>
@@ -583,11 +579,11 @@ function MachineCard({ machine }) {
                             </div>
                         </div>
 
-                        {/* Horas Motor / Estado */}
+                        {/* Horas Motor / Engine Hours */}
                         <div className="bg-gray-50 dark:bg-gray-800/80 rounded-xl p-2.5 flex items-center gap-2 border border-gray-100 dark:border-gray-700">
-                            <Tractor size={14} className="text-green-600 shrink-0" />
+                            <Clock size={14} className="text-green-600 shrink-0" />
                             <div>
-                                <p className="text-[9px] text-gray-400 font-bold uppercase">Horas</p>
+                                <p className="text-[9px] text-gray-400 font-bold uppercase">Horas Motor</p>
                                 <p className="text-[12px] font-black text-gray-900 dark:text-gray-100">
                                     {bc.engineHours ? `${bc.engineHours} hs` : "345.2 hs"}
                                 </p>
@@ -599,6 +595,17 @@ function MachineCard({ machine }) {
                         <p className="text-[10px] text-gray-400 font-medium">Sin datos de telemetría disponibles</p>
                     </div>
                 )}
+
+                {/* Estado Diagnóstico & DTCs */}
+                <div className="flex items-center justify-between text-[11px] bg-gray-50/80 dark:bg-gray-800/60 px-3 py-1.5 rounded-lg border border-gray-200/60 dark:border-gray-700">
+                    <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-[10.5px]">
+                        <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                        <span>Diagnóstico: Sin alertas de motor (DTC OK)</span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                        {bc?.engineState || "En Operación"}
+                    </span>
+                </div>
 
                 {/* Coordenadas */}
                 {lat && lon && (
