@@ -21,6 +21,7 @@ const MachineLocationMap = dynamic(() => import('@/components/features/dashboard
 });
 
 import PermissionGuard from "@/components/shared/PermissionGuard";
+import JohnDeereApiExplorer from "@/components/features/dashboard/maquinaria/JohnDeereApiExplorer";
 
 const PROVIDERS = [
     {
@@ -482,6 +483,9 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* 3. CENTRO DE APIS JOHN DEERE (HOMOLOGACIÓN Y AUDITORÍA) */}
+                            <JohnDeereApiExplorer organizations={organizations} machines={machines} fields={fields} />
                         </>
                     )}
                 </div>
