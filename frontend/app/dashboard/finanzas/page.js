@@ -60,6 +60,10 @@ export default function FinanzasPage() {
         precioPuntoText: "",
         toneladasRecargoHumedad: "",
         precioVentaSemilla: "",
+        alquilerFormaPago: "DINERO",
+        alquilerQuintales: "",
+        alquilerPrecioQq: "",
+        alquilerPorcentaje: "",
     });
     const [gastoLoading, setGastoLoading] = useState(false);
     const [gastoSuccess, setGastoSuccess] = useState(null);
@@ -135,7 +139,7 @@ export default function FinanzasPage() {
 
     // Fetch resumen for the campaign selected in the gasto form (for Impuestos % calc)
     useEffect(() => {
-        if (formGasto.idCampania && formGasto.categoria === "Impuestos") {
+        if (formGasto.idCampania && (formGasto.categoria === "Impuestos" || formGasto.categoria === "Alquiler de Campo")) {
             const t = new Date().getTime();
             apiClient.get(`/finanzas/campania/${formGasto.idCampania}/resumen?t=${t}`)
                 .then(res => setResumenGastoCampania(res.data))
@@ -175,6 +179,25 @@ export default function FinanzasPage() {
                 finalDescripcion = `[${details}] ${finalDescripcion}`.trim();
             }
 
+            // Alquiler de Campo
+            if (formGasto.categoria === "Alquiler de Campo") {
+                const forma = formGasto.alquilerFormaPago;
+                if (forma === "QUINTALES") {
+                    const qq = parseFloat(formGasto.alquilerQuintales) || 0;
+                    const precioQq = parseFloat(formGasto.alquilerPrecioQq) || 0;
+                    finalMonto = qq * precioQq;
+                    finalDescripcion = `[Pago en Quintales: ${qq} Qq × $${precioQq}/Qq] ${finalDescripcion}`.trim();
+                } else if (forma === "PORCENTAJE" && formGasto.idCampania && resumenGastoCampania) {
+                    const pct = parseFloat(formGasto.alquilerPorcentaje) || 0;
+                    const ingresos = resumenGastoCampania.ingresosTotales || 0;
+                    finalMonto = (pct / 100) * ingresos;
+                    finalDescripcion = `[Pago ${pct}% de liquidación s/ingresos] ${finalDescripcion}`.trim();
+                } else {
+                    // DINERO: uses montoTotal directly
+                    finalDescripcion = `[Pago en Dinero Fijo] ${finalDescripcion}`.trim();
+                }
+            }
+
             const body = {
                 fecha: formGasto.fecha,
                 categoria: formGasto.categoria,
@@ -195,7 +218,11 @@ export default function FinanzasPage() {
                 gradoHumedad: "",
                 precioPuntoText: "",
                 toneladasRecargoHumedad: "",
-                precioVentaSemilla: ""
+                precioVentaSemilla: "",
+                alquilerFormaPago: "DINERO",
+                alquilerQuintales: "",
+                alquilerPrecioQq: "",
+                alquilerPorcentaje: "",
             }));
             invalidateDashboardBootstrapCache();
             await fetchData({ forceRefresh: true });
@@ -579,6 +606,7 @@ export default function FinanzasPage() {
                                     <option value="Servicios">Servicios</option>
                                     <option value="Flete">Flete</option>
                                     <option value="Secada">Secada</option>
+                                    <option value="Alquiler de Campo">Alquiler de Campo</option>
                                 </select>
                             </FormField>
                         </div>
@@ -733,6 +761,122 @@ export default function FinanzasPage() {
                                         placeholder="0.00"
                                     />
                                 </FormField>
+                            </>
+                        ) : formGasto.categoria === "Alquiler de Campo" ? (
+                            <>
+                                <FormField label="Imputar a campaña">
+                                    <select
+                                        value={formGasto.idCampania}
+                                        onChange={(e) => setFormGasto((p) => ({ ...p, idCampania: e.target.value }))}
+                                        className={INPUT_CLASS}
+                                        disabled={!formGasto.idCampo}
+                                    >
+                                        <option value="">Solo al campo (sin campaña)</option>
+                                        {campaniasParaGasto.map((c) => (
+                                            <option key={c.idCampania} value={c.idCampania}>
+                                                {c.cultivo} — {c.nombreLote}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="text-[9px] text-gray-400 mt-1">Requerido para calcular porcentaje de liquidación.</p>
+                                </FormField>
+                                <FormField label="Forma de Pago">
+                                    <div className="flex gap-1.5">
+                                        {[
+                                            { value: "DINERO", label: "Dinero Fijo" },
+                                            { value: "QUINTALES", label: "Quintales de Grano" },
+                                            { value: "PORCENTAJE", label: "% de Liquidación" },
+                                        ].map((opt) => (
+                                            <button
+                                                key={opt.value}
+                                                type="button"
+                                                onClick={() => setFormGasto(p => ({ ...p, alquilerFormaPago: opt.value, montoTotal: "" }))}
+                                                className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold border-2 transition-all ${
+                                                    formGasto.alquilerFormaPago === opt.value
+                                                        ? "border-[#2D6A4F] bg-[#2D6A4F]/10 text-[#2D6A4F]"
+                                                        : "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:border-gray-300"
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </FormField>
+
+                                {formGasto.alquilerFormaPago === "DINERO" && (
+                                    <FormField label={`Monto del Alquiler (${currSymbol})`}>
+                                        <input type="number" step="0.01" min="0" required value={formGasto.montoTotal} onChange={e => setFormGasto(p => ({ ...p, montoTotal: e.target.value }))} className={INPUT_CLASS} placeholder="ej. 500000" />
+                                    </FormField>
+                                )}
+
+                                {formGasto.alquilerFormaPago === "QUINTALES" && (
+                                    <>
+                                        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
+                                            <FormField label="Quintales (Qq)">
+                                                <input
+                                                    type="number" step="0.01" min="0" required
+                                                    value={formGasto.alquilerQuintales}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        setFormGasto(p => {
+                                                            const qq = parseFloat(val) || 0;
+                                                            const prec = parseFloat(p.alquilerPrecioQq) || 0;
+                                                            const total = qq * prec;
+                                                            return { ...p, alquilerQuintales: val, montoTotal: total > 0 ? total.toFixed(2) : "" };
+                                                        });
+                                                    }}
+                                                    className={INPUT_CLASS}
+                                                    placeholder="ej. 12"
+                                                />
+                                            </FormField>
+                                            <FormField label={`Precio por Quintal (${currSymbol}/Qq)`}>
+                                                <input
+                                                    type="number" step="0.01" min="0" required
+                                                    value={formGasto.alquilerPrecioQq}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        setFormGasto(p => {
+                                                            const prec = parseFloat(val) || 0;
+                                                            const qq = parseFloat(p.alquilerQuintales) || 0;
+                                                            const total = qq * prec;
+                                                            return { ...p, alquilerPrecioQq: val, montoTotal: total > 0 ? total.toFixed(2) : "" };
+                                                        });
+                                                    }}
+                                                    className={INPUT_CLASS}
+                                                    placeholder="ej. 45000"
+                                                />
+                                            </FormField>
+                                        </div>
+                                        {formGasto.montoTotal && (
+                                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 text-[12px]">
+                                                <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {formatCurrency(parseFloat(formGasto.montoTotal) || 0)}</p>
+                                                <p className="text-blue-500 dark:text-blue-400 text-[10px] mt-0.5">{formGasto.alquilerQuintales} Qq × {currSymbol}{formGasto.alquilerPrecioQq}/Qq</p>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {formGasto.alquilerFormaPago === "PORCENTAJE" && (
+                                    <>
+                                        <FormField label="Porcentaje de liquidación (%)">
+                                            <input type="number" step="0.01" min="0" max="100" required value={formGasto.alquilerPorcentaje} onChange={e => setFormGasto(p => ({ ...p, alquilerPorcentaje: e.target.value }))} className={INPUT_CLASS} placeholder="ej. 30" />
+                                        </FormField>
+                                        {formGasto.alquilerPorcentaje && formGasto.idCampania && resumenGastoCampania && (() => {
+                                            const pct = parseFloat(formGasto.alquilerPorcentaje);
+                                            const ingresos = resumenGastoCampania.ingresosTotales || 0;
+                                            const calculado = (pct / 100) * ingresos;
+                                            return (
+                                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 text-[12px]">
+                                                    <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {formatCurrency(calculado)}</p>
+                                                    <p className="text-blue-500 dark:text-blue-400 text-[10px] mt-0.5">{pct}% de ingresos totales ({formatCurrency(ingresos)})</p>
+                                                </div>
+                                            );
+                                        })()}
+                                        {!formGasto.idCampania && (
+                                            <p className="text-[10px] text-orange-500 font-bold">⚠ Seleccioná una campaña para calcular el porcentaje sobre los ingresos.</p>
+                                        )}
+                                    </>
+                                )}
                             </>
                         ) : (
                             <>
