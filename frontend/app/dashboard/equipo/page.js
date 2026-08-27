@@ -240,25 +240,23 @@ export default function EquipoPage() {
                 <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-4">
                     <button
                         onClick={() => setActiveTab("equipo")}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all ${
-                            activeTab === "equipo"
-                                ? "bg-[#2D6A4F] text-white shadow-sm shadow-[#2D6A4F]/20"
-                                : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-300"
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all ${activeTab === "equipo"
+                            ? "bg-[#2D6A4F] text-white shadow-sm shadow-[#2D6A4F]/20"
+                            : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-300"
+                            }`}
                     >
                         <Users size={16} />
                         Gestión de Colaboradores
                     </button>
                     <button
                         onClick={() => setActiveTab("auditoria")}
-                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all ${
-                            activeTab === "auditoria"
-                                ? "bg-[#2D6A4F] text-white shadow-sm shadow-[#2D6A4F]/20"
-                                : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-300"
-                        }`}
+                        className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all ${activeTab === "auditoria"
+                            ? "bg-[#2D6A4F] text-white shadow-sm shadow-[#2D6A4F]/20"
+                            : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-300"
+                            }`}
                     >
                         <Activity size={16} />
-                        Auditoría y Trazabilidad
+                        Auditoría
                     </button>
                 </div>
 
@@ -354,11 +352,10 @@ export default function EquipoPage() {
                                                             <CheckCircle2 size={12} className="text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} />
                                                         </div>
                                                     </div>
-                                                    <span className={`text-[13px] font-semibold transition-colors ${
-                                                        permiso.value === "LECTURA_CAMPOS"
-                                                            ? "text-gray-400 dark:text-gray-500"
-                                                            : "text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white"
-                                                    }`}>
+                                                    <span className={`text-[13px] font-semibold transition-colors ${permiso.value === "LECTURA_CAMPOS"
+                                                        ? "text-gray-400 dark:text-gray-500"
+                                                        : "text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white"
+                                                        }`}>
                                                         {permiso.label}
                                                     </span>
                                                 </label>
@@ -389,22 +386,20 @@ export default function EquipoPage() {
                                         <button
                                             type="button"
                                             onClick={() => setSubTabEquipo("activos")}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                                subTabEquipo === "activos"
-                                                    ? "bg-white dark:bg-[#1a1f25] text-gray-900 dark:text-gray-100 shadow-sm"
-                                                    : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
-                                            }`}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${subTabEquipo === "activos"
+                                                ? "bg-white dark:bg-[#1a1f25] text-gray-900 dark:text-gray-100 shadow-sm"
+                                                : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+                                                }`}
                                         >
                                             Colaboradores Activos ({empleados.length})
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setSubTabEquipo("invitaciones")}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                                subTabEquipo === "invitaciones"
-                                                    ? "bg-white dark:bg-[#1a1f25] text-gray-900 dark:text-gray-100 shadow-sm"
-                                                    : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
-                                            }`}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${subTabEquipo === "invitaciones"
+                                                ? "bg-white dark:bg-[#1a1f25] text-gray-900 dark:text-gray-100 shadow-sm"
+                                                : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
+                                                }`}
                                         >
                                             Invitaciones Enviadas ({invitacionesEnviadas.length})
                                         </button>
@@ -495,7 +490,7 @@ export default function EquipoPage() {
                                                                         </span>
                                                                         <span className="text-[10px] font-semibold text-gray-400 uppercase">
                                                                             {emp.tipoPersona === "FISICA" ? "Persona Física" :
-                                                                             emp.tipoPersona === "JURIDICA" ? "Persona Jurídica" : "—"}
+                                                                                emp.tipoPersona === "JURIDICA" ? "Persona Jurídica" : "—"}
                                                                         </span>
                                                                     </div>
                                                                 </td>
