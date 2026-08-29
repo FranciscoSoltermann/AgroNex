@@ -407,24 +407,43 @@ public class JohnDeereMachineService {
         log.info("Consultando campos JD con embed=boundaries en org {} via: {}", orgId, urlWithEmbed);
 
         try {
-            String rawResponse = null;
-            try {
-                rawResponse = executeGet(userId, urlWithEmbed);
-            } catch (Exception embedEx) {
-                log.warn("Fallo al consultar campos con embed=boundaries en org {}: {}. Reintentando sin embed...", orgId, embedEx.getMessage());
-                rawResponse = executeGet(userId, url);
-            }
+            String currentUrl = urlWithEmbed;
+            boolean failedWithEmbed = false;
+            
+            while (currentUrl != null) {
+                String rawResponse = null;
+                try {
+                    rawResponse = executeGet(userId, currentUrl);
+                } catch (Exception embedEx) {
+                    if (currentUrl.contains("embed=boundaries")) {
+                        log.warn("Fallo al consultar campos con embed=boundaries en org {}: {}. Reintentando sin embed...", orgId, embedEx.getMessage());
+                        failedWithEmbed = true;
+                        currentUrl = url;
+                        rawResponse = executeGet(userId, currentUrl);
+                    } else {
+                        throw embedEx;
+                    }
+                }
 
-            log.info("JD FIELDS RAW RESPONSE: {}", rawResponse);
-
-            if (rawResponse != null && !rawResponse.isBlank()) {
+                if (rawResponse == null || rawResponse.isBlank()) break;
+                
                 Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
                 if (response.containsKey("values")) {
-                    fields = new ArrayList<>((List<Map<String, Object>>) response.get("values"));
+                    fields.addAll((List<Map<String, Object>>) response.get("values"));
                 } else if (response.containsKey("elements")) {
-                    fields = new ArrayList<>((List<Map<String, Object>>) response.get("elements"));
+                    fields.addAll((List<Map<String, Object>>) response.get("elements"));
                 } else {
-                    fields = new ArrayList<>(List.of(response));
+                    fields.add(response);
+                }
+                
+                Optional<String> nextLink = extractLink(response, "next");
+                if (nextLink.isPresent()) {
+                    currentUrl = nextLink.get();
+                    if (!failedWithEmbed && !currentUrl.contains("embed=boundaries")) {
+                        currentUrl = currentUrl.contains("?") ? currentUrl + "&embed=boundaries" : currentUrl + "?embed=boundaries";
+                    }
+                } else {
+                    currentUrl = null;
                 }
             }
         } catch (Exception e) {

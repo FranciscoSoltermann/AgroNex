@@ -282,6 +282,10 @@ export default function JohnDeereFieldSelector({ onGeoJsonReady, onBulkReady, on
         else { setExpandedOrg(orgId); fetchFields(orgId); }
     };
 
+    const isFieldSelected = (fieldId) => {
+        return selectedFields.some(sf => sf.field.id === fieldId);
+    };
+
     const handleToggleField = (field) => {
         const { polys } = extractLeafletCoords(field);
         const hasGeometry = polys && polys.length > 0;
