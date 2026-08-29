@@ -42,6 +42,13 @@ public class CampaniaMapper {
         // Para compatibilidad: datos del primer lote
         Lote primerLote = campania.getLote(); // helper que devuelve el primer lote
 
+        java.math.BigDecimal supTotal = null;
+        if (campania.getCampaniaLotes() != null && !campania.getCampaniaLotes().isEmpty()) {
+            supTotal = campania.getCampaniaLotes().stream()
+                    .map(cl -> cl.getLote() != null && cl.getLote().getSuperficie() != null ? cl.getLote().getSuperficie() : java.math.BigDecimal.ZERO)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        }
+
         return CampaniaResponse.builder()
                 .idCampania(campania.getIdCampania())
                 .cultivo(campania.getCultivo())
@@ -60,7 +67,7 @@ public class CampaniaMapper {
                 .nombreLote(primerLote != null ? primerLote.getNombre() : "General")
                 .nombreCampo(primerLote != null && primerLote.getCampo() != null
                         ? primerLote.getCampo().getNombre() : "Estancia Base")
-                .superficieLoteHa(primerLote != null ? primerLote.getSuperficie() : null)
+                .superficieLoteHa(supTotal)
                 .build();
     }
 }

@@ -33,6 +33,13 @@ public class ActividadMapper {
     public ActividadResponse toResponse(Actividad actividad) {
         if (actividad == null) return null;
         var lote = actividad.getCampania() != null ? actividad.getCampania().getLote() : null;
+        java.math.BigDecimal supTotal = null;
+        if (actividad.getCampania() != null && actividad.getCampania().getLotes() != null) {
+            supTotal = actividad.getCampania().getLotes().stream()
+                    .map(l -> l.getSuperficie() != null ? l.getSuperficie() : java.math.BigDecimal.ZERO)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        }
+
         return ActividadResponse.builder()
                 .idActividad(actividad.getIdActividad())
                 .tipoActv(actividad.getTipoActv())
@@ -46,7 +53,7 @@ public class ActividadMapper {
                 .nombreCultivo(actividad.getCampania() != null ? actividad.getCampania().getCultivo() : null)
                 .nombreLote(lote != null ? lote.getNombre() : "General")
                 .nombreCampo(lote != null && lote.getCampo() != null ? lote.getCampo().getNombre() : "Campo no asignado")
-                .superficieLoteHa(lote != null ? lote.getSuperficie() : null)
+                .superficieLoteHa(supTotal)
                 .hectareasTratadas(actividad.getHectareasTratadas())
                 .notas(actividad.getNotas())
                 .insumos(actividad.getInsumosUtilizados() == null ? Collections.emptyList()
