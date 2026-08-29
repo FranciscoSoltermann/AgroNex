@@ -298,6 +298,163 @@ public class JohnDeereController {
     }
 
     // ──────────────────────────────────────────────────
+    // OPERATIONS CENTER EXTENDED APIS (user-level)
+    // ──────────────────────────────────────────────────
+
+    @GetMapping("/organizations/{orgId}/clients")
+    public ResponseEntity<List<Map<String, Object>>> listClients(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String orgId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listClients(userId, orgId));
+    }
+
+    @GetMapping("/clients")
+    public ResponseEntity<List<Map<String, Object>>> listClientsUnificados(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        try {
+            List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
+            if (orgs == null || orgs.isEmpty()) return ResponseEntity.ok(List.of());
+            List<Map<String, Object>> allClients = new ArrayList<>();
+            for (Map<String, Object> org : orgs) {
+                String orgId = org.containsKey("id") ? String.valueOf(org.get("id")) : null;
+                if (orgId != null && !"null".equalsIgnoreCase(orgId)) {
+                    allClients.addAll(machineService.listClients(userId, orgId));
+                }
+            }
+            return ResponseEntity.ok(allClients);
+        } catch (Exception e) {
+            log.warn("Error consultando clients unificados: {}", e.getMessage());
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    @GetMapping("/organizations/{orgId}/users")
+    public ResponseEntity<List<Map<String, Object>>> listUsers(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String orgId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listUsers(userId, orgId));
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<Map<String, Object>>> listUsersUnificados(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        try {
+            List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
+            if (orgs == null || orgs.isEmpty()) return ResponseEntity.ok(List.of());
+            List<Map<String, Object>> allUsers = new ArrayList<>();
+            for (Map<String, Object> org : orgs) {
+                String orgId = org.containsKey("id") ? String.valueOf(org.get("id")) : null;
+                if (orgId != null && !"null".equalsIgnoreCase(orgId)) {
+                    allUsers.addAll(machineService.listUsers(userId, orgId));
+                }
+            }
+            return ResponseEntity.ok(allUsers);
+        } catch (Exception e) {
+            log.warn("Error consultando users unificados: {}", e.getMessage());
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    @GetMapping("/organizations/{orgId}/files")
+    public ResponseEntity<List<Map<String, Object>>> listFiles(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String orgId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listFiles(userId, orgId));
+    }
+
+    @GetMapping("/files")
+    public ResponseEntity<List<Map<String, Object>>> listFilesUnificados(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        try {
+            List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
+            if (orgs == null || orgs.isEmpty()) return ResponseEntity.ok(List.of());
+            List<Map<String, Object>> allFiles = new ArrayList<>();
+            for (Map<String, Object> org : orgs) {
+                String orgId = org.containsKey("id") ? String.valueOf(org.get("id")) : null;
+                if (orgId != null && !"null".equalsIgnoreCase(orgId)) {
+                    allFiles.addAll(machineService.listFiles(userId, orgId));
+                }
+            }
+            return ResponseEntity.ok(allFiles);
+        } catch (Exception e) {
+            log.warn("Error consultando files unificados: {}", e.getMessage());
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    @GetMapping("/organizations/{orgId}/alerts")
+    public ResponseEntity<List<Map<String, Object>>> listOrgAlerts(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String orgId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listAlerts(userId, orgId, null));
+    }
+
+    @GetMapping("/machines/{machineId}/alerts")
+    public ResponseEntity<List<Map<String, Object>>> listMachineAlerts(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String machineId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listAlerts(userId, null, machineId));
+    }
+
+    @GetMapping("/alerts")
+    public ResponseEntity<List<Map<String, Object>>> listAlertsUnificadas(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        try {
+            List<Map<String, Object>> orgs = machineService.listOrganizations(userId);
+            if (orgs == null || orgs.isEmpty()) return ResponseEntity.ok(List.of());
+            List<Map<String, Object>> allAlerts = new ArrayList<>();
+            for (Map<String, Object> org : orgs) {
+                String orgId = org.containsKey("id") ? String.valueOf(org.get("id")) : null;
+                if (orgId != null && !"null".equalsIgnoreCase(orgId)) {
+                    allAlerts.addAll(machineService.listAlerts(userId, orgId, null));
+                }
+            }
+            return ResponseEntity.ok(allAlerts);
+        } catch (Exception e) {
+            log.warn("Error consultando alertas unificadas: {}", e.getMessage());
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    @GetMapping("/machines/{machineId}/engine-hours")
+    public ResponseEntity<List<Map<String, Object>>> getMachineEngineHours(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String machineId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.getMachineEngineHours(userId, machineId));
+    }
+
+    @GetMapping("/machines/{machineId}/hours-of-operation")
+    public ResponseEntity<List<Map<String, Object>>> getMachineHoursOfOperation(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String machineId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.getMachineHoursOfOperation(userId, machineId));
+    }
+
+    @GetMapping("/organizations/{orgId}/fields/{fieldId}/map-layers")
+    public ResponseEntity<List<Map<String, Object>>> listMapLayers(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String orgId,
+            @PathVariable String fieldId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listMapLayers(userId, orgId, fieldId));
+    }
+
+    @GetMapping("/fields/{fieldId}/map-layers")
+    public ResponseEntity<List<Map<String, Object>>> listFieldMapLayers(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable String fieldId) {
+        UUID userId = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(machineService.listMapLayers(userId, null, fieldId));
+    }
+
+    // ──────────────────────────────────────────────────
     // ADMIN: diagnóstico (solo ROLE_ADMIN)
     // ──────────────────────────────────────────────────
 

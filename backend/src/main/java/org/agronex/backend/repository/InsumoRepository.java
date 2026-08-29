@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface InsumoRepository extends JpaRepository<Insumo, UUID> {
 
-    @Query("SELECT i FROM Insumo i WHERE i.usuario.idUsuario = :idUsuario OR (i.campo IS NOT NULL AND i.campo.usuario.idUsuario = :idUsuario)")
+    @Query("SELECT i FROM Insumo i LEFT JOIN i.campo c LEFT JOIN c.usuario cu WHERE i.usuario.idUsuario = :idUsuario OR cu.idUsuario = :idUsuario")
     List<Insumo> findByUsuarioOrCampoUsuario(@Param("idUsuario") UUID idUsuario);
 
     List<Insumo> findByCampoUsuarioIdUsuario(UUID idUsuario);

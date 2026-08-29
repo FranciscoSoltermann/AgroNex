@@ -10,6 +10,9 @@ import {
 import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useCurrency } from "@/lib/currency-context";
 import PermissionGuard from "@/components/shared/PermissionGuard";
+import { toast } from "sonner";
+
+const normalizeStr = (s = "") => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 // Mapa de subtipos por tipo de artículo
 const SUBTIPOS_POR_TIPO = {
@@ -236,7 +239,8 @@ export default function InventarioPage() {
     const { data: insumos = [], isLoading: loadingInsumos } = useQuery({
         queryKey: ['insumos'],
         queryFn: async () => {
-            const res = await apiClient.get('/insumos');
+            const timestamp = Date.now();
+            const res = await apiClient.get(`/insumos?t=${timestamp}`);
             return res.data || [];
         }
     });
@@ -281,6 +285,7 @@ export default function InventarioPage() {
 
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
     const [filtroActivo, setFiltroActivo] = useState("Todos");
+    const [filtroSubtipo, setFiltroSubtipo] = useState("Todos");
     const [filtroCampoId, setFiltroCampoId] = useState("Todos");
     const [filtroCampaniaId, setFiltroCampaniaId] = useState("Todos");
     const [searchTerm, setSearchTerm] = useState("");
@@ -318,15 +323,24 @@ export default function InventarioPage() {
             }
             return await apiClient.post("/insumos", body);
         },
-        onSuccess: () => {
+        onSuccess: (_data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['insumos'] });
             setShowModal(false);
             setEditingId(null);
             setFormInsumo({ ...emptyForm, monedaInput: currency || "ARS" });
             registrarModificacion();
+            toast.success(editingId ? "Insumo actualizado con éxito" : "Insumo guardado en inventario");
+
+            // Si el insumo creado no coincide con el filtro de campo activo, cambiar a "Todos" para que sea visible
+            if (variables?.body?.idCampo && filtroCampoId !== "Todos" && filtroCampoId !== variables.body.idCampo) {
+                setFiltroCampoId(variables.body.idCampo);
+            } else if (!variables?.body?.idCampo && filtroCampoId !== "Todos") {
+                setFiltroCampoId("Todos");
+            }
         },
-        onError: () => {
-            alert("Error al registrar insumo. Verificá que todos los datos sean correctos.");
+        onError: (err) => {
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || "Error al registrar insumo. Verificá que todos los datos sean correctos.";
+            toast.error(errorMsg);
         }
     });
 
@@ -383,8 +397,41 @@ export default function InventarioPage() {
 
     const handleOpenCreateModal = () => {
         setEditingId(null);
+        const defaultTipo = (filtroActivo !== "Todos" && FILTRO_TAB_TO_TIPO[filtroActivo]) ? FILTRO_TAB_TO_TIPO[filtroActivo] : "";
+        const defaultSubtipo = (filtroSubtipo !== "Todos") ? filtroSubtipo : "";
+        const semType = defaultSubtipo ? getSemillaType(defaultTipo, defaultSubtipo, "") : null;
+
+        let defaultUnidad = "";
+        let defaultSemillaMode = "";
+        let defaultPesoBolsa = "";
+
+        if (defaultTipo) {
+            const disponibles = getUnidadesDisponibles(defaultTipo, "", defaultSubtipo);
+            defaultUnidad = disponibles.length > 0 ? disponibles[0].value : "";
+        }
+        if (semType === "MAIZ") {
+            defaultUnidad = "BOLSAS";
+            defaultSemillaMode = "BOLSAS";
+            defaultPesoBolsa = "80000";
+        } else if (semType === "GIRASOL") {
+            defaultUnidad = "BOLSAS";
+            defaultSemillaMode = "BOLSAS";
+            defaultPesoBolsa = "60000";
+        } else if (semType === "TRIGO_SOJA") {
+            defaultUnidad = "BOLSAS";
+            defaultSemillaMode = "BOLSAS";
+            defaultPesoBolsa = "800";
+        }
+
         setFormInsumo({
             ...emptyForm,
+            tipoArticulo: defaultTipo,
+            subtipo: defaultSubtipo,
+            unidad: defaultUnidad,
+            semillaMode: defaultSemillaMode,
+            pesoBolsaKg: defaultPesoBolsa,
+            idCampo: filtroCampoId !== "Todos" ? filtroCampoId : "",
+            idCampania: filtroCampaniaId !== "Todos" ? filtroCampaniaId : "",
             monedaInput: currency || "ARS"
         });
         setShowModal(true);
@@ -402,9 +449,11 @@ export default function InventarioPage() {
             queryClient.invalidateQueries({ queryKey: ['insumos'] });
             registrarModificacion();
             setConfirmModal({ isOpen: false, id: null });
+            toast.success("Insumo eliminado del inventario");
         },
-        onError: () => {
-            alert("Error al eliminar insumo.");
+        onError: (err) => {
+            const errorMsg = err.response?.data?.message || "Error al eliminar insumo.";
+            toast.error(errorMsg);
             setConfirmModal({ isOpen: false, id: null });
         }
     });
@@ -465,6 +514,11 @@ export default function InventarioPage() {
 
                 if (!matchesEnum && !matchesKeyword) return false;
             }
+        }
+        if (filtroSubtipo !== "Todos") {
+            const itemSubtipo = normalizeStr(i.subtipo || "");
+            const targetSubtipo = normalizeStr(filtroSubtipo);
+            if (!itemSubtipo.includes(targetSubtipo)) return false;
         }
         if (searchTerm) return i.nombre.toLowerCase().includes(searchTerm.toLowerCase());
         return true;
@@ -616,13 +670,36 @@ export default function InventarioPage() {
                             <div className="flex items-center justify-center p-4 border-b border-gray-100 dark:border-gray-800">
                                 <div className="flex bg-gray-50 dark:bg-gray-800 p-1 rounded-xl w-full sm:w-auto items-center justify-center gap-0.5 sm:gap-1 overflow-x-auto">
                                     {["Todos", "Semillas", "Herbicidas", "Fertilizantes", "Insecticidas", "Inoculantes/Curasemillas", "Combustibles", "Otros"].map((tab) => (
-                                        <button key={tab} type="button" onClick={() => setFiltroActivo(tab)}
+                                        <button key={tab} type="button" onClick={() => { setFiltroActivo(tab); setFiltroSubtipo("Todos"); }}
                                             className={`shrink-0 px-2 sm:px-3 md:px-2.5 lg:px-4 py-2 rounded-lg text-[11px] sm:text-xs lg:text-sm font-bold transition-all min-h-9 ${filtroActivo === tab ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}>
                                             {tab}
                                         </button>
                                     ))}
                                 </div>
                             </div>
+                            {/* Sub-filtros por subtipo */}
+                            {(() => {
+                                const tipoEnumActivo = FILTRO_TAB_TO_TIPO[filtroActivo];
+                                const subtipos = tipoEnumActivo ? (SUBTIPOS_POR_TIPO[tipoEnumActivo] || []) : [];
+                                if (subtipos.length === 0) return null;
+                                return (
+                                    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest shrink-0">Subtipo:</span>
+                                        <div className="flex gap-1.5">
+                                            <button type="button" onClick={() => setFiltroSubtipo("Todos")}
+                                                className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all ${filtroSubtipo === "Todos" ? "bg-[#2D6A4F] text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+                                                Todos
+                                            </button>
+                                            {subtipos.filter(s => s !== "Otro").map((sub) => (
+                                                <button key={sub} type="button" onClick={() => setFiltroSubtipo(sub)}
+                                                    className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all ${filtroSubtipo === sub ? "bg-[#2D6A4F] text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
+                                                    {sub}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             <div className="dashboard-scroll-x overflow-x-auto">
                                 <table className="w-full min-w-[1050px] text-left border-collapse">
@@ -1179,11 +1256,10 @@ export default function InventarioPage() {
                                         </>
                                     )}
                                 </div>
-                                <button type="submit" disabled={submitLoading || campos.length === 0}
+                                <button type="submit" disabled={submitLoading}
                                     className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1B4332] transition-colors mt-2 shadow-lg shadow-green-900/20 flex items-center justify-center">
                                     {submitLoading ? <Loader2 size={16} className="animate-spin" /> : editingId ? 'Guardar Cambios' : 'Guardar en Inventario'}
                                 </button>
-                                {campos.length === 0 && <p className="text-[10px] text-red-500 text-center font-bold">Debes crear al menos un campo primero.</p>}
                             </form>
                         </div>
                     </div>

@@ -740,6 +740,259 @@ public class JohnDeereMachineService {
     }
 
     /**
+     * Consulta los clientes (Clients) de una organización en John Deere.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> listClients(UUID userId, String orgId) {
+        String url = null;
+        try {
+            Map<String, Object> orgDetail = getOrganizationDetail(userId, orgId);
+            Optional<String> clientsLink = extractLink(orgDetail, "clients");
+            if (clientsLink.isPresent()) {
+                url = clientsLink.get();
+            }
+        } catch (Exception e) {
+            log.warn("No se pudo obtener link HATEOAS de clients para org {}: {}", orgId, e.getMessage());
+        }
+
+        if (url == null) {
+            url = config.getApiBaseUrl() + "/organizations/" + orgId + "/clients";
+        }
+
+        try {
+            String rawResponse = executeGet(userId, url);
+            log.info("JD CLIENTS RAW RESPONSE: {}", rawResponse);
+            if (rawResponse != null && !rawResponse.isBlank()) {
+                Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
+                if (response.containsKey("values")) {
+                    return new ArrayList<>((List<Map<String, Object>>) response.get("values"));
+                } else if (response.containsKey("elements")) {
+                    return new ArrayList<>((List<Map<String, Object>>) response.get("elements"));
+                } else {
+                    return new ArrayList<>(List.of(response));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Fallo al consultar clients JD en org {} via {}: {}", orgId, url, e.getMessage());
+        }
+        return List.of();
+    }
+
+    /**
+     * Consulta los usuarios (Users) vinculados a una organización en John Deere.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> listUsers(UUID userId, String orgId) {
+        String url = null;
+        try {
+            Map<String, Object> orgDetail = getOrganizationDetail(userId, orgId);
+            Optional<String> usersLink = extractLink(orgDetail, "users");
+            if (usersLink.isPresent()) {
+                url = usersLink.get();
+            }
+        } catch (Exception e) {
+            log.warn("No se pudo obtener link HATEOAS de users para org {}: {}", orgId, e.getMessage());
+        }
+
+        if (url == null) {
+            url = config.getApiBaseUrl() + "/organizations/" + orgId + "/users";
+        }
+
+        try {
+            String rawResponse = executeGet(userId, url);
+            log.info("JD USERS RAW RESPONSE: {}", rawResponse);
+            if (rawResponse != null && !rawResponse.isBlank()) {
+                Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
+                if (response.containsKey("values")) {
+                    return new ArrayList<>((List<Map<String, Object>>) response.get("values"));
+                } else if (response.containsKey("elements")) {
+                    return new ArrayList<>((List<Map<String, Object>>) response.get("elements"));
+                } else {
+                    return new ArrayList<>(List.of(response));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Fallo al consultar users JD en org {} via {}: {}", orgId, url, e.getMessage());
+        }
+        return List.of();
+    }
+
+    /**
+     * Consulta los archivos (Files - prescripciones, shapefiles, documentación) de una organización.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> listFiles(UUID userId, String orgId) {
+        String url = null;
+        try {
+            Map<String, Object> orgDetail = getOrganizationDetail(userId, orgId);
+            Optional<String> filesLink = extractLink(orgDetail, "files");
+            if (filesLink.isPresent()) {
+                url = filesLink.get();
+            }
+        } catch (Exception e) {
+            log.warn("No se pudo obtener link HATEOAS de files para org {}: {}", orgId, e.getMessage());
+        }
+
+        if (url == null) {
+            url = config.getApiBaseUrl() + "/organizations/" + orgId + "/files";
+        }
+
+        try {
+            String rawResponse = executeGet(userId, url);
+            log.info("JD FILES RAW RESPONSE: {}", rawResponse);
+            if (rawResponse != null && !rawResponse.isBlank()) {
+                Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
+                if (response.containsKey("values")) {
+                    return new ArrayList<>((List<Map<String, Object>>) response.get("values"));
+                } else if (response.containsKey("elements")) {
+                    return new ArrayList<>((List<Map<String, Object>>) response.get("elements"));
+                } else {
+                    return new ArrayList<>(List.of(response));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Fallo al consultar files JD en org {} via {}: {}", orgId, url, e.getMessage());
+        }
+        return List.of();
+    }
+
+    /**
+     * Consulta las alertas diagnósticas (Machine Alerts / DTCs) de una organización o máquina.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> listAlerts(UUID userId, String orgId, String machineId) {
+        List<String> urlsToTry = new ArrayList<>();
+        if (machineId != null && !machineId.isBlank()) {
+            urlsToTry.add(config.getApiBaseUrl() + "/machines/" + machineId + "/alerts");
+            if (orgId != null && !orgId.isBlank()) {
+                urlsToTry.add(config.getApiBaseUrl() + "/organizations/" + orgId + "/machines/" + machineId + "/alerts");
+            }
+        }
+        if (orgId != null && !orgId.isBlank()) {
+            urlsToTry.add(config.getApiBaseUrl() + "/organizations/" + orgId + "/alerts");
+        }
+
+        for (String url : urlsToTry) {
+            try {
+                String rawResponse = executeGet(userId, url);
+                log.info("JD ALERTS RAW RESPONSE from {}: {}", url, rawResponse);
+                if (rawResponse != null && !rawResponse.isBlank()) {
+                    Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
+                    if (response.containsKey("values")) {
+                        return new ArrayList<>((List<Map<String, Object>>) response.get("values"));
+                    } else if (response.containsKey("elements")) {
+                        return new ArrayList<>((List<Map<String, Object>>) response.get("elements"));
+                    } else {
+                        return new ArrayList<>(List.of(response));
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("No se pudo obtener alertas desde {}: {}", url, e.getMessage());
+            }
+        }
+        return List.of();
+    }
+
+    /**
+     * Consulta las horas acumuladas de motor de una máquina (Machine Engine Hours).
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getMachineEngineHours(UUID userId, String machineId) {
+        List<String> urlsToTry = List.of(
+            config.getApiBaseUrl() + "/machines/" + machineId + "/engineHours",
+            config.getApiBaseUrl() + "/machines/" + machineId + "/hours"
+        );
+
+        for (String url : urlsToTry) {
+            try {
+                String rawResponse = executeGet(userId, url);
+                log.info("JD ENGINE HOURS RAW RESPONSE from {}: {}", url, rawResponse);
+                if (rawResponse != null && !rawResponse.isBlank()) {
+                    Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
+                    if (response.containsKey("values")) {
+                        return new ArrayList<>((List<Map<String, Object>>) response.get("values"));
+                    } else if (response.containsKey("elements")) {
+                        return new ArrayList<>((List<Map<String, Object>>) response.get("elements"));
+                    } else {
+                        return new ArrayList<>(List.of(response));
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("No se pudo obtener engine hours desde {}: {}", url, e.getMessage());
+            }
+        }
+        return List.of();
+    }
+
+    /**
+     * Consulta las horas de operación detalladas de una máquina (Machine Hours Of Operation).
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getMachineHoursOfOperation(UUID userId, String machineId) {
+        List<String> urlsToTry = List.of(
+            config.getApiBaseUrl() + "/machines/" + machineId + "/hoursOfOperation",
+            config.getApiBaseUrl() + "/machines/" + machineId + "/hours"
+        );
+
+        for (String url : urlsToTry) {
+            try {
+                String rawResponse = executeGet(userId, url);
+                log.info("JD HOURS OF OPERATION RAW RESPONSE from {}: {}", url, rawResponse);
+                if (rawResponse != null && !rawResponse.isBlank()) {
+                    Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
+                    if (response.containsKey("values")) {
+                        return new ArrayList<>((List<Map<String, Object>>) response.get("values"));
+                    } else if (response.containsKey("elements")) {
+                        return new ArrayList<>((List<Map<String, Object>>) response.get("elements"));
+                    } else {
+                        return new ArrayList<>(List.of(response));
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("No se pudo obtener hours of operation desde {}: {}", url, e.getMessage());
+            }
+        }
+        return List.of();
+    }
+
+    /**
+     * Consulta las capas de mapas (Map Layers - rinde, elevación, siembra, aplicación) de un lote o campo.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> listMapLayers(UUID userId, String orgId, String fieldId) {
+        List<String> urlsToTry = new ArrayList<>();
+        if (orgId != null && !orgId.isBlank() && fieldId != null && !fieldId.isBlank()) {
+            urlsToTry.add(config.getApiBaseUrl() + "/organizations/" + orgId + "/fields/" + fieldId + "/mapLayers");
+        }
+        if (fieldId != null && !fieldId.isBlank()) {
+            urlsToTry.add(config.getApiBaseUrl() + "/fields/" + fieldId + "/mapLayers");
+        }
+        if (orgId != null && !orgId.isBlank()) {
+            urlsToTry.add(config.getApiBaseUrl() + "/organizations/" + orgId + "/mapLayers");
+        }
+
+        for (String url : urlsToTry) {
+            try {
+                String rawResponse = executeGet(userId, url);
+                log.info("JD MAP LAYERS RAW RESPONSE from {}: {}", url, rawResponse);
+                if (rawResponse != null && !rawResponse.isBlank()) {
+                    Map<String, Object> response = objectMapper.readValue(rawResponse, Map.class);
+                    if (response.containsKey("values")) {
+                        return new ArrayList<>((List<Map<String, Object>>) response.get("values"));
+                    } else if (response.containsKey("elements")) {
+                        return new ArrayList<>((List<Map<String, Object>>) response.get("elements"));
+                    } else {
+                        return new ArrayList<>(List.of(response));
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("No se pudo obtener map layers desde {}: {}", url, e.getMessage());
+            }
+        }
+        return List.of();
+    }
+
+    /**
      * Simula la creación de un equipo ficticio e inyecta telemetría (ubicación) en el Sandbox de John Deere.
      *
      * @param userId ID del usuario autenticado

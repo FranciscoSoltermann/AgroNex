@@ -138,7 +138,7 @@ export default function AuthPage() {
         const url = new URL(window.location.href);
         url.searchParams.delete("error");
         window.history.replaceState({}, "", url.pathname + url.search);
-    }, []);
+    }, [router]);
 
     const isUserAlreadyRegisteredError = (err) => {
         const msg = (err?.message || "").toLowerCase();

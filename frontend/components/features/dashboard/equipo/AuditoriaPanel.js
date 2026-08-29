@@ -103,8 +103,8 @@ export default function AuditoriaPanel() {
                                 </td>
                             </tr>
                         ) : (
-                            logs.map((log) => (
-                                <tr key={log.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                            logs.map((log, index) => (
+                                <tr key={log.idLog || log.id || `log-${index}`} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                                     <td className="px-5 py-4">
                                         <div className="flex items-center gap-2 text-xs font-semibold text-gray-600 dark:text-gray-400">
                                             <CalendarDays size={14} className="text-gray-400" />
