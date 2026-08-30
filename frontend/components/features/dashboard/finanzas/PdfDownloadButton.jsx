@@ -5,13 +5,14 @@ import { Loader2, Download, X } from "lucide-react";
 import apiClient from "@/lib/api-client";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useCurrency } from "@/lib/currency-context";
 
 export default function PdfDownloadButton({ campanias, resumen, gastos, campos, loading }) {
+    const { formatCurrency } = useCurrency();
     const [pdfLoading, setPdfLoading] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [selectedCampo, setSelectedCampo] = useState(""); // "" means All Campos
 
-    const formatCurrency = (val) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val || 0);
     const formatNum = (val, dec = 2) =>
         val != null && !Number.isNaN(Number(val)) ? Number(val).toLocaleString("es-AR", { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "—";
 

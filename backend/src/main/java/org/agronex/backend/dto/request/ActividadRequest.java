@@ -24,6 +24,8 @@ public class ActividadRequest {
     @PositiveOrZero(message = "El costo del servicio no puede ser negativo")
     private BigDecimal costoServicio;
 
+    private String moneda;
+
     @NotNull(message = "La fecha de la actividad es obligatoria")
     private LocalDate fecha;
 

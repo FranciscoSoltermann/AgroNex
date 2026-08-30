@@ -167,9 +167,9 @@ export default function DashboardHome() {
         const processItem = (dateStr, val, type) => {
             if (!dateStr) return;
             const dt = new Date(dateStr + "T00:00:00");
-            const m = dt.getMonth();
-            monthData[m] = monthData[m] || { costos: 0, cosecha: 0 };
-            monthData[m][type] += val;
+            const key = `${dt.getFullYear()}-${dt.getMonth()}`;
+            monthData[key] = monthData[key] || { costos: 0, cosecha: 0 };
+            monthData[key][type] += val;
         };
 
         actos.forEach(a => {
@@ -179,15 +179,14 @@ export default function DashboardHome() {
         gast.forEach(g => processItem(g.fecha, g.montoTotal || 0, "costos"));
         coses.forEach(c => processItem(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
 
-        const today = new Date();
-        for (let i = 4; i >= 0; i--) {
-            const dt = new Date(today.getFullYear(), today.getMonth() - i, 1);
-            const mIdx = dt.getMonth();
-            const data = monthData[mIdx] || { costos: 0, cosecha: 0 };
-            finalChartData.push({ mes: monthNames[mIdx], costos: data.costos, cosecha: data.cosecha });
+        const currentYear = new Date().getFullYear();
+        monthNames.forEach((label, i) => {
+            const key = `${currentYear}-${i}`;
+            const data = monthData[key] || { costos: 0, cosecha: 0 };
+            finalChartData.push({ mes: label, costos: data.costos, cosecha: data.cosecha });
             if (data.costos > maxChartVal) maxChartVal = data.costos;
             if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
-        }
+        });
     } else {
         const getWeekNumber = (d) => {
             d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -215,7 +214,8 @@ export default function DashboardHome() {
         const now = new Date();
         const currentWeek = getWeekNumber(now);
         for (let i = 4; i >= 0; i--) {
-            const wIdx = currentWeek - i;
+            let wIdx = currentWeek - i;
+            if (wIdx <= 0) wIdx += 52;
             const data = weekData[wIdx] || { costos: 0, cosecha: 0 };
             finalChartData.push({ mes: `S${wIdx}`, costos: data.costos, cosecha: data.cosecha });
             if (data.costos > maxChartVal) maxChartVal = data.costos;
@@ -394,7 +394,7 @@ export default function DashboardHome() {
                         {dynChartData.map((d, i) => (
                             <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
                                 <div className="w-full flex-1 flex items-end gap-1 min-h-0">
-                                    <div className="w-1/2 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.costos / Math.max(1, dynMaxVal)) * 100)}%` }} title={`${symbol}${convertCurrency(d.costos).toFixed(2)}`} />
+                                    <div className="w-1/2 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.costos / Math.max(1, dynMaxVal)) * 100)}%` }} title={`${symbol}${Number(d.costos).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
                                     <div className="w-1/2 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.cosecha / Math.max(1, dynMaxVal)) * 100)}%` }} title={`Rend.: ${d.cosecha}`} />
                                 </div>
                                 <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">{d.mes}</span>

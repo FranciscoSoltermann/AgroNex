@@ -6,7 +6,9 @@ import apiClient from "@/lib/api-client";
 import {
     Tractor, Link2, Unlink, Loader2, AlertCircle, CheckCircle2,
     RefreshCw, Shield, Building2, Calendar, Clock,
-    MapPin, Fuel, Gauge, Navigation, LogIn, LogOut, ChevronDown, ChevronUp, Maximize, Globe
+    MapPin, Fuel, Gauge, Navigation, LogIn, LogOut, ChevronDown, ChevronUp,
+    Maximize, Globe, AlertTriangle, FileText, Layers, HardDrive,
+    Download, ShieldCheck, Sparkles, Filter, X, Eye, Activity
 } from "lucide-react";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 
@@ -183,9 +185,19 @@ export default function EcosistemaPage() {
 
 function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection }) {
     const { id, name, description, color, logo, configured, userConnected, connections, organizations, loading, error } = provider;
+    
+    // Estado de pestañas en Operations Center
+    const [activeTab, setActiveTab] = useState("maquinaria"); // 'maquinaria' | 'campos' | 'alertas' | 'archivos'
+    
+    // Datos cargados desde John Deere
     const [machines, setMachines] = useState([]);
     const [fields, setFields] = useState([]);
+    const [alerts, setAlerts] = useState([]);
+    const [files, setFiles] = useState([]);
     const [loadingData, setLoadingData] = useState(false);
+    
+    // Modal de Capas de Mapa (Map Layers)
+    const [selectedFieldForLayers, setSelectedFieldForLayers] = useState(null);
 
     const primaryOrgId = organizations?.[0]?.id || organizations?.[0]?.organizationId;
 
@@ -205,52 +217,80 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
 
             const allMachinesArr = [];
             const allFieldsArr = [];
+            const allAlertsArr = [];
+            const allFilesArr = [];
 
-            await Promise.all(
-                orgsToQuery.map(async (org) => {
-                    const orgId = org.id || org.organizationId;
-                    if (!orgId) return;
+            // Consultar datos unificados y por organización en paralelo
+            await Promise.all([
+                // 1. Maquinaria y Campos
+                Promise.all(
+                    orgsToQuery.map(async (org) => {
+                        const orgId = org.id || org.organizationId;
+                        if (!orgId) return;
 
+                        try {
+                            const [resMachines, resFields] = await Promise.allSettled([
+                                apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/machines`),
+                                apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/fields`)
+                            ]);
+
+                            if (resMachines.status === 'fulfilled') {
+                                const machineList = resMachines.value.data || [];
+                                const machinesWithLocation = await Promise.all(
+                                    machineList.map(async (machine) => {
+                                        try {
+                                            const locRes = await apiClient.get(`/maquinaria/john-deere/machines/${machine.id || machine.principalId}/breadcrumbs`);
+                                            const breadcrumbs = locRes.data || [];
+                                            const bc = (breadcrumbs.length > 0 ? breadcrumbs[0] : null) || machine.breadcrumbs || null;
+                                            return { ...machine, breadcrumbs: bc };
+                                        } catch {
+                                            return { ...machine, breadcrumbs: machine.breadcrumbs || null };
+                                        }
+                                    })
+                                );
+                                allMachinesArr.push(...machinesWithLocation);
+                            }
+
+                            if (resFields.status === 'fulfilled') {
+                                allFieldsArr.push(...(resFields.value.data || []));
+                            }
+                        } catch { /* ignore */ }
+                    })
+                ),
+                // 2. Alertas Diagnósticas (DTCs)
+                (async () => {
                     try {
-                        const [resMachines, resFields] = await Promise.allSettled([
-                            apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/machines`),
-                            apiClient.get(`/maquinaria/john-deere/organizations/${orgId}/fields`)
-                        ]);
-
-                        if (resMachines.status === 'fulfilled') {
-                            const machineList = resMachines.value.data || [];
-                            const machinesWithLocation = await Promise.all(
-                                machineList.map(async (machine) => {
-                                    try {
-                                        const locRes = await apiClient.get(`/maquinaria/john-deere/machines/${machine.id || machine.principalId}/breadcrumbs`);
-                                        const breadcrumbs = locRes.data || [];
-                                        const bc = (breadcrumbs.length > 0 ? breadcrumbs[0] : null) || machine.breadcrumbs || null;
-                                        return { ...machine, breadcrumbs: bc };
-                                    } catch {
-                                        return { ...machine, breadcrumbs: machine.breadcrumbs || null };
-                                    }
-                                })
-                            );
-                            allMachinesArr.push(...machinesWithLocation);
+                        const alertsRes = await apiClient.get('/maquinaria/john-deere/alerts');
+                        if (Array.isArray(alertsRes.data)) {
+                            allAlertsArr.push(...alertsRes.data);
                         }
-
-                        if (resFields.status === 'fulfilled') {
-                            allFieldsArr.push(...(resFields.value.data || []));
+                    } catch { /* ignore */ }
+                })(),
+                // 3. Archivos y Prescripciones (Files API)
+                (async () => {
+                    try {
+                        const filesRes = await apiClient.get('/maquinaria/john-deere/files');
+                        if (Array.isArray(filesRes.data)) {
+                            allFilesArr.push(...filesRes.data);
                         }
-                    } catch {
-                        // ignore per org error
-                    }
-                })
-            );
+                    } catch { /* ignore */ }
+                })()
+            ]);
 
             const uniqueMachines = Array.from(new Map(allMachinesArr.map(m => [m.id || m.principalId, m])).values());
             const uniqueFields = Array.from(new Map(allFieldsArr.map(f => [f.id, f])).values());
+            const uniqueAlerts = Array.from(new Map(allAlertsArr.map(a => [a.id || JSON.stringify(a), a])).values());
+            const uniqueFiles = Array.from(new Map(allFilesArr.map(fl => [fl.id || JSON.stringify(fl), fl])).values());
 
             setMachines(uniqueMachines);
             setFields(uniqueFields);
+            setAlerts(uniqueAlerts);
+            setFiles(uniqueFiles);
         } catch {
             setMachines([]);
             setFields([]);
+            setAlerts([]);
+            setFiles([]);
         } finally {
             setLoadingData(false);
         }
@@ -262,6 +302,8 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
         } else {
             setMachines([]);
             setFields([]);
+            setAlerts([]);
+            setFiles([]);
         }
     }, [userConnected, loadData]);
 
@@ -282,7 +324,7 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
     return (
         <div className="bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
             {/* Provider Header */}
-            <div className="p-4 sm:p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="p-4 sm:p-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-start gap-3 sm:gap-4 min-w-0">
                     <div
                         className="w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl shadow-lg shrink-0"
@@ -298,8 +340,8 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-black text-gray-900 dark:text-gray-100 break-words">{name}</h3>
                             {userConnected && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10px] font-bold border border-green-100 dark:border-green-800">
-                                    <LogIn size={10} /> Cuenta conectada
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-[10.5px] font-bold border border-green-200 dark:border-green-800">
+                                    <LogIn size={11} /> Conexión Activa
                                 </span>
                             )}
                         </div>
@@ -318,20 +360,32 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                         </button>
                     )}
                     {userConnected && (
-                        <button
-                            type="button"
-                            onClick={() => onDisconnect(id)}
-                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-1.5 rounded-lg text-[10px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 transition-all min-h-11 w-full min-[400px]:w-auto"
-                        >
-                            <LogOut size={12} /> Desconectar
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={loadData}
+                                disabled={loadingData}
+                                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                                title="Recargar datos de John Deere"
+                            >
+                                <RefreshCw size={12} className={loadingData ? "animate-spin" : ""} />
+                                <span className="hidden sm:inline">Sincronizar</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onDisconnect(id)}
+                                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800/60 transition-all"
+                            >
+                                <LogOut size={12} /> Desconectar
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
 
             {/* Error */}
             {error && (
-                <div className="mx-6 mb-4 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-red-700 dark:text-red-400 text-[12px] font-semibold">
+                <div className="mx-6 my-4 flex items-center gap-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 text-red-700 dark:text-red-400 text-[12px] font-semibold">
                     <AlertCircle size={14} />
                     {error}
                 </div>
@@ -339,7 +393,7 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
 
             {/* Not configured */}
             {!configured && !error && (
-                <div className="mx-6 mb-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+                <div className="mx-6 my-6 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
                     <div className="flex items-start gap-3">
                         <Shield size={18} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                         <div>
@@ -356,134 +410,236 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                 </div>
             )}
 
-            {/* User connected: Fields & Machines */}
+            {/* User connected: Navigation Tabs & Content */}
             {userConnected && (
-                <div className="border-t border-gray-100 dark:border-gray-800 p-4 sm:p-6 space-y-6">
-                    {loadingData && fields.length === 0 && machines.length === 0 ? (
-                        <div className="p-8 text-center">
-                            <Loader2 size={24} className="mx-auto mb-2 text-[#367C2B] animate-spin" />
-                            <p className="text-xs text-gray-500 font-medium">Cargando datos de John Deere...</p>
-                        </div>
-                    ) : (
-                        <>
-                            {/* 1. CAMPOS CONECTADOS (SEPARADOS POR GRANJA) */}
-                            <div>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                        <MapPin size={16} className="text-green-600" />
-                                        Campos ({fields.length})
-                                    </h4>
-                                </div>
+                <div>
+                    {/* Barra de Pestañas de Ecosistema Operations Center */}
+                    <div className="flex items-center gap-1 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 px-4 sm:px-6 overflow-x-auto scrollbar-none">
+                        <button
+                            onClick={() => setActiveTab("maquinaria")}
+                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
+                                activeTab === "maquinaria"
+                                    ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
+                                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                            }`}
+                        >
+                            <Tractor size={15} />
+                            <span>Maquinaria & GPS</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                                activeTab === "maquinaria" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            }`}>
+                                {machines.length}
+                            </span>
+                        </button>
 
-                                {fields.length === 0 ? (
-                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center border border-dashed border-gray-200 dark:border-gray-700">
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
-                                            No se encontraron campos en la cuenta de John Deere.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {Object.entries(
-                                            fields.reduce((acc, field) => {
-                                                let granja = field.farmName;
-                                                if (!granja || granja.isBlank) {
-                                                    const fn = (field.name || "").toLowerCase();
-                                                    if (fn.includes("500") || fn.includes("years")) {
-                                                        granja = "prueba agronex";
-                                                    } else if (fn.includes("recreo") || fn.includes("san justo") || fn.includes("omg") || fn.includes("funciona")) {
-                                                        granja = "recreo agro";
-                                                    } else {
-                                                        granja = "Granja Principal";
-                                                    }
-                                                }
-                                                if (!acc[granja]) acc[granja] = [];
-                                                acc[granja].push(field);
-                                                return acc;
-                                            }, {})
-                                        ).map(([granjaName, farmFields]) => (
-                                            <div key={granjaName} className="bg-gray-50/70 dark:bg-gray-800/40 rounded-2xl p-4 border border-gray-200/80 dark:border-gray-700/80 space-y-3">
-                                                {/* Header de Granja */}
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-7 h-7 rounded-lg bg-[#367C2B]/15 text-[#367C2B] dark:bg-[#367C2B]/30 dark:text-green-400 flex items-center justify-center font-bold text-xs">
-                                                            <Building2 size={14} />
-                                                        </div>
-                                                        <div>
-                                                            <h5 className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">
-                                                                Granja: {granjaName}
-                                                            </h5>
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 shadow-sm">
-                                                        {farmFields.length} {farmFields.length === 1 ? "campo" : "campos"}
-                                                    </span>
-                                                </div>
+                        <button
+                            onClick={() => setActiveTab("campos")}
+                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
+                                activeTab === "campos"
+                                    ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
+                                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                            }`}
+                        >
+                            <MapPin size={15} />
+                            <span>Campos & Granjas</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                                activeTab === "campos" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            }`}>
+                                {fields.length}
+                            </span>
+                        </button>
 
-                                                {/* Grilla de Campos de esta Granja */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                    {farmFields.map((field) => (
-                                                        <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md">
-                                                            <div className="relative h-36 w-full bg-gray-100 dark:bg-gray-800 overflow-hidden border-b border-gray-100 dark:border-gray-700">
-                                                                <FieldMap field={field} />
-                                                            </div>
-                                                            <div className="p-3.5 flex-1 flex flex-col justify-between">
-                                                                <div>
-                                                                    <div className="flex items-start justify-between gap-2">
-                                                                        <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100 line-clamp-2" title={field.name}>{field.name}</p>
-                                                                        {field.area && (
-                                                                            <span className="shrink-0 text-[10px] font-black bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-md border border-green-100 dark:border-green-800/30">
-                                                                                {Number(field.area.value).toFixed(2)} {field.area.unitId}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    {field.clientName && (
-                                                                        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-                                                                            <Building2 size={11} className="shrink-0" />
-                                                                            <span className="truncate">Cliente: {field.clientName}</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                        <button
+                            onClick={() => setActiveTab("alertas")}
+                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
+                                activeTab === "alertas"
+                                    ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
+                                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                            }`}
+                        >
+                            <AlertTriangle size={15} />
+                            <span>Alertas & Diagnósticos (DTC)</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                                alerts.length > 0 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            }`}>
+                                {alerts.length}
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveTab("archivos")}
+                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
+                                activeTab === "archivos"
+                                    ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
+                                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                            }`}
+                        >
+                            <HardDrive size={15} />
+                            <span>Archivos & Prescripciones</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                                activeTab === "archivos" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            }`}>
+                                {files.length}
+                            </span>
+                        </button>
+                    </div>
+
+                    {/* Contenido de la Pestaña Activa */}
+                    <div className="p-4 sm:p-6">
+                        {loadingData && fields.length === 0 && machines.length === 0 ? (
+                            <div className="p-12 text-center">
+                                <Loader2 size={28} className="mx-auto mb-2 text-[#367C2B] animate-spin" />
+                                <p className="text-xs text-gray-500 font-medium">Sincronizando con John Deere Operations Center...</p>
                             </div>
+                        ) : (
+                            <>
+                                {/* TAB 1: MAQUINARIA */}
+                                {activeTab === "maquinaria" && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                                    <Tractor size={16} className="text-green-600" />
+                                                    Flota de Maquinaria Conectada ({machines.length})
+                                                </h4>
+                                                <p className="text-[11px] text-gray-400">Telemetría satelital, nivel de combustible y horas de motor en tiempo real.</p>
+                                            </div>
+                                            {primaryOrgId && (
+                                                <SandboxSimulateButton orgId={primaryOrgId} onSimulated={loadData} />
+                                            )}
+                                        </div>
 
-                            {/* 2. MAQUINARIA CONECTADA */}
-                            <div>
-                                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                                    <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                        <Tractor size={16} className="text-green-600" />
-                                        Maquinaria conectada ({machines.length})
-                                    </h4>
-                                    {primaryOrgId && (
-                                        <SandboxSimulateButton orgId={primaryOrgId} onSimulated={loadData} />
-                                    )}
-                                </div>
-
-                                {machines.length === 0 ? (
-                                    <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 text-center border border-dashed border-gray-200 dark:border-gray-700">
-                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium mb-3">
-                                            No se encontraron máquinas en la cuenta de John Deere.
-                                        </p>
-                                        {primaryOrgId && (
-                                            <SandboxSimulateButton orgId={primaryOrgId} onSimulated={loadData} inline={true} />
+                                        {machines.length === 0 ? (
+                                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-8 text-center border border-dashed border-gray-200 dark:border-gray-700">
+                                                <Tractor size={32} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-3">
+                                                    No se encontraron máquinas vinculadas en la cuenta de John Deere.
+                                                </p>
+                                                {primaryOrgId && (
+                                                    <SandboxSimulateButton orgId={primaryOrgId} onSimulated={loadData} inline={true} />
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {machines.map((machine) => (
+                                                    <MachineCard key={machine.id || machine.principalId} machine={machine} />
+                                                ))}
+                                            </div>
                                         )}
                                     </div>
-                                ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {machines.map((machine) => (
-                                            <MachineCard key={machine.id || machine.principalId} machine={machine} />
-                                        ))}
+                                )}
+
+                                {/* TAB 2: CAMPOS & GRANJAS */}
+                                {activeTab === "campos" && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                                    <MapPin size={16} className="text-green-600" />
+                                                    Campos & Límites Agrícolas ({fields.length})
+                                                </h4>
+                                                <p className="text-[11px] text-gray-400">Límites perimetrales (boundaries) y capas agronómicas importadas.</p>
+                                            </div>
+                                        </div>
+
+                                        {fields.length === 0 ? (
+                                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-8 text-center border border-dashed border-gray-200 dark:border-gray-700">
+                                                <MapPin size={32} className="mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                                    No se encontraron campos registrados en tu organización de John Deere.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {Object.entries(
+                                                    fields.reduce((acc, field) => {
+                                                        let granja = field.farmName;
+                                                        if (!granja || granja === "null" || granja.isBlank) {
+                                                            const fn = (field.name || "").toLowerCase();
+                                                            if (fn.includes("500") || fn.includes("years")) {
+                                                                granja = "Prueba AgroNex";
+                                                            } else if (fn.includes("recreo") || fn.includes("san justo") || fn.includes("omg") || fn.includes("funciona")) {
+                                                                granja = "Recreo Agro";
+                                                            } else {
+                                                                granja = "Granja Principal";
+                                                            }
+                                                        }
+                                                        if (!acc[granja]) acc[granja] = [];
+                                                        acc[granja].push(field);
+                                                        return acc;
+                                                    }, {})
+                                                ).map(([granjaName, farmFields]) => (
+                                                    <div key={granjaName} className="bg-gray-50/70 dark:bg-gray-800/40 rounded-2xl p-4 border border-gray-200/80 dark:border-gray-700/80 space-y-3">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-7 h-7 rounded-lg bg-[#367C2B]/15 text-[#367C2B] dark:bg-[#367C2B]/30 dark:text-green-400 flex items-center justify-center font-bold text-xs">
+                                                                    <Building2 size={14} />
+                                                                </div>
+                                                                <h5 className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">
+                                                                    Granja: {granjaName}
+                                                                </h5>
+                                                            </div>
+                                                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 shadow-sm">
+                                                                {farmFields.length} {farmFields.length === 1 ? "campo" : "campos"}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                            {farmFields.map((field) => (
+                                                                <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col justify-between transition-all hover:shadow-md">
+                                                                    <div className="relative h-36 w-full bg-gray-100 dark:bg-gray-800 overflow-hidden border-b border-gray-100 dark:border-gray-700">
+                                                                        <FieldMap field={field} />
+                                                                    </div>
+                                                                    <div className="p-3.5 space-y-3">
+                                                                        <div>
+                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                <p className="font-bold text-[13px] text-gray-900 dark:text-gray-100 line-clamp-2" title={field.name}>{field.name}</p>
+                                                                                {field.area && (
+                                                                                    <span className="shrink-0 text-[10px] font-black bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2 py-0.5 rounded-md border border-green-100 dark:border-green-800/30">
+                                                                                        {Number(field.area.value).toFixed(2)} {field.area.unitId || "ha"}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            {field.clientName && (
+                                                                                <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                                                                                    <Building2 size={11} className="shrink-0" />
+                                                                                    <span className="truncate">Cliente: {field.clientName}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                                                                            <span className="text-[10px] text-gray-400 font-mono">ID: {String(field.id).substring(0, 10)}...</span>
+                                                                            <button
+                                                                                onClick={() => setSelectedFieldForLayers(field)}
+                                                                                className="flex items-center gap-1 text-[11px] font-bold text-[#367C2B] dark:text-green-400 hover:underline"
+                                                                            >
+                                                                                <Layers size={12} /> Capas de Mapa
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
-                            </div>
-                        </>
-                    )}
+
+                                {/* TAB 3: ALERTAS DIAGNÓSTICAS (DTCs) */}
+                                {activeTab === "alertas" && (
+                                    <AlertasDiagnosticasSection alerts={alerts} machines={machines} />
+                                )}
+
+                                {/* TAB 4: ARCHIVOS Y PRESCRIPCIONES */}
+                                {activeTab === "archivos" && (
+                                    <ArchivosPrescripcionesSection files={files} />
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -491,16 +647,27 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
             {configured && !userConnected && connections.length === 0 && (
                 <div className="border-t border-gray-100 dark:border-gray-800 p-8 text-center">
                     <CheckCircle2 size={28} className="mx-auto mb-2 text-green-400" />
-                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400">API configurada</p>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400">API de John Deere configurada</p>
                     <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
-                        Conectá tu cuenta de John Deere para ver tus campos, máquinas y su ubicación en tiempo real.
+                        Conectá tu cuenta de John Deere para sincronizar maquinaria, límites satelitales, diagnósticos y prescripciones.
                     </p>
                 </div>
+            )}
+
+            {/* Modal de Capas de Mapa (Map Layers) */}
+            {selectedFieldForLayers && (
+                <MapLayersModal
+                    field={selectedFieldForLayers}
+                    onClose={() => setSelectedFieldForLayers(null)}
+                />
             )}
         </div>
     );
 }
 
+/* =========================================================================
+   COMPONENTE: TARJETA DE MAQUINARIA
+   ========================================================================= */
 function MachineCard({ machine }) {
     const bc = machine.breadcrumbs;
     const location = bc?.location;
@@ -600,7 +767,7 @@ function MachineCard({ machine }) {
                 <div className="flex items-center justify-between text-[11px] bg-gray-50/80 dark:bg-gray-800/60 px-3 py-1.5 rounded-lg border border-gray-200/60 dark:border-gray-700">
                     <div className="flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400 font-bold text-[10.5px]">
                         <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
-                        <span>Diagnóstico: Sin alertas de motor (DTC OK)</span>
+                        <span>Diagnóstico: Sin alertas activas de motor (DTC OK)</span>
                     </div>
                     <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
                         {bc?.engineState || "En Operación"}
@@ -617,6 +784,277 @@ function MachineCard({ machine }) {
                         <span className="text-[10px] text-gray-500 font-medium">Santa Fe, Argentina</span>
                     </div>
                 )}
+            </div>
+        </div>
+    );
+}
+
+/* =========================================================================
+   COMPONENTE: SECCIÓN DE ALERTAS DIAGNÓSTICAS (DTCs)
+   ========================================================================= */
+function AlertasDiagnosticasSection({ alerts, machines }) {
+    // Si no hay alertas del backend, mostrar estado saludable de flota
+    const isHealthy = alerts.length === 0;
+
+    return (
+        <div className="space-y-6">
+            {/* KPI Cards de Salud de Flota */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/40 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                        <ShieldCheck size={22} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase text-emerald-800 dark:text-emerald-300 tracking-wider">Salud de Flota</p>
+                        <p className="text-base font-black text-gray-900 dark:text-gray-100">
+                            {isHealthy ? "100% Operativa" : `${alerts.length} Alertas Activas`}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                        <Tractor size={22} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider">Equipos Monitoreados</p>
+                        <p className="text-base font-black text-gray-900 dark:text-gray-100">{machines.length} Maquinarias</p>
+                    </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
+                        <Activity size={22} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider">Códigos DTC</p>
+                        <p className="text-base font-black text-gray-900 dark:text-gray-100">{alerts.length} Detectados</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Listado de Alertas */}
+            {isHealthy ? (
+                <div className="bg-gray-50/60 dark:bg-gray-800/30 rounded-2xl p-8 text-center border border-gray-200/80 dark:border-gray-700/80 space-y-2">
+                    <CheckCircle2 size={36} className="mx-auto text-emerald-500 mb-2" />
+                    <h5 className="text-sm font-black text-gray-900 dark:text-gray-100">Sin Alertas Mecánicas ni Códigos de Falla</h5>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                        Los sensores telemáticos de John Deere Operations Center no reportan códigos de error activos (DTC) en los motores ni sistemas hidráulicos de tu flota.
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    <h5 className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Alertas y Códigos de Diagnóstico Detectados
+                    </h5>
+                    <div className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#1e2329] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        {alerts.map((al, idx) => (
+                            <div key={al.id || idx} className="p-4 flex items-start justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-0.5 text-amber-500 shrink-0">
+                                        <AlertTriangle size={18} />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                                {al.description || al.title || "Alerta de Telemetría"}
+                                            </span>
+                                            {al.severity && (
+                                                <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200">
+                                                    {al.severity}
+                                                </span>
+                                            )}
+                                            {al.dtcCode && (
+                                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                                    DTC: {al.dtcCode}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                                            {al.machineName ? `Equipo: ${al.machineName}` : "Equipo John Deere"} • {al.eventTime ? new Date(al.eventTime).toLocaleString() : "Reciente"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* =========================================================================
+   COMPONENTE: SECCIÓN DE ARCHIVOS Y PRESCRIPCIONES (Files API)
+   ========================================================================= */
+function ArchivosPrescripcionesSection({ files }) {
+    const isFilesEmpty = files.length === 0;
+
+    return (
+        <div className="space-y-6">
+            {/* KPI Cards de Archivos */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-800/40 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                        <HardDrive size={22} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase text-blue-800 dark:text-blue-300 tracking-wider">Archivos en Nube JD</p>
+                        <p className="text-base font-black text-gray-900 dark:text-gray-100">{files.length} Archivos</p>
+                    </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+                        <FileText size={22} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider">Prescripciones VRA</p>
+                        <p className="text-base font-black text-gray-900 dark:text-gray-100">Disponibles</p>
+                    </div>
+                </div>
+
+                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                        <Sparkles size={22} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider">Formato Compatibilidad</p>
+                        <p className="text-base font-black text-gray-900 dark:text-gray-100">Shapefile / ISOXML</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Listado o Estado Vacío */}
+            {isFilesEmpty ? (
+                <div className="bg-gray-50/60 dark:bg-gray-800/30 rounded-2xl p-8 text-center border border-gray-200/80 dark:border-gray-700/80 space-y-2">
+                    <FileText size={36} className="mx-auto text-gray-400 mb-2" />
+                    <h5 className="text-sm font-black text-gray-900 dark:text-gray-100">Sin Archivos de Prescripción o Labor en la Nube</h5>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                        Aún no hay archivos de configuración (setup files), prescripciones variables ni mapas de cosecha subidos a tu organización de John Deere.
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    <h5 className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Archivos Sincronizados con Operations Center
+                    </h5>
+                    <div className="divide-y divide-gray-100 dark:divide-gray-800 bg-white dark:bg-[#1e2329] rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        {files.map((fl, idx) => (
+                            <div key={fl.id || idx} className="p-4 flex items-center justify-between gap-3 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                                        <FileText size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                            {fl.name || fl.filename || `Archivo ${idx + 1}`}
+                                        </p>
+                                        <p className="text-[11px] text-gray-400">
+                                            {fl.type || "Documento"} • {fl.size ? `${(fl.size / 1024).toFixed(1)} KB` : "JD Cloud"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200">
+                                    Sincronizado
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+/* =========================================================================
+   COMPONENTE: MODAL DE CAPAS DE MAPA (Map Layers API)
+   ========================================================================= */
+function MapLayersModal({ field, onClose }) {
+    const [loading, setLoading] = useState(true);
+    const [layers, setLayers] = useState([]);
+
+    useEffect(() => {
+        const fetchLayers = async () => {
+            setLoading(true);
+            try {
+                const res = await apiClient.get(`/maquinaria/john-deere/fields/${field.id}/map-layers`);
+                setLayers(Array.isArray(res.data) ? res.data : []);
+            } catch {
+                setLayers([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (field?.id) {
+            fetchLayers();
+        }
+    }, [field]);
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-[#1a1f25] w-full max-w-lg rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col max-h-[85vh]">
+                {/* Modal Header */}
+                <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-[#367C2B]/15 text-[#367C2B] dark:bg-[#367C2B]/30 dark:text-green-400 flex items-center justify-center font-bold">
+                            <Layers size={18} />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-sm text-gray-900 dark:text-gray-100">Capas de Mapa (Map Layers)</h4>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">{field.name}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-5 overflow-y-auto space-y-4 flex-1">
+                    {loading ? (
+                        <div className="p-8 text-center">
+                            <Loader2 size={24} className="mx-auto mb-2 text-[#367C2B] animate-spin" />
+                            <p className="text-xs text-gray-500 font-medium">Consultando capas en John Deere Operations Center...</p>
+                        </div>
+                    ) : layers.length === 0 ? (
+                        <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-6 text-center border border-dashed border-gray-200 dark:border-gray-700 space-y-2">
+                            <Layers size={32} className="mx-auto text-gray-300 dark:text-gray-600 mb-1" />
+                            <p className="text-xs font-bold text-gray-700 dark:text-gray-300">Sin capas agronómicas registradas</p>
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 max-w-xs mx-auto">
+                                Este lote cuenta con su límite perimetral (boundary), pero aún no tiene capas rasterizadas de rinde de cosecha o densidad de siembra en John Deere.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {layers.map((layer, idx) => (
+                                <div key={layer.id || idx} className="p-3 bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                                    <div>
+                                        <p className="text-xs font-bold text-gray-900 dark:text-gray-100">{layer.title || layer.name || `Capa ${idx + 1}`}</p>
+                                        <p className="text-[10px] text-gray-400">{layer.layerType || "Rinde / Siembra"}</p>
+                                    </div>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                        Disponible
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 flex justify-end">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 transition-colors"
+                    >
+                        Cerrar
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,17 +32,22 @@ public class FinanzasController {
     private final UsuarioService usuarioService;
 
     @GetMapping("/resumen")
-    public ResponseEntity<List<FinanzasCampoResponse>> obtenerResumen(@AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<List<FinanzasCampoResponse>> obtenerResumen(
+            @RequestParam(required = false, defaultValue = "ARS") String moneda,
+            @RequestParam(required = false) BigDecimal tipoCambio,
+            @AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
-        return ResponseEntity.ok(finanzasService.obtenerResumenGeneral(idUsuario));
+        return ResponseEntity.ok(finanzasService.obtenerResumenGeneral(idUsuario, moneda, tipoCambio));
     }
 
     @GetMapping("/campania/{idCampania}/resumen")
     public ResponseEntity<ResumenCampaniaResponse> resumenPorCampania(
             @PathVariable UUID idCampania,
+            @RequestParam(required = false, defaultValue = "ARS") String moneda,
+            @RequestParam(required = false) BigDecimal tipoCambio,
             @AuthenticationPrincipal Jwt jwt) {
         UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
-        return ResponseEntity.ok(finanzasService.obtenerResumenCampania(idCampania, idUsuario));
+        return ResponseEntity.ok(finanzasService.obtenerResumenCampania(idCampania, idUsuario, moneda, tipoCambio));
     }
 }
 

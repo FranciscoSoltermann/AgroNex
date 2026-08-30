@@ -26,6 +26,9 @@ public class Actividad {
     @Column(name = "costo_servicio", precision = 15, scale = 2)
     private BigDecimal costoServicio;
 
+    @Column(name = "moneda", length = 10)
+    private String moneda;
+
     @Column(name = "fecha")
     private LocalDate fecha;
 

@@ -520,14 +520,20 @@ export default function InventarioPage() {
             const targetSubtipo = normalizeStr(filtroSubtipo);
             if (!itemSubtipo.includes(targetSubtipo)) return false;
         }
-        if (searchTerm) return i.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+        if (searchTerm) return (i.nombre || "").toLowerCase().includes(searchTerm.toLowerCase());
         return true;
     });
 
-    const valorTotal = displayInsumos.reduce((acc, curr) => acc + (Number(curr.precioUnitario) * Number(curr.cantidad || 0)), 0);
+    const valorTotal = displayInsumos.reduce((acc, curr) => acc + (Number(curr.precioUnitario || 0) * Number(curr.cantidad || 0)), 0);
     const itemsConStockBajo = displayInsumos.filter(i => {
-        const pct = i.cantidadInicial ? (Number(i.cantidad) / Number(i.cantidadInicial)) * 100 : null;
-        return Number(i.cantidad) <= 0 || (pct !== null && pct < 20);
+        const qty = Number(i.cantidad || 0);
+        if (qty <= 0) return true;
+        const ini = Number(i.cantidadInicial || 0);
+        if (ini > 0) {
+            const pct = (qty / ini) * 100;
+            return pct <= 30;
+        }
+        return qty < 5;
     }).length;
     const itemsDisponibles = displayInsumos.filter(i => Number(i.cantidad) > 0).length;
 
@@ -560,7 +566,7 @@ export default function InventarioPage() {
             const campaniaDelHistorial = campanias.find(c => c.idCampania === h.idCampania);
             if (campaniaDelHistorial && campaniaDelHistorial.idCampo !== filtroCampoId && !campaniaDelHistorial.lotes?.some(l => l.idCampo === filtroCampoId)) return false;
         }
-        if (searchTerm) return h.nombreInsumo.toLowerCase().includes(searchTerm.toLowerCase());
+        if (searchTerm) return (h.nombreInsumo || "").toLowerCase().includes(searchTerm.toLowerCase());
         return true;
     });
 
@@ -766,8 +772,8 @@ export default function InventarioPage() {
                                                         </div>
                                                         {item.cantidadInicial && Number(item.cantidadInicial) > 0 && (
                                                             <div className="w-16 h-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                                <div className={`h-full rounded-full ${(Number(item.cantidad) / Number(item.cantidadInicial)) > 0.4 ? 'bg-emerald-400' : (Number(item.cantidad) / Number(item.cantidadInicial)) > 0.15 ? 'bg-orange-400' : 'bg-red-500'}`}
-                                                                    style={{ width: `${Math.min(100, (Number(item.cantidad) / Number(item.cantidadInicial)) * 100)}%` }} />
+                                                                <div className={`h-full rounded-full ${(Number(item.cantidad) / Number(item.cantidadInicial)) > 0.3 ? 'bg-emerald-400' : (Number(item.cantidad) / Number(item.cantidadInicial)) > 0.15 ? 'bg-orange-400' : 'bg-red-500'}`}
+                                                                    style={{ width: `${Math.max(0, Math.min(100, (Number(item.cantidad) / Number(item.cantidadInicial)) * 100))}%` }} />
                                                             </div>
                                                         )}
                                                     </div>
@@ -865,7 +871,7 @@ export default function InventarioPage() {
                                                 </td>
                                                 {/* Valor Total */}
                                                 <td className="p-4 text-sm font-black text-gray-900 dark:text-gray-100 text-right">
-                                                    {currSymbol}{convertCurrency(Number(item.precioUnitario) * Number(item.cantidad || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
+                                                    {currSymbol}{convertCurrency(Number(item.precioUnitario || 0) * Number(item.cantidad || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}
                                                 </td>
                                                 {/* Campaña */}
                                                 <td className="p-4">
@@ -879,7 +885,7 @@ export default function InventarioPage() {
                                                 </td>
                                                 {/* Acciones */}
                                                 <td className="p-4">
-                                                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex items-center justify-center gap-1">
                                                         <button type="button" onClick={() => handleEditar(item)} title="Editar"
                                                             className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 transition-colors">
                                                             <Pencil size={14} />

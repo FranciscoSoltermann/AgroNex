@@ -25,7 +25,8 @@ export default function FinanzasPage() {
     const [gastos, setGastos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { formatCurrency, symbol: currSymbol } = useCurrency();
+    const { currency, exchangeRate, formatCurrency, symbol: currSymbol } = useCurrency();
+    const fmtDirect = (val) => `${currSymbol}${Number(val || 0).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const [filtroCampoId, setFiltroCampoId] = useState("");
     const [filtroCampaniaId, setFiltroCampaniaId] = useState("");
 
@@ -42,45 +43,44 @@ export default function FinanzasPage() {
     });
 
     const gastosFiltrados = gastos.filter(g => {
-        if (filtroCampoId && g.idCampo !== filtroCampoId) return false;
-        if (filtroCampaniaId && g.idCampania !== filtroCampaniaId) return false;
+        if (filtroCampaniaId) return g.campania?.idCampania === filtroCampaniaId;
+        if (filtroCampoId) return g.campo?.idCampo === filtroCampoId;
         return true;
     });
 
     const [formGasto, setFormGasto] = useState({
         fecha: new Date().toISOString().split("T")[0],
-        categoria: "Sueldos",
+        categoria: "Insumos Varios",
         descripcion: "",
         montoTotal: "",
         idCampo: "",
         idCampania: "",
-        tipoSeguro: "Granizo",
-        porcentajeImpuesto: "",
-        gradoHumedad: "",
-        precioPuntoText: "",
-        toneladasRecargoHumedad: "",
-        precioVentaSemilla: "",
-        alquilerFormaPago: "DINERO",
-        alquilerQuintales: "",
-        alquilerPrecioQq: "",
-        alquilerPorcentaje: "",
     });
+
     const [gastoLoading, setGastoLoading] = useState(false);
     const [gastoSuccess, setGastoSuccess] = useState(null);
+    const [gastoError, setGastoError] = useState(null);
+
+    const [porcentajeImpuesto, setPorcentajeImpuesto] = useState("");
     const [resumenGastoCampania, setResumenGastoCampania] = useState(null);
+    const [toneladasSecada, setToneladasSecada] = useState("");
+    const [humedadReal, setHumedadReal] = useState("");
+    const [alquilerTipo, setAlquilerTipo] = useState("FIJO");
+    const [alquilerQuintales, setAlquilerQuintales] = useState("");
+    const [alquilerPrecioQq, setAlquilerPrecioQq] = useState("");
+    const [alquilerPorcentaje, setAlquilerPorcentaje] = useState("");
 
     const campaniasParaGasto = useMemo(() => {
         if (!formGasto.idCampo) return campanias;
         return campanias.filter((c) => c.idCampo === formGasto.idCampo || c.lotes?.some(l => l.idCampo === formGasto.idCampo));
     }, [formGasto.idCampo, campanias]);
 
-    // Form cosecha
     const [formCosecha, setFormCosecha] = useState({
         fecha: new Date().toISOString().split("T")[0],
         rendimientoTotalQq: "",
         precioVentaUnitarioUsd: "",
         idCampania: "",
-        tipoLogistica: "NINGUNO",
+        tipoLogistica: "TERCERIZADO",
         fleteTercerizadoCostoTotal: "",
         fletePropioLitrosCombustible: "",
         fletePropioPrecioLitro: "",
@@ -91,9 +91,10 @@ export default function FinanzasPage() {
     const fetchData = useCallback(async (options = {}) => {
         try {
             const timestamp = new Date().getTime();
+            const rateParam = exchangeRate ? `&tipoCambio=${exchangeRate}` : '';
             const [bootstrap, resumenRes, gastosRes] = await Promise.all([
                 getDashboardBootstrapData({ forceRefresh: !!options.forceRefresh }),
-                apiClient.get(`/finanzas/resumen?t=${timestamp}`).catch(() => ({ data: [] })),
+                apiClient.get(`/finanzas/resumen?moneda=${currency}${rateParam}&t=${timestamp}`).catch(() => ({ data: [] })),
                 apiClient.get(`/gastos?t=${timestamp}`).catch(() => ({ data: [] }))
             ]);
             setCampos(bootstrap.campos || []);
@@ -105,7 +106,7 @@ export default function FinanzasPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [currency, exchangeRate]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -117,14 +118,15 @@ export default function FinanzasPage() {
         setResumenCampLoading(true);
         try {
             const t = new Date().getTime();
-            const res = await apiClient.get(`/finanzas/campania/${idCampania}/resumen?t=${t}`);
+            const rateParam = exchangeRate ? `&tipoCambio=${exchangeRate}` : '';
+            const res = await apiClient.get(`/finanzas/campania/${idCampania}/resumen?moneda=${currency}${rateParam}&t=${t}`);
             setResumenCampania(res.data);
         } catch {
             setResumenCampania(null);
         } finally {
             setResumenCampLoading(false);
         }
-    }, []);
+    }, [currency, exchangeRate]);
 
     useEffect(() => {
         if (idCampaniaEconomia) fetchResumenCampania(idCampaniaEconomia);
@@ -141,13 +143,14 @@ export default function FinanzasPage() {
     useEffect(() => {
         if (formGasto.idCampania && (formGasto.categoria === "Impuestos" || formGasto.categoria === "Alquiler de Campo")) {
             const t = new Date().getTime();
-            apiClient.get(`/finanzas/campania/${formGasto.idCampania}/resumen?t=${t}`)
+            const rateParam = exchangeRate ? `&tipoCambio=${exchangeRate}` : '';
+            apiClient.get(`/finanzas/campania/${formGasto.idCampania}/resumen?moneda=${currency}${rateParam}&t=${t}`)
                 .then(res => setResumenGastoCampania(res.data))
                 .catch(() => setResumenGastoCampania(null));
         } else {
             setResumenGastoCampania(null);
         }
-    }, [formGasto.idCampania, formGasto.categoria]);
+    }, [formGasto.idCampania, formGasto.categoria, currency, exchangeRate]);
 
     const handleRegistrarGasto = async (e) => {
         e.preventDefault();
@@ -173,7 +176,7 @@ export default function FinanzasPage() {
                 finalMonto = parseFloat(formGasto.montoTotal) || 0;
                 let details = "Secada";
                 if (formGasto.toneladasRecargoHumedad) details += `, Recargo Humedad: ${formGasto.toneladasRecargoHumedad} Tn`;
-                if (formGasto.precioVentaSemilla) details += `, Precio Venta: $${formGasto.precioVentaSemilla}/Tn`;
+                if (formGasto.precioVentaSemilla) details += `, Precio Venta: ${currSymbol}${formGasto.precioVentaSemilla}/Tn`;
                 if (formGasto.gradoHumedad) details += `, Humedad: ${formGasto.gradoHumedad}`;
                 if (formGasto.precioPuntoText) details += `, Precio Punto: ${formGasto.precioPuntoText}`;
                 finalDescripcion = `[${details}] ${finalDescripcion}`.trim();
@@ -186,7 +189,7 @@ export default function FinanzasPage() {
                     const qq = parseFloat(formGasto.alquilerQuintales) || 0;
                     const precioQq = parseFloat(formGasto.alquilerPrecioQq) || 0;
                     finalMonto = qq * precioQq;
-                    finalDescripcion = `[Pago en Quintales: ${qq} Qq × $${precioQq}/Qq] ${finalDescripcion}`.trim();
+                    finalDescripcion = `[Pago en Quintales: ${qq} Qq × ${currSymbol}${precioQq}/Qq] ${finalDescripcion}`.trim();
                 } else if (forma === "PORCENTAJE" && formGasto.idCampania && resumenGastoCampania) {
                     const pct = parseFloat(formGasto.alquilerPorcentaje) || 0;
                     const ingresos = resumenGastoCampania.ingresosTotales || 0;
@@ -203,7 +206,7 @@ export default function FinanzasPage() {
                 categoria: formGasto.categoria,
                 descripcion: finalDescripcion,
                 montoTotal: finalMonto,
-                moneda: "ARS",
+                moneda: currency,
                 idCampo: formGasto.idCampo,
             };
             if (formGasto.idCampania) body.idCampania = formGasto.idCampania;
@@ -443,12 +446,12 @@ export default function FinanzasPage() {
                             </span>
                         </div>
                         <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-4 gap-3">
-                            <MetricBox label="Costo total / Ha" value={`${formatCurrency(resumenCampania.costoPorHa)}`} sub="Incluye servicios, insumos, logística y gastos fijos" />
-                            <MetricBox label="Ingresos / Ha" value={`${formatCurrency(resumenCampania.ingresosPorHa)}`} sub="Cosechas registradas" />
+                            <MetricBox label="Costo total / Ha" value={`${fmtDirect(resumenCampania.costoPorHa)}`} sub="Incluye servicios, insumos, logística y gastos fijos" />
+                            <MetricBox label="Ingresos / Ha" value={`${fmtDirect(resumenCampania.ingresosPorHa)}`} sub="Cosechas registradas" />
                             <MetricBox label="Quintales / Ha" value={`${formatNum(resumenCampania.quintalesPorHa, 3)} qq`} sub="Producción por hectárea" />
                             <MetricBox
                                 label="Margen bruto / Ha"
-                                value={`${formatCurrency(resumenCampania.margenBrutoPorHa)}`}
+                                value={`${fmtDirect(resumenCampania.margenBrutoPorHa)}`}
                                 sub="Ingresos − costos totales"
                                 highlight={Number(resumenCampania.margenBrutoPorHa) >= 0}
                             />
@@ -459,19 +462,19 @@ export default function FinanzasPage() {
                                 <ul className="text-[12px] space-y-1.5 font-semibold">
                                     <li className="flex justify-between">
                                         <span className="text-white/75">Servicios (actividades)</span>
-                                        <span>{formatCurrency(resumenCampania.costoServiciosTotal)}</span>
+                                        <span>{fmtDirect(resumenCampania.costoServiciosTotal)}</span>
                                     </li>
                                     <li className="flex flex-col gap-1.5">
                                         <div className="flex justify-between">
                                             <span className="text-white/75">Insumos (dosis × Ha)</span>
-                                            <span>{formatCurrency(resumenCampania.costoInsumosTotal)}</span>
+                                            <span>{fmtDirect(resumenCampania.costoInsumosTotal)}</span>
                                         </div>
                                         {resumenCampania.detallesInsumos && resumenCampania.detallesInsumos.length > 0 && (
                                             <div className="pl-3 border-l-2 border-white/10 mt-1 space-y-1">
                                                 {resumenCampania.detallesInsumos.map(ins => (
                                                     <div key={ins.idInsumo} className="flex justify-between text-[11px] text-white/50 font-medium">
                                                         <span>• {ins.nombreInsumo} ({formatNum(ins.cantidadTotalUsada, 2)} und)</span>
-                                                        <span>{formatCurrency(ins.costoTotal)}</span>
+                                                        <span>{fmtDirect(ins.costoTotal)}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -479,15 +482,15 @@ export default function FinanzasPage() {
                                     </li>
                                     <li className="flex justify-between">
                                         <span className="text-white/75">Logística de cosecha</span>
-                                        <span>{formatCurrency(resumenCampania.costoLogisticaTotal)}</span>
+                                        <span>{fmtDirect(resumenCampania.costoLogisticaTotal)}</span>
                                     </li>
                                     <li className="flex justify-between">
                                         <span className="text-white/75">Gastos fijos imputados</span>
-                                        <span>{formatCurrency(resumenCampania.gastosFijosAsignados)}</span>
+                                        <span>{fmtDirect(resumenCampania.gastosFijosAsignados)}</span>
                                     </li>
                                     <li className="flex justify-between pt-2 border-t border-white/10 font-black text-[13px]">
                                         <span>Total</span>
-                                        <span>{formatCurrency(resumenCampania.costoTotal)}</span>
+                                        <span>{fmtDirect(resumenCampania.costoTotal)}</span>
                                     </li>
                                 </ul>
                             </div>
@@ -496,7 +499,7 @@ export default function FinanzasPage() {
                                 <ul className="text-[12px] space-y-1.5 font-semibold">
                                     <li className="flex justify-between">
                                         <span className="text-white/75">Ingresos (cosechas)</span>
-                                        <span>{formatCurrency(resumenCampania.ingresosTotales)}</span>
+                                        <span>{fmtDirect(resumenCampania.ingresosTotales)}</span>
                                     </li>
                                     <li className="flex justify-between">
                                         <span className="text-white/75">Quintales totales</span>
@@ -504,7 +507,7 @@ export default function FinanzasPage() {
                                     </li>
                                     <li className="flex justify-between">
                                         <span className="text-white/75">Margen bruto total</span>
-                                        <span>{formatCurrency(resumenCampania.margenBruto)}</span>
+                                        <span>{fmtDirect(resumenCampania.margenBruto)}</span>
                                     </li>
                                     <li className="flex justify-between pt-2 border-t border-white/10 font-black text-[13px]">
                                         <span>ROI sobre costos</span>
@@ -540,26 +543,26 @@ export default function FinanzasPage() {
                             <div key={i} className="border border-gray-100 dark:border-gray-800 p-5 rounded-xl bg-gray-50 dark:bg-[#151a20] shadow-sm transition-all hover:shadow-md">
                                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center mb-4">
                                     <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base sm:text-lg break-words">{r.nombreCampo}</h3>
-                                    <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold shrink-0 ${r.roi > 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                                        ROI: {r.roi > 0 ? '+' : ''}{r.roi}%
+                                    <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold shrink-0 ${r.roi >= 0 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                                        ROI: {r.roi >= 0 ? '+' : ''}{(r.roi || 0).toFixed(2)}%
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-1 min-[400px]:grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Ingresos Totales</p>
-                                        <p className="text-green-600 font-black text-sm">{formatCurrency(r.ingresos)}</p>
+                                        <p className="text-green-600 font-black text-sm">{fmtDirect(r.ingresos)}</p>
                                     </div>
                                     <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Gasto Operativo (Var)</p>
-                                        <p className="text-orange-500 font-black text-sm">{formatCurrency(r.costosVariables)}</p>
+                                        <p className="text-orange-500 font-black text-sm">{fmtDirect(r.costosVariables)}</p>
                                     </div>
                                     <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Costo Estructural (Fijo)</p>
-                                        <p className="text-orange-500 font-black text-sm">{formatCurrency(r.costosFijos)}</p>
+                                        <p className="text-orange-500 font-black text-sm">{fmtDirect(r.costosFijos)}</p>
                                     </div>
                                     <div className="bg-white dark:bg-[#1a1f25] p-3 rounded-lg border border-gray-100 dark:border-gray-800">
                                         <p className="text-[10px] text-gray-400 font-bold uppercase mb-1">Margen Bruto</p>
-                                        <p className={`font-black text-sm ${r.margenBruto >= 0 ? 'text-gray-900' : 'text-red-500'}`}>{formatCurrency(r.margenBruto)}</p>
+                                        <p className={`font-black text-sm ${r.margenBruto >= 0 ? 'text-gray-900' : 'text-red-500'}`}>{fmtDirect(r.margenBruto)}</p>
                                     </div>
                                 </div>
 
@@ -649,8 +652,8 @@ export default function FinanzasPage() {
                                     const calculado = (pct / 100) * ingresos;
                                     return (
                                         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 text-[12px]">
-                                            <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {formatCurrency(calculado)}</p>
-                                            <p className="text-blue-500 dark:text-blue-400 text-[10px] mt-0.5">{pct}% de ingresos totales ({formatCurrency(ingresos)})</p>
+                                            <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {fmtDirect(calculado)}</p>
+                                            <p className="text-blue-500 dark:text-blue-400 text-[10px] mt-0.5">{pct}% de ingresos totales ({fmtDirect(ingresos)})</p>
                                         </div>
                                     );
                                 })()}
@@ -849,7 +852,7 @@ export default function FinanzasPage() {
                                         </div>
                                         {formGasto.montoTotal && (
                                             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 text-[12px]">
-                                                <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {formatCurrency(parseFloat(formGasto.montoTotal) || 0)}</p>
+                                                <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {fmtDirect(parseFloat(formGasto.montoTotal) || 0)}</p>
                                                 <p className="text-blue-500 dark:text-blue-400 text-[10px] mt-0.5">{formGasto.alquilerQuintales} Qq × {currSymbol}{formGasto.alquilerPrecioQq}/Qq</p>
                                             </div>
                                         )}
@@ -867,8 +870,8 @@ export default function FinanzasPage() {
                                             const calculado = (pct / 100) * ingresos;
                                             return (
                                                 <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3 text-[12px]">
-                                                    <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {formatCurrency(calculado)}</p>
-                                                    <p className="text-blue-500 dark:text-blue-400 text-[10px] mt-0.5">{pct}% de ingresos totales ({formatCurrency(ingresos)})</p>
+                                                    <p className="text-blue-700 dark:text-blue-300 font-bold">Importe calculado: {fmtDirect(calculado)}</p>
+                                                    <p className="text-blue-500 dark:text-blue-400 text-[10px] mt-0.5">{pct}% de ingresos totales ({fmtDirect(ingresos)})</p>
                                                 </div>
                                             );
                                         })()}
@@ -999,7 +1002,7 @@ export default function FinanzasPage() {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="py-3 pr-4 font-black text-orange-500 text-right whitespace-nowrap">{formatCurrency(g.montoTotal)}</td>
+                                    <td className="py-3 pr-4 font-black text-orange-500 text-right whitespace-nowrap">{fmtDirect(g.montoTotal)}</td>
                                     <td className="py-3 text-right relative">
                                         <button
                                             onClick={() => handleEliminarGasto(g.idGasto)}

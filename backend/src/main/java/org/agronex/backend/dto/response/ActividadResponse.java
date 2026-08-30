@@ -16,6 +16,7 @@ public class ActividadResponse {
     private UUID idActividad;
     private String tipoActv;
     private BigDecimal costoServicio;
+    private String moneda;
     private LocalDate fecha;
     private UUID idCampania;
     private String nombreCultivo;

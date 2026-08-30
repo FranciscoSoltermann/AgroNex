@@ -189,6 +189,9 @@ public class ActividadService {
         actividad.setTipoActv(request.getTipoActv());
         actividad.setFecha(request.getFecha());
         actividad.setCostoServicio(request.getCostoServicio());
+        if (request.getMoneda() != null && !request.getMoneda().isBlank()) {
+            actividad.setMoneda(request.getMoneda());
+        }
         actividad.setHectareasTratadas(request.getHectareasTratadas());
         actividad.setNotas(request.getNotas());
         actividad.setCampania(campania);

@@ -23,6 +23,7 @@ public class ActividadMapper {
         return Actividad.builder()
                 .tipoActv(request.getTipoActv())
                 .costoServicio(request.getCostoServicio())
+                .moneda(request.getMoneda() != null && !request.getMoneda().isBlank() ? request.getMoneda() : "ARS")
                 .fecha(request.getFecha())
                 .hectareasTratadas(request.getHectareasTratadas())
                 .notas(request.getNotas())
@@ -44,6 +45,7 @@ public class ActividadMapper {
                 .idActividad(actividad.getIdActividad())
                 .tipoActv(actividad.getTipoActv())
                 .costoServicio(actividad.getCostoServicio())
+                .moneda(actividad.getMoneda() != null ? actividad.getMoneda() : "ARS")
                 .fecha(actividad.getFecha())
                 .idCampania(
                         actividad.getCampania() != null

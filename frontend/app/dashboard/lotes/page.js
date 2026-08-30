@@ -31,7 +31,7 @@ const TIPOS_CON_DOSIS = ["Siembra", "Pulverización", "Inoculante/Curasemilla"];
 const emptyInsumoRow = () => ({ idInsumo: "", dosisHa: "" });
 
 export default function CiclosPage() {
-    const { symbol, convertCurrency } = useCurrency();
+    const { symbol, currency } = useCurrency();
     const [campos, setCampos] = useState([]);
     const [campanias, setCampanias] = useState([]);
     const [actividades, setActividades] = useState([]);
@@ -187,6 +187,7 @@ export default function CiclosPage() {
                 tipoActv: formAct.tipoActv,
                 fecha: formAct.fecha,
                 costoServicio: formAct.costoServicio === "" ? 0 : parseFloat(formAct.costoServicio),
+                moneda: currency,
                 idCampania: formAct.idCampania || idCampaniaActiva,
                 notas: formAct.notas?.trim() || null,
                 hectareasTratadas: haVal != null && !Number.isNaN(haVal) ? haVal : null,
@@ -396,10 +397,12 @@ export default function CiclosPage() {
             onConfirm: async () => {
                 try {
                     await apiClient.delete(`/campanias/${idCampania}`);
+                    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
                     toast.success("¡Campaña eliminada!");
                     invalidateDashboardBootstrapCache();
                     await fetchData({ forceRefresh: true });
                 } catch (err) {
+                    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
                     toast.error(err.response?.data?.message || "Error al eliminar la campaña.");
                 }
             }
@@ -945,7 +948,7 @@ export default function CiclosPage() {
 }
 
 function ActividadCard({ actividad, onEliminar, onEditar }) {
-    const { symbol, convertCurrency } = useCurrency();
+    const { symbol } = useCurrency();
     const colorMap = {
         Siembra: { icon: <Sprout size={16} /> },
         Pulverización: { icon: <BugOff size={16} /> },
@@ -1013,10 +1016,10 @@ function ActividadCard({ actividad, onEliminar, onEditar }) {
                     {actividad.costoServicio > 0 && (
                         <div className="text-left sm:text-right">
                             <p className="text-[12px] font-black text-gray-900 dark:text-gray-100 whitespace-nowrap">
-                                {symbol}{convertCurrency(Number((actividad.costoServicio || 0) * (actividad.hectareasTratadas != null ? actividad.hectareasTratadas : (actividad.superficieLoteHa || 0)))).toLocaleString("es-AR")} total
+                                {symbol}{Number((actividad.costoServicio || 0) * (actividad.hectareasTratadas != null ? actividad.hectareasTratadas : (actividad.superficieLoteHa || 0))).toLocaleString("es-AR", { minimumFractionDigits: 2 })} total
                             </p>
                             <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 whitespace-nowrap">
-                                ({symbol}{convertCurrency(Number(actividad.costoServicio)).toLocaleString("es-AR")}/Ha)
+                                ({symbol}{Number(actividad.costoServicio).toLocaleString("es-AR", { minimumFractionDigits: 2 })}/Ha)
                             </p>
                         </div>
                     )}

@@ -30,6 +30,32 @@ public class FinanzasService {
         return v != null ? v : BigDecimal.ZERO;
     }
 
+    private static BigDecimal convertir(BigDecimal monto, String monedaOrigen, String monedaDestino, BigDecimal tipoCambio) {
+        if (monto == null || monto.compareTo(BigDecimal.ZERO) == 0) {
+            return BigDecimal.ZERO;
+        }
+        String origen = (monedaOrigen != null && !monedaOrigen.isBlank()) ? monedaOrigen.trim().toUpperCase() : "ARS";
+        String destino = (monedaDestino != null && !monedaDestino.isBlank()) ? monedaDestino.trim().toUpperCase() : "ARS";
+
+        if (origen.equals(destino)) {
+            return monto;
+        }
+        if (tipoCambio == null || tipoCambio.compareTo(BigDecimal.ZERO) <= 0) {
+            return monto; // Fallback if no exchange rate provided
+        }
+
+        // ARS -> USD
+        if ("ARS".equals(origen) && "USD".equals(destino)) {
+            return monto.divide(tipoCambio, 4, RoundingMode.HALF_UP);
+        }
+        // USD -> ARS
+        if ("USD".equals(origen) && "ARS".equals(destino)) {
+            return monto.multiply(tipoCambio);
+        }
+
+        return monto;
+    }
+
     private static BigDecimal costoLogistica(Cosecha c) {
         if (c == null || c.getTipoLogistica() == null) {
             return BigDecimal.ZERO;
@@ -63,6 +89,11 @@ public class FinanzasService {
 
     @Transactional(readOnly = true)
     public List<FinanzasCampoResponse> obtenerResumenGeneral(UUID idUsuario) {
+        return obtenerResumenGeneral(idUsuario, "ARS", null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FinanzasCampoResponse> obtenerResumenGeneral(UUID idUsuario, String monedaDestino, BigDecimal tipoCambio) {
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuario);
         List<Campo> campos = campoRepository.findByUsuarioIdUsuario(idDatos);
         List<GastoFijo> gastosFijos = gastoFijoRepository.findByCampoUsuarioIdUsuario(idDatos);
@@ -73,20 +104,23 @@ public class FinanzasService {
         Map<UUID, BigDecimal> costosActividadesPorCampo = new HashMap<>();
         for (GastoFijo g : gastosFijos) {
             UUID campoId = g.getCampo().getIdCampo();
-            gastosPorCampo.put(campoId, gastosPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(nz(g.getMontoTotal())));
+            BigDecimal montoNormalizado = convertir(nz(g.getMontoTotal()), g.getMoneda(), monedaDestino, tipoCambio);
+            gastosPorCampo.put(campoId, gastosPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(montoNormalizado));
         }
 
         for (Actividad a : actividades) {
             UUID campoId = a.getCampania().getLote().getCampo().getIdCampo();
             BigDecimal ha = hectareasParaCosteoInsumos(a);
-            BigDecimal costoServicio = nz(a.getCostoServicio()).multiply(ha);
+            BigDecimal costoServicioOrig = nz(a.getCostoServicio()).multiply(ha);
+            BigDecimal costoServicio = convertir(costoServicioOrig, a.getMoneda(), monedaDestino, tipoCambio);
             BigDecimal costoInsumos = BigDecimal.ZERO;
 
             for (ActividadInsumo ai : a.getInsumosUtilizados()) {
                 BigDecimal dosis = nz(ai.getDosisHa());
-                BigDecimal precio = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
+                BigDecimal precioArs = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
                         ? ai.getInsumo().getPrecioUnitario() : BigDecimal.ZERO;
-                costoInsumos = costoInsumos.add(dosis.multiply(precio).multiply(ha));
+                BigDecimal costoInsumoArs = dosis.multiply(precioArs).multiply(ha);
+                costoInsumos = costoInsumos.add(convertir(costoInsumoArs, "ARS", monedaDestino, tipoCambio));
             }
             costosActividadesPorCampo.put(campoId, costosActividadesPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(costoServicio).add(costoInsumos));
         }
@@ -96,17 +130,22 @@ public class FinanzasService {
         for (Cosecha c : cosechas) {
             UUID campoId = c.getCampania().getLote().getCampo().getIdCampo();
             BigDecimal rendimiento = nz(c.getRendimientoTotalQq());
-            BigDecimal precio = nz(c.getPrecioVentaUnitarioUsd());
-            ingresosPorCampo.put(campoId, ingresosPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(rendimiento.multiply(precio)));
+            BigDecimal precioUsd = nz(c.getPrecioVentaUnitarioUsd());
+            BigDecimal ingresoUsd = rendimiento.multiply(precioUsd);
+            BigDecimal ingresoNormalizado = convertir(ingresoUsd, "USD", monedaDestino, tipoCambio);
+            ingresosPorCampo.put(campoId, ingresosPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(ingresoNormalizado));
+
+            BigDecimal logisticaArs = costoLogistica(c);
+            BigDecimal logisticaNormalizada = convertir(logisticaArs, "ARS", monedaDestino, tipoCambio);
             costosLogisticaPorCampo.put(campoId,
-                    costosLogisticaPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(costoLogistica(c)));
+                    costosLogisticaPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(logisticaNormalizada));
         }
 
         List<FinanzasCampoResponse> resumenList = new ArrayList<>();
         for (Campo c : campos) {
             UUID id = c.getIdCampo();
             BigDecimal ingresos = ingresosPorCampo.getOrDefault(id, BigDecimal.ZERO);
-                BigDecimal costosVar = costosActividadesPorCampo.getOrDefault(id, BigDecimal.ZERO)
+            BigDecimal costosVar = costosActividadesPorCampo.getOrDefault(id, BigDecimal.ZERO)
                     .add(costosLogisticaPorCampo.getOrDefault(id, BigDecimal.ZERO));
             BigDecimal fijos = gastosPorCampo.getOrDefault(id, BigDecimal.ZERO);
             BigDecimal margenBruto = ingresos.subtract(costosVar).subtract(fijos);
@@ -134,6 +173,11 @@ public class FinanzasService {
 
     @Transactional(readOnly = true)
     public ResumenCampaniaResponse obtenerResumenCampania(UUID idCampania, UUID idUsuario) {
+        return obtenerResumenCampania(idCampania, idUsuario, "ARS", null);
+    }
+
+    @Transactional(readOnly = true)
+    public ResumenCampaniaResponse obtenerResumenCampania(UUID idCampania, UUID idUsuario, String monedaDestino, BigDecimal tipoCambio) {
         Campania campania = campaniaRepository.findById(idCampania)
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
         
@@ -156,29 +200,36 @@ public class FinanzasService {
 
         for (Actividad a : actividades) {
             BigDecimal ha = hectareasParaCosteoInsumos(a);
-            costoServicios = costoServicios.add(nz(a.getCostoServicio()).multiply(ha));
+            BigDecimal costoServicioOrig = nz(a.getCostoServicio()).multiply(ha);
+            BigDecimal costoServicioNorm = convertir(costoServicioOrig, a.getMoneda(), monedaDestino, tipoCambio);
+            costoServicios = costoServicios.add(costoServicioNorm);
+
             for (ActividadInsumo ai : a.getInsumosUtilizados()) {
                 BigDecimal dosis = nz(ai.getDosisHa());
-                BigDecimal precio = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
+                BigDecimal precioUnitarioArs = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
                         ? ai.getInsumo().getPrecioUnitario() : BigDecimal.ZERO;
-                BigDecimal costo = dosis.multiply(precio).multiply(ha);
+                BigDecimal costoInsumoArs = dosis.multiply(precioUnitarioArs).multiply(ha);
                 BigDecimal cantidad = dosis.multiply(ha);
-                costoInsumos = costoInsumos.add(costo);
+
+                BigDecimal costoInsumoNorm = convertir(costoInsumoArs, "ARS", monedaDestino, tipoCambio);
+                costoInsumos = costoInsumos.add(costoInsumoNorm);
 
                 if (ai.getInsumo() != null) {
                     UUID idIns = ai.getInsumo().getIdInsumo();
+                    BigDecimal precioUnitarioNorm = convertir(precioUnitarioArs, "ARS", monedaDestino, tipoCambio);
+
                     if (!detalleMap.containsKey(idIns)) {
                         detalleMap.put(idIns, DetalleInsumoGasto.builder()
                                 .idInsumo(idIns)
                                 .nombreInsumo(ai.getInsumo().getNombre())
                                 .cantidadTotalUsada(BigDecimal.ZERO)
-                                .precioUnitario(ai.getInsumo().getPrecioUnitario())
+                                .precioUnitario(precioUnitarioNorm)
                                 .costoTotal(BigDecimal.ZERO)
                                 .build());
                     }
                     DetalleInsumoGasto di = detalleMap.get(idIns);
                     di.setCantidadTotalUsada(di.getCantidadTotalUsada().add(cantidad));
-                    di.setCostoTotal(di.getCostoTotal().add(costo));
+                    di.setCostoTotal(di.getCostoTotal().add(costoInsumoNorm));
                 }
             }
         }
@@ -187,7 +238,8 @@ public class FinanzasService {
         List<GastoFijo> gastosCamp = gastoFijoRepository.findByCampania_IdCampania(idCampania);
         BigDecimal gastosFijos = BigDecimal.ZERO;
         for (GastoFijo g : gastosCamp) {
-            gastosFijos = gastosFijos.add(nz(g.getMontoTotal()));
+            BigDecimal gastoNorm = convertir(nz(g.getMontoTotal()), g.getMoneda(), monedaDestino, tipoCambio);
+            gastosFijos = gastosFijos.add(gastoNorm);
         }
 
         BigDecimal costoTotal = costoServicios.add(costoInsumos).add(gastosFijos);
@@ -198,10 +250,16 @@ public class FinanzasService {
         BigDecimal ingresos = BigDecimal.ZERO;
         for (Cosecha c : cosechas) {
             BigDecimal r = nz(c.getRendimientoTotalQq());
-            BigDecimal p = nz(c.getPrecioVentaUnitarioUsd());
+            BigDecimal pUsd = nz(c.getPrecioVentaUnitarioUsd());
+            BigDecimal ingresoUsd = r.multiply(pUsd);
+            BigDecimal ingresoNorm = convertir(ingresoUsd, "USD", monedaDestino, tipoCambio);
+
             qqTot = qqTot.add(r);
-            ingresos = ingresos.add(r.multiply(p));
-            costoLogisticaTotal = costoLogisticaTotal.add(costoLogistica(c));
+            ingresos = ingresos.add(ingresoNorm);
+
+            BigDecimal logisticaArs = costoLogistica(c);
+            BigDecimal logisticaNorm = convertir(logisticaArs, "ARS", monedaDestino, tipoCambio);
+            costoLogisticaTotal = costoLogisticaTotal.add(logisticaNorm);
         }
 
         costoTotal = costoTotal.add(costoLogisticaTotal);
