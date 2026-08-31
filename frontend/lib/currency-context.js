@@ -168,6 +168,19 @@ export function CurrencyProvider({ children }) {
     }, [currency, exchangeRate]);
 
     /**
+     * Convierte un valor desde una moneda específica a la moneda seleccionada globalmente.
+     */
+    const convert = useCallback((monto, monedaOrigen) => {
+        if (!monto) return 0;
+        const num = Number(monto);
+        const origen = monedaOrigen || "ARS";
+        if (origen === currency || !exchangeRate) return num;
+        if (origen === "ARS" && currency === "USD") return num / exchangeRate;
+        if (origen === "USD" && currency === "ARS") return num * exchangeRate;
+        return num;
+    }, [currency, exchangeRate]);
+
+    /**
      * Formatea un valor monetario usando Intl.NumberFormat.
      * Aplica la conversión de moneda automáticamente.
      */
@@ -203,6 +216,7 @@ export function CurrencyProvider({ children }) {
             formatCurrency,
             formatMoney,
             convertCurrency,
+            convert,
             config: CURRENCY_CONFIG,
         }}>
             {children}
