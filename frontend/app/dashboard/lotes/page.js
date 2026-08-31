@@ -948,7 +948,7 @@ export default function CiclosPage() {
 }
 
 function ActividadCard({ actividad, onEliminar, onEditar }) {
-    const { symbol } = useCurrency();
+    const { symbol, convert } = useCurrency();
     const colorMap = {
         Siembra: { icon: <Sprout size={16} /> },
         Pulverización: { icon: <BugOff size={16} /> },
@@ -961,6 +961,9 @@ function ActividadCard({ actividad, onEliminar, onEditar }) {
     };
     const c = colorMap[actividad.tipoActv] || { icon: <Layers size={16} /> };
     const insumos = actividad.insumos || [];
+
+    const costoConvertido = convert(actividad.costoServicio, actividad.moneda);
+    const haTratadas = actividad.hectareasTratadas != null ? actividad.hectareasTratadas : (actividad.superficieLoteHa || 0);
 
     return (
         <div className="bg-white dark:bg-[#1a1f25] rounded-xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow group">
