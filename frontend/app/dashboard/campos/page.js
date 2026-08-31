@@ -37,7 +37,7 @@ function extractPolygonsAndPoints(field) {
 
     if (!field) return { parsedPolygons, allPoints };
 
-    const rawBoundaries = field.boundaries 
+    const rawBoundaries = field.boundaries
         ? (Array.isArray(field.boundaries) ? field.boundaries : [field.boundaries])
         : (field.boundary ? [field.boundary] : (field.activeBoundary ? [field.activeBoundary] : []));
 
@@ -147,7 +147,7 @@ function calculateFieldAreaHa(field) {
     }
 
     // 3. Verificar si viene en field.boundaries o field.activeBoundary
-    const rawBoundaries = field.boundaries 
+    const rawBoundaries = field.boundaries
         ? (Array.isArray(field.boundaries) ? field.boundaries : [field.boundaries])
         : (field.boundary ? [field.boundary] : (field.activeBoundary ? [field.activeBoundary] : []));
 
@@ -198,9 +198,9 @@ function isJohnDeereLote(lote) {
     if (lote.idPoligonoAgro && String(lote.idPoligonoAgro).startsWith("jd-")) return true;
     if (typeof lote.coordenadasGeoJson === "string") {
         return lote.coordenadasGeoJson.includes('"source":"john-deere"') ||
-               lote.coordenadasGeoJson.includes('john-deere') ||
-               lote.coordenadasGeoJson.includes('"jdFieldId"') ||
-               lote.coordenadasGeoJson.includes('"provider":"Operations Center"');
+            lote.coordenadasGeoJson.includes('john-deere') ||
+            lote.coordenadasGeoJson.includes('"jdFieldId"') ||
+            lote.coordenadasGeoJson.includes('"provider":"Operations Center"');
     }
     return false;
 }
@@ -349,7 +349,7 @@ export default function CamposPage() {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
                 setUserId(session.user.id);
-                
+
                 let isConnected = false;
                 try {
                     const jdRes = await apiClient.get('/maquinaria/john-deere/auth/status');
@@ -441,7 +441,7 @@ export default function CamposPage() {
             const freshCamposRes = await apiClient.get('/campos');
             const currentCampos = freshCamposRes.data || [];
 
-            let targetCampo = currentCampos.find(c => 
+            let targetCampo = currentCampos.find(c =>
                 c.nombre?.toLowerCase().trim() === farmName.toLowerCase().trim() ||
                 (c.ubicacion && c.ubicacion.toLowerCase().includes(farmName.toLowerCase().trim()))
             );
@@ -474,7 +474,7 @@ export default function CamposPage() {
 
             if (idCampo) {
                 const freshLotesRes = await apiClient.get('/lotes');
-                const existingLote = (freshLotesRes.data || []).find(l => 
+                const existingLote = (freshLotesRes.data || []).find(l =>
                     l.idCampo === idCampo && l.nombre?.toLowerCase().trim() === fieldName.toLowerCase().trim()
                 );
                 if (!existingLote) {
@@ -536,7 +536,7 @@ export default function CamposPage() {
                 const freshCamposRes = await apiClient.get('/campos');
                 const currentCampos = freshCamposRes.data || [];
 
-                let targetCampo = currentCampos.find(c => 
+                let targetCampo = currentCampos.find(c =>
                     c.nombre?.toLowerCase().trim() === farmName.toLowerCase().trim() ||
                     (c.ubicacion && c.ubicacion.toLowerCase().includes(farmName.toLowerCase().trim()))
                 );
@@ -783,7 +783,7 @@ export default function CamposPage() {
     const handleOpenDetalle = async (campo) => {
         if (campo.isOnlyJd && campo.jdFields && campo.jdFields.length > 0) {
             setLoadingLotes(false);
-            
+
             const syntheticLotes = [];
             const allBounds = [];
 
@@ -848,7 +848,7 @@ export default function CamposPage() {
     };
 
     const handleSyncAndOpenGestion = async (campo) => {
-        const existing = campos.find(c => 
+        const existing = campos.find(c =>
             c.nombre?.toLowerCase().trim() === campo.nombre?.toLowerCase().trim() ||
             (c.ubicacion && c.ubicacion.toLowerCase().includes(campo.nombre?.toLowerCase().trim()))
         );
@@ -1130,14 +1130,14 @@ export default function CamposPage() {
                                     onClick={() => setCampoInputMethod('manual')}
                                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${campoInputMethod === 'manual' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
-                                    ✍️ Manual
+                                    Manual
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setCampoInputMethod('john-deere')}
                                     className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${campoInputMethod === 'john-deere' ? 'bg-[#367C2B] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
                                 >
-                                    <Tractor size={14} /> John Deere
+                                    Importar
                                 </button>
                             </div>
                         )}
@@ -1324,22 +1324,20 @@ export default function CamposPage() {
                                             <button
                                                 type="button"
                                                 onClick={() => { setLoteInputMethod('draw'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
-                                                    loteInputMethod === 'draw'
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${loteInputMethod === 'draw'
                                                         ? 'bg-white dark:bg-gray-700 text-[#2D6A4F] shadow-sm'
                                                         : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                                                }`}
+                                                    }`}
                                             >
                                                 <Pencil size={12} /> Dibujar
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => { setLoteInputMethod('upload'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
-                                                    loteInputMethod === 'upload'
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${loteInputMethod === 'upload'
                                                         ? 'bg-white dark:bg-gray-700 text-[#2D6A4F] shadow-sm'
                                                         : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                                                }`}
+                                                    }`}
                                             >
                                                 <Upload size={12} /> Subir archivo
                                             </button>
@@ -1347,11 +1345,10 @@ export default function CamposPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => { setLoteInputMethod('john-deere'); setBulkLotes(null); setFormLote(p => ({ ...p, coordenadasGeoJson: '', superficie: '' })); }}
-                                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${
-                                                        loteInputMethod === 'john-deere'
+                                                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all ${loteInputMethod === 'john-deere'
                                                             ? 'bg-white dark:bg-gray-700 text-[#367C2B] shadow-sm'
                                                             : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <Tractor size={12} /> John Deere
                                                 </button>
@@ -1440,13 +1437,13 @@ export default function CamposPage() {
                                 <div className="grid grid-cols-2 gap-3 items-end">
                                     <FormField label="Superficie (Ha)" required>
                                         <div className="relative">
-                                            <input 
-                                                type="number" 
+                                            <input
+                                                type="number"
                                                 step="0.01"
                                                 min="0.01"
-                                                value={formLote.superficie} 
-                                                onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))} 
-                                                className={`${INPUT_CLASS} pr-10 text-[#2D6A4F] font-black`} 
+                                                value={formLote.superficie}
+                                                onChange={e => setFormLote(p => ({ ...p, superficie: e.target.value }))}
+                                                className={`${INPUT_CLASS} pr-10 text-[#2D6A4F] font-black`}
                                                 placeholder="0.00"
                                             />
                                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#2D6A4F] font-bold">Ha</span>
@@ -1544,11 +1541,10 @@ export default function CamposPage() {
                                                     key={lote.idLote}
                                                     type="button"
                                                     onClick={() => setSelectedDetalleLoteId(prev => prev === lote.idLote ? null : lote.idLote)}
-                                                    className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 border transition-all text-left group ${
-                                                        isSelected
+                                                    className={`w-full flex items-center justify-between rounded-xl px-3.5 py-2.5 border transition-all text-left group ${isSelected
                                                             ? 'bg-green-50/90 dark:bg-green-900/40 border-[#2D6A4F] ring-2 ring-[#2D6A4F]/30 shadow-sm'
                                                             : 'bg-gray-50 dark:bg-gray-800/80 border-gray-100 dark:border-gray-700/80 hover:border-[#2D6A4F]/50 hover:bg-gray-100/80 dark:hover:bg-gray-800'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-2 min-w-0">
                                                         <span className={`w-2.5 h-2.5 rounded-full shrink-0 transition-transform ${isSelected ? 'bg-amber-400 ring-2 ring-amber-400/50 scale-110' : 'bg-emerald-500'}`} />

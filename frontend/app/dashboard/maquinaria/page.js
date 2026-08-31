@@ -185,17 +185,17 @@ export default function EcosistemaPage() {
 
 function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection }) {
     const { id, name, description, color, logo, configured, userConnected, connections, organizations, loading, error } = provider;
-    
+
     // Estado de pestañas en Operations Center
     const [activeTab, setActiveTab] = useState("maquinaria"); // 'maquinaria' | 'campos' | 'alertas' | 'archivos'
-    
+
     // Datos cargados desde John Deere
     const [machines, setMachines] = useState([]);
     const [fields, setFields] = useState([]);
     const [alerts, setAlerts] = useState([]);
     const [files, setFiles] = useState([]);
     const [loadingData, setLoadingData] = useState(false);
-    
+
     // Modal de Capas de Mapa (Map Layers)
     const [selectedFieldForLayers, setSelectedFieldForLayers] = useState(null);
 
@@ -417,68 +417,60 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                     <div className="flex items-center gap-1 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 px-4 sm:px-6 overflow-x-auto scrollbar-none">
                         <button
                             onClick={() => setActiveTab("maquinaria")}
-                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
-                                activeTab === "maquinaria"
-                                    ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
-                                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                            }`}
+                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${activeTab === "maquinaria"
+                                ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
+                                : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                }`}
                         >
                             <Tractor size={15} />
                             <span>Maquinaria & GPS</span>
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                                activeTab === "maquinaria" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                            }`}>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${activeTab === "maquinaria" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                }`}>
                                 {machines.length}
                             </span>
                         </button>
 
                         <button
                             onClick={() => setActiveTab("campos")}
-                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
-                                activeTab === "campos"
-                                    ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
-                                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                            }`}
+                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${activeTab === "campos"
+                                ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
+                                : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                }`}
                         >
                             <MapPin size={15} />
                             <span>Campos & Granjas</span>
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                                activeTab === "campos" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                            }`}>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${activeTab === "campos" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                }`}>
                                 {fields.length}
                             </span>
                         </button>
 
                         <button
                             onClick={() => setActiveTab("alertas")}
-                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
-                                activeTab === "alertas"
-                                    ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
-                                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                            }`}
+                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${activeTab === "alertas"
+                                ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
+                                : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                }`}
                         >
                             <AlertTriangle size={15} />
                             <span>Alertas & Diagnósticos (DTC)</span>
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                                alerts.length > 0 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                            }`}>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${alerts.length > 0 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                }`}>
                                 {alerts.length}
                             </span>
                         </button>
 
                         <button
                             onClick={() => setActiveTab("archivos")}
-                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${
-                                activeTab === "archivos"
-                                    ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
-                                    : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                            }`}
+                            className={`flex items-center gap-2 py-3 px-3.5 border-b-2 text-xs font-bold transition-all whitespace-nowrap ${activeTab === "archivos"
+                                ? "border-[#367C2B] text-[#367C2B] dark:text-green-400 bg-white dark:bg-[#1a1f25]"
+                                : "border-transparent text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                                }`}
                         >
                             <HardDrive size={15} />
                             <span>Archivos & Prescripciones</span>
-                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
-                                activeTab === "archivos" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                            }`}>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${activeTab === "archivos" ? "bg-[#367C2B]/15 text-[#367C2B] dark:text-green-300" : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                }`}>
                                 {files.length}
                             </span>
                         </button>
@@ -500,9 +492,8 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                             <div>
                                                 <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                                     <Tractor size={16} className="text-green-600" />
-                                                    Flota de Maquinaria Conectada ({machines.length})
+                                                    Maquinaria Conectada ({machines.length})
                                                 </h4>
-                                                <p className="text-[11px] text-gray-400">Telemetría satelital, nivel de combustible y horas de motor en tiempo real.</p>
                                             </div>
                                             {primaryOrgId && (
                                                 <SandboxSimulateButton orgId={primaryOrgId} onSimulated={loadData} />
@@ -536,9 +527,8 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                             <div>
                                                 <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                                     <MapPin size={16} className="text-green-600" />
-                                                    Campos & Límites Agrícolas ({fields.length})
+                                                    Campos & Límites ({fields.length})
                                                 </h4>
-                                                <p className="text-[11px] text-gray-400">Límites perimetrales (boundaries) y capas agronómicas importadas.</p>
                                             </div>
                                         </div>
 

@@ -27,11 +27,10 @@ function CurrencySelector() {
                         key={code}
                         type="button"
                         onClick={() => setCurrency(code)}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${
-                            isActive
+                        className={`px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all duration-200 ${isActive
                                 ? "bg-[#2D6A4F] text-white shadow-sm"
                                 : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-200/55 dark:hover:bg-gray-700/50"
-                        }`}
+                            }`}
                     >
                         {code}
                     </button>
@@ -67,7 +66,7 @@ export default function DashboardLayout({ children }) {
                         apiClient.get("/usuarios/me/check", { timeout: 15000 }),
                         apiClient.get("/usuarios/settings", { timeout: 15000 }).catch(() => null)
                     ]);
-                    
+
                     const data = res?.data;
                     if (data && data.registrado === false) {
                         const { data: idData } = await supabase.auth.getUserIdentities();
@@ -171,7 +170,7 @@ export default function DashboardLayout({ children }) {
     // Mapeo de rutas a títulos de página
     const pageTitles = {
         "/dashboard": "Resumen Operativo",
-        "/dashboard/campos": "Resumen de la Estancia",
+        "/dashboard/campos": "Registro de Territorios",
         "/dashboard/lotes": "Ciclos de Producción",
         "/dashboard/clima": "Pronósticos",
         "/dashboard/finanzas": "Finanzas y Rendimiento",
@@ -217,8 +216,8 @@ export default function DashboardLayout({ children }) {
                             onMouseEnter={() => prefetchRoute(item.path)}
                             onFocus={() => prefetchRoute(item.path)}
                             className={`flex items-center gap-2.5 px-2.5 min-h-11 sm:min-h-10 rounded-xl text-[12px] sm:text-[13px] font-semibold transition-all leading-snug ${isActive
-                                    ? "bg-white/20 text-white"
-                                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                                ? "bg-white/20 text-white"
+                                : "text-white/70 hover:bg-white/10 hover:text-white"
                                 }`}
                         >
                             <span className={`flex-shrink-0 ${isActive ? "text-white" : "text-white/50"}`}>
@@ -254,81 +253,81 @@ export default function DashboardLayout({ children }) {
 
     return (
         <CurrencyProvider>
-        <div className="flex h-[100dvh] min-h-0 bg-[#F4F6F5] dark:bg-[#0f1419] font-sans overflow-hidden">
+            <div className="flex h-[100dvh] min-h-0 bg-[#F4F6F5] dark:bg-[#0f1419] font-sans overflow-hidden">
 
-            {/* ══ SIDEBAR DESKTOP (≥ lg) ══ */}
-            <aside className="hidden lg:flex w-[220px] min-w-[220px] xl:w-[236px] xl:min-w-[236px] bg-[#2D6A4F] flex-col shadow-sm">
-                {renderSidebarContent()}
-            </aside>
+                {/* ══ SIDEBAR DESKTOP (≥ lg) ══ */}
+                <aside className="hidden lg:flex w-[220px] min-w-[220px] xl:w-[236px] xl:min-w-[236px] bg-[#2D6A4F] flex-col shadow-sm">
+                    {renderSidebarContent()}
+                </aside>
 
-            {/* ══ SIDEBAR MOBILE OVERLAY (< lg) ══ */}
-            {sidebarOpen && (
-                <div className="fixed inset-0 z-50 flex lg:hidden">
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm pt-[env(safe-area-inset-top)]"
-                        onClick={() => setSidebarOpen(false)}
-                        aria-hidden
-                    />
-                    {/* Drawer: ancho adaptable + safe area */}
-                    <aside
-                        className="relative w-[min(20rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)))] max-w-[85vw] bg-[#2D6A4F] flex flex-col shadow-2xl animate-in slide-in-from-left duration-200 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-                    >
-                        {renderSidebarContent()}
-                    </aside>
+                {/* ══ SIDEBAR MOBILE OVERLAY (< lg) ══ */}
+                {sidebarOpen && (
+                    <div className="fixed inset-0 z-50 flex lg:hidden">
+                        {/* Backdrop */}
+                        <div
+                            className="absolute inset-0 bg-black/40 backdrop-blur-sm pt-[env(safe-area-inset-top)]"
+                            onClick={() => setSidebarOpen(false)}
+                            aria-hidden
+                        />
+                        {/* Drawer: ancho adaptable + safe area */}
+                        <aside
+                            className="relative w-[min(20rem,calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right)))] max-w-[85vw] bg-[#2D6A4F] flex flex-col shadow-2xl animate-in slide-in-from-left duration-200 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+                        >
+                            {renderSidebarContent()}
+                        </aside>
+                    </div>
+                )}
+
+                {/* ══ CONTENIDO PRINCIPAL ══ */}
+                <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
+
+                    {/* Header */}
+                    <header className="min-h-14 shrink-0 bg-white dark:bg-[#1a1f25] border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] py-2 sm:px-6 sm:py-0 sm:h-14">
+                        {/* Izquierda: Hamburger + Título de página */}
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                            {/* Hamburger (solo móvil) */}
+                            <button
+                                type="button"
+                                className="lg:hidden min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300 shrink-0"
+                                onClick={() => setSidebarOpen(true)}
+                                aria-label="Abrir menú"
+                            >
+                                <Menu size={20} />
+                            </button>
+
+                            {/* Título de la página actual */}
+                            {currentPageTitle && (
+                                <h1 className="text-sm sm:text-lg font-black text-gray-900 dark:text-gray-100 tracking-tight truncate leading-tight">
+                                    {currentPageTitle}
+                                </h1>
+                            )}
+                        </div>
+
+                        {/* Derecha: Tema + Notificaciones + Cambiador de moneda */}
+                        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={toggleTheme}
+                                className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
+                                aria-label="Alternar modo oscuro"
+                                title={theme === 'dark' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}
+                            >
+                                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                            </button>
+                            <NotificationBell />
+                            <CurrencySelector />
+                        </div>
+                    </header>
+
+                    {/* Página: scroll + ancho máximo en pantallas muy anchas */}
+                    <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain dark:bg-[#0f1419] pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:pt-2 sm:pb-2 lg:px-8 xl:px-10">
+                        <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto min-h-0 h-full">
+                            <InvitacionesBanner />
+                            {children}
+                        </div>
+                    </main>
                 </div>
-            )}
-
-            {/* ══ CONTENIDO PRINCIPAL ══ */}
-            <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
-
-                {/* Header */}
-                <header className="min-h-14 shrink-0 bg-white dark:bg-[#1a1f25] border-b border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2 pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] py-2 sm:px-6 sm:py-0 sm:h-14">
-                    {/* Izquierda: Hamburger + Título de página */}
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                        {/* Hamburger (solo móvil) */}
-                        <button
-                            type="button"
-                            className="lg:hidden min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300 shrink-0"
-                            onClick={() => setSidebarOpen(true)}
-                            aria-label="Abrir menú"
-                        >
-                            <Menu size={20} />
-                        </button>
-
-                        {/* Título de la página actual */}
-                        {currentPageTitle && (
-                            <h1 className="text-sm sm:text-lg font-black text-gray-900 dark:text-gray-100 tracking-tight truncate leading-tight">
-                                {currentPageTitle}
-                            </h1>
-                        )}
-                    </div>
-
-                    {/* Derecha: Tema + Notificaciones + Cambiador de moneda */}
-                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                        <button
-                            type="button"
-                            onClick={toggleTheme}
-                            className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-500 dark:text-gray-400"
-                            aria-label="Alternar modo oscuro"
-                            title={theme === 'dark' ? 'Cambiar a modo día' : 'Cambiar a modo noche'}
-                        >
-                            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        </button>
-                        <NotificationBell />
-                        <CurrencySelector />
-                    </div>
-                </header>
-
-                {/* Página: scroll + ancho máximo en pantallas muy anchas */}
-                <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain dark:bg-[#0f1419] pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:pt-2 sm:pb-2 lg:px-8 xl:px-10">
-                    <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto min-h-0 h-full">
-                        <InvitacionesBanner />
-                        {children}
-                    </div>
-                </main>
             </div>
-        </div>
         </CurrencyProvider>
     );
 }
