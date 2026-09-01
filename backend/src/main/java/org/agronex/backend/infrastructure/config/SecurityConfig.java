@@ -199,20 +199,23 @@ public class SecurityConfig {
         return source;
     }
 
+    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:${SUPABASE_JWK_SET_URI:https://qgokssagrwpsfryhczug.supabase.co/auth/v1/.well-known/jwks.json}}")
+    private String jwkSetUri;
+
     @Bean
     public JwtDecoder jwtDecoder() {
         try {
-            // JWK Set estático obtenido directamente de Supabase para evitar timeouts de red saliente
-            String jwkSetJson = "{\"keys\":[{\"alg\":\"ES256\",\"crv\":\"P-256\",\"ext\":true,\"key_ops\":[\"verify\"],\"kid\":\"af8da56c-0cd5-4109-841e-35de777acae2\",\"kty\":\"EC\",\"use\":\"sig\",\"x\":\"ZIcX5bHrnjqRPSz_Km-OaZA05REvA6hXUFFvX860b1w\",\"y\":\"vkuvP28i9Tvn3fjB7PjOtMCybZDKUJW7TKVkrDoNXW4\"}]}";
-            JWKSet jwkSet = JWKSet.parse(jwkSetJson);
-            JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(jwkSet);
+            com.nimbusds.jose.util.DefaultResourceRetriever resourceRetriever =
+                    new com.nimbusds.jose.util.DefaultResourceRetriever(5000, 5000);
+            JWKSource<SecurityContext> jwkSource =
+                    new com.nimbusds.jose.jwk.source.RemoteJWKSet<>(java.net.URI.create(jwkSetUri).toURL(), resourceRetriever);
             DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
             JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(
-                    Set.of(JWSAlgorithm.ES256), jwkSource);
+                    Set.of(JWSAlgorithm.ES256, JWSAlgorithm.RS256), jwkSource);
             jwtProcessor.setJWSKeySelector(keySelector);
             return new NimbusJwtDecoder(jwtProcessor);
         } catch (Exception e) {
-            throw new IllegalStateException("Error al inicializar JwtDecoder con JWK Set local", e);
+            throw new IllegalStateException("Error al inicializar JwtDecoder con JWK Set dinámico (" + jwkSetUri + ")", e);
         }
     }
 }

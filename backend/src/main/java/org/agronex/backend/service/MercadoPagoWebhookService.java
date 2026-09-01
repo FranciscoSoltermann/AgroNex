@@ -140,7 +140,7 @@ public class MercadoPagoWebhookService {
         String emailSus   = suscripcion.getUsuario() != null ? suscripcion.getUsuario().getEmail() : payerEmail;
         auditService.registrar(
                 idUsuarioSus, emailSus,
-                EntidadAudit.SUSCRIPCION, suscripcion.getIdSuscripcion().toString(),
+                EntidadAudit.SUSCRIPCION, suscripcion.getIdSuscripcion() != null ? suscripcion.getIdSuscripcion().toString() : preapprovalId,
                 "Plan " + plan + " (" + billingCycle + ")",
                 accionAudit,
                 "Estado MP: " + status + ". preapprovalId: " + preapprovalId

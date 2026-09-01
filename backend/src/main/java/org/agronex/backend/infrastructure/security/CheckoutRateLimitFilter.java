@@ -6,7 +6,10 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -21,12 +24,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * Limita solicitudes a endpoints públicos sensibles por dirección IP.
  * Cubre: checkout de Mercado Pago y validación de disponibilidad en registro.
  *
+ * Soporta Rate Limiting distribuido con Redis, con fallback automático en memoria (Bucket4j).
+ *
  * SEGURIDAD (VUL-A01 CORREGIDO): la extracción de IP ahora es defensiva.
  * El header {@code X-Forwarded-For} solo se usa si la petición proviene de la
  * lista de proxies confiables configurada en {@code trusted.proxy.ips}. Si el
  * request llega directamente (sin proxy o desde un IP no confiable), se usa
  * {@code RemoteAddr} para evitar spoofing.
  */
+@Slf4j
 @Component
 public class CheckoutRateLimitFilter extends OncePerRequestFilter {
 
@@ -47,7 +53,12 @@ public class CheckoutRateLimitFilter extends OncePerRequestFilter {
     @Value("${trusted.proxy.ips:}")
     private String trustedProxyIpsRaw;
 
+    private final StringRedisTemplate redisTemplate;
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+
+    public CheckoutRateLimitFilter(@Autowired(required = false) StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -66,10 +77,9 @@ public class CheckoutRateLimitFilter extends OncePerRequestFilter {
 
         String ip = clientIp(request);
         String path = request.getServletPath();
-        String bucketKey = ip + "|" + path;
-        Bucket bucket = buckets.computeIfAbsent(bucketKey, k -> newBucket(path));
+        boolean allowed = tryConsume(ip, path);
 
-        if (bucket.tryConsume(1)) {
+        if (allowed) {
             filterChain.doFilter(request, response);
         } else {
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
@@ -79,9 +89,33 @@ public class CheckoutRateLimitFilter extends OncePerRequestFilter {
         }
     }
 
-    private Bucket newBucket(String path) {
+    private boolean tryConsume(String ip, String path) {
+        int cap = getCap(path);
+        if (redisTemplate != null) {
+            try {
+                String redisKey = "ratelimit:" + path.replace("/", "_") + ":" + ip;
+                Long current = redisTemplate.opsForValue().increment(redisKey);
+                if (current != null && current == 1) {
+                    redisTemplate.expire(redisKey, Duration.ofMinutes(1));
+                }
+                return current != null && current <= cap;
+            } catch (Exception e) {
+                log.debug("Redis no disponible para rate limit, usando fallback local en memoria: {}", e.getMessage());
+            }
+        }
+
+        String bucketKey = ip + "|" + path;
+        Bucket bucket = buckets.computeIfAbsent(bucketKey, k -> newBucket(path));
+        return bucket.tryConsume(1);
+    }
+
+    private int getCap(String path) {
         int configured = CHECKOUT_PATH.equals(path) ? requestsPerMinute : authRegistroRequestsPerMinute;
-        int cap = Math.max(1, Math.min(configured, 120));
+        return Math.max(1, Math.min(configured, 120));
+    }
+
+    private Bucket newBucket(String path) {
+        int cap = getCap(path);
         Bandwidth limit = Bandwidth.builder()
                 .capacity(cap)
                 .refillGreedy(cap, Duration.ofMinutes(1))
