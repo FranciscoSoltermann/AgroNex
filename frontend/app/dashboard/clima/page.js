@@ -593,13 +593,13 @@ function ModuloLluvias({ campoId, onDataChange }) {
                 <form onSubmit={handleGuardar} className="p-5 bg-gray-50 dark:bg-[#151a20] border-b border-gray-100 dark:border-gray-800">
                     <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-3">Agregar nuevo registro</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                        <div>
+                        <div className="w-full min-w-0">
                             <label className="block text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-1">Fecha</label>
                             <input
                                 type="date" required
                                 value={form.fecha}
                                 onChange={e => setForm(p => ({ ...p, fecha: e.target.value }))}
-                                className="w-full border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1a1f25] focus:outline-none focus:border-[#2D6A4F]"
+                                className="w-full min-w-0 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-[16px] sm:text-[13px] font-semibold text-gray-900 dark:text-gray-100 bg-white dark:bg-[#1a1f25] focus:outline-none focus:border-[#2D6A4F] [color-scheme:light] dark:[color-scheme:dark] min-h-[42px] sm:min-h-[38px]"
                             />
                         </div>
                         <div>

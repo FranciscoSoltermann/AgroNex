@@ -611,22 +611,28 @@ export default function CiclosPage() {
                         )}
                     </div>
                     <form onSubmit={handleRegistrarActividad} className="space-y-3">
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                            <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                            <div className="w-full min-w-0">
                                 <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Tipo</label>
                                 <select value={formAct.tipoActv} onChange={(e) => setFormAct((p) => ({ ...p, tipoActv: e.target.value }))} className={SELECT_GREEN}>
                                     {TIPO_ACTIVIDAD.map((t) => (<option key={t} value={t}>{t}</option>))}
                                 </select>
                             </div>
-                            <div>
+                            <div className="w-full min-w-0">
                                 <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Fecha</label>
-                                <input type="date" required value={formAct.fecha} onChange={(e) => setFormAct((p) => ({ ...p, fecha: e.target.value }))} className={INPUT_GREEN} />
+                                <input
+                                    type="date"
+                                    required
+                                    value={formAct.fecha}
+                                    onChange={(e) => setFormAct((p) => ({ ...p, fecha: e.target.value }))}
+                                    className={`${INPUT_GREEN} cursor-pointer`}
+                                />
                             </div>
-                            <div>
+                            <div className="w-full min-w-0">
                                 <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Costo servicio ({symbol}/Ha)</label>
                                 <input type="number" step="0.01" min="0" value={formAct.costoServicio} onChange={(e) => setFormAct((p) => ({ ...p, costoServicio: e.target.value }))} className={INPUT_GREEN} placeholder="0" />
                             </div>
-                            <div>
+                            <div className="w-full min-w-0">
                                 <label className="block text-[9px] font-bold uppercase tracking-widest text-green-200 mb-1">Ha tratadas (opcional)</label>
                                 <input type="number" step="0.01" min="0" max={loteActual?.superficie != null ? loteActual.superficie : undefined} value={formAct.hectareasTratadas} onChange={(e) => setFormAct((p) => ({ ...p, hectareasTratadas: e.target.value }))} className={INPUT_GREEN} placeholder={`Máx. ${loteActual?.superficie ?? "—"} Ha`} />
                             </div>
@@ -883,7 +889,7 @@ export default function CiclosPage() {
                                         </div>
                                     )}
                                 </FormField>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <FormField label="Inicio" required>
                                         <input
                                             type="date"
@@ -1051,11 +1057,11 @@ function ActividadCard({ actividad, onEliminar, onEditar }) {
 }
 
 const INPUT_CLASS =
-    "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/15 focus:bg-white transition-all placeholder:text-gray-400";
+    "w-full min-w-0 max-w-full block bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-[16px] sm:text-[13px] font-semibold text-gray-900 dark:text-gray-100 focus:outline-none focus:border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/15 focus:bg-white dark:focus:bg-gray-800 transition-all placeholder:text-gray-400 [color-scheme:light] dark:[color-scheme:dark] min-h-[42px] sm:min-h-[38px] leading-normal";
 const INPUT_GREEN =
-    "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white placeholder:text-green-200/50 focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-emerald-400/50 transition-all";
+    "w-full min-w-0 max-w-full block bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[16px] sm:text-[12px] font-semibold text-white placeholder:text-green-200/50 focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-emerald-400/50 transition-all [color-scheme:dark] min-h-[42px] sm:min-h-[38px] leading-normal";
 const SELECT_GREEN =
-    "w-full bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[12px] font-semibold text-white focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-emerald-400/50 transition-all [&>option]:text-gray-900";
+    "w-full min-w-0 max-w-full block bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-[16px] sm:text-[12px] font-semibold text-white focus:outline-none focus:bg-white/20 focus:ring-2 focus:ring-emerald-400/50 transition-all [&>option]:text-gray-900 min-h-[42px] sm:min-h-[38px] leading-normal";
 
 function FormField({ label, required, children }) {
     return (

@@ -123,3 +123,39 @@ body {
   -webkit-backface-visibility: hidden;
 }
 
+/* ── iOS & Mobile Form / Date Input Normalization ── */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 38px;
+  position: relative;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Fix iOS date text alignment & vertical clipping */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: inherit;
+  min-height: 1.25em;
+  padding: 0;
+  display: block;
+}
+
+/* Style calendar picker icon nicely */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.85;
+  padding: 0;
+  margin-left: auto;
+}
+
+/* Prevent auto-zoom on iOS devices (iPhone / iPad) */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+
