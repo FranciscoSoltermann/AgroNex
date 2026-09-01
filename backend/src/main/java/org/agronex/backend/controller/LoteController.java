@@ -49,7 +49,7 @@ public class LoteController {
             );
         }
 
-        UUID idUsuario = UUID.fromString(jwt.getSubject());
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
         LoteResponse response = loteService.crearLote(request, idUsuario);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }

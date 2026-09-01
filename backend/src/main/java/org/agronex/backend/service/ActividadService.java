@@ -71,6 +71,11 @@ public class ActividadService {
                 Insumo insumo = insumoRepository.findById(detalle.getIdInsumo())
                         .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en catálogo"));
 
+                UUID ownerInsumo = insumo.getUsuario() != null ? insumo.getUsuario().getIdUsuario() : null;
+                if (ownerInsumo != null && !ownerInsumo.equals(idDatos)) {
+                    throw new AccessDeniedException("No tenés permiso para utilizar este insumo");
+                }
+
                 ActividadInsumo vinculo = new ActividadInsumo();
                 vinculo.setActividad(guardada);
                 vinculo.setInsumo(insumo);
@@ -209,6 +214,11 @@ public class ActividadService {
             for (DetalleInsumoRequest detalle : request.getInsumos()) {
                 Insumo insumo = insumoRepository.findById(detalle.getIdInsumo())
                         .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en catálogo"));
+
+                UUID ownerInsumo = insumo.getUsuario() != null ? insumo.getUsuario().getIdUsuario() : null;
+                if (ownerInsumo != null && !ownerInsumo.equals(idDatos)) {
+                    throw new AccessDeniedException("No tenés permiso para utilizar este insumo");
+                }
 
                 ActividadInsumo vinculo = new ActividadInsumo();
                 vinculo.setActividad(guardada);

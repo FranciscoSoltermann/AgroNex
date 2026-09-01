@@ -96,4 +96,40 @@ class CosechaServiceTest {
         List<CosechaResponse> list = cosechaService.listarTodas(userId);
         assertEquals(1, list.size());
     }
+
+    @Test
+    @DisplayName("editarCosecha - Edita cosecha exitosamente")
+    void editarCosecha_exito() {
+        UUID idCosecha = UUID.randomUUID();
+        CosechaRequest req = new CosechaRequest();
+        req.setFecha(LocalDate.now());
+        req.setRendimientoTotalQq(BigDecimal.valueOf(200));
+
+        Cosecha cosecha = Cosecha.builder().idCosecha(idCosecha).campania(campania).rendimientoTotalQq(BigDecimal.valueOf(150)).build();
+
+        when(cosechaRepository.findById(idCosecha)).thenReturn(Optional.of(cosecha));
+        when(usuarioService.idUsuarioParaAccesoDatos(userId)).thenReturn(userId);
+        when(cosechaRepository.save(any(Cosecha.class))).thenReturn(cosecha);
+        when(cosechaMapper.toResponse(cosecha)).thenReturn(CosechaResponse.builder().idCosecha(idCosecha).build());
+
+        CosechaResponse res = cosechaService.editarCosecha(idCosecha, req, userId);
+
+        assertNotNull(res);
+        verify(cosechaRepository).save(cosecha);
+        verify(auditService).registrar(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("eliminarCosecha - Elimina cosecha exitosamente")
+    void eliminarCosecha_exito() {
+        UUID idCosecha = UUID.randomUUID();
+        Cosecha cosecha = Cosecha.builder().idCosecha(idCosecha).campania(campania).rendimientoTotalQq(BigDecimal.valueOf(150)).build();
+
+        when(cosechaRepository.findById(idCosecha)).thenReturn(Optional.of(cosecha));
+        when(usuarioService.idUsuarioParaAccesoDatos(userId)).thenReturn(userId);
+
+        assertDoesNotThrow(() -> cosechaService.eliminarCosecha(idCosecha, userId));
+        verify(cosechaRepository).delete(cosecha);
+        verify(auditService).registrar(any(), any(), any(), any(), any(), any(), any());
+    }
 }

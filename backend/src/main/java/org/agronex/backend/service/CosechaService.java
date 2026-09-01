@@ -59,4 +59,60 @@ public class CosechaService {
 
         return cosechaMapper.toResponse(guardada);
     }
+
+    @Transactional
+    public CosechaResponse editarCosecha(UUID idCosecha, CosechaRequest request, UUID idUsuarioToken) {
+        Cosecha cosecha = cosechaRepository.findById(idCosecha)
+                .orElseThrow(() -> new EntityNotFoundException("Cosecha no encontrada"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        Campania campania = cosecha.getCampania();
+        if (campania == null || campania.getLote() == null || !campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tienes permiso sobre esta cosecha");
+        }
+
+        cosecha.setFecha(request.getFecha());
+        cosecha.setRendimientoTotalQq(request.getRendimientoTotalQq());
+        cosecha.setHumedadPorcentaje(request.getHumedadPorcentaje());
+        cosecha.setPrecioVentaUnitarioUsd(request.getPrecioVentaUnitarioUsd());
+        cosecha.setObservaciones(request.getObservaciones());
+        cosecha.setTipoLogistica(request.getTipoLogistica());
+        cosecha.setFleteTercerizadoCostoTotal(request.getFleteTercerizadoCostoTotal());
+        cosecha.setFletePropioLitrosCombustible(request.getFletePropioLitrosCombustible());
+        cosecha.setFletePropioPrecioLitro(request.getFletePropioPrecioLitro());
+
+        Cosecha guardada = cosechaRepository.save(cosecha);
+
+        auditService.registrar(
+                idUsuarioToken, campania.getLote().getCampo().getUsuario().getEmail(),
+                EntidadAudit.COSECHA, guardada.getIdCosecha().toString(),
+                "Cosecha de " + campania.getCultivo() + " editada",
+                AccionAudit.ACTUALIZAR,
+                "Rendimiento: " + guardada.getRendimientoTotalQq() + " qq. Fecha: " + guardada.getFecha()
+        );
+
+        return cosechaMapper.toResponse(guardada);
+    }
+
+    @Transactional
+    public void eliminarCosecha(UUID idCosecha, UUID idUsuarioToken) {
+        Cosecha cosecha = cosechaRepository.findById(idCosecha)
+                .orElseThrow(() -> new EntityNotFoundException("Cosecha no encontrada"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        Campania campania = cosecha.getCampania();
+        if (campania == null || campania.getLote() == null || !campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tienes permiso para eliminar esta cosecha");
+        }
+
+        auditService.registrar(
+                idUsuarioToken, campania.getLote().getCampo().getUsuario().getEmail(),
+                EntidadAudit.COSECHA, cosecha.getIdCosecha().toString(),
+                "Cosecha de " + campania.getCultivo() + " eliminada",
+                AccionAudit.ELIMINAR,
+                "Rendimiento: " + cosecha.getRendimientoTotalQq() + " qq"
+        );
+
+        cosechaRepository.delete(cosecha);
+    }
 }

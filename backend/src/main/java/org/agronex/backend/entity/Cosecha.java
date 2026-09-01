@@ -11,7 +11,10 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "cosecha")
+@Table(name = "cosecha", indexes = {
+    @Index(name = "idx_cosecha_campania", columnList = "id_campania"),
+    @Index(name = "idx_cosecha_fecha", columnList = "fecha")
+})
 @SQLDelete(sql = "UPDATE cosecha SET eliminado_en = CURRENT_TIMESTAMP WHERE id_cosecha = ?")
 @SQLRestriction("eliminado_en IS NULL")
 @Getter @Setter

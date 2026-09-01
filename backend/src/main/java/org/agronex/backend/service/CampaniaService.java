@@ -114,8 +114,13 @@ public class CampaniaService {
         Campania campania = campaniaRepository.findById(idCampania)
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
 
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
         Lote primerLote = campania.getLote();
-        if (primerLote == null || !primerLote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        if (primerLote == null) {
+            throw new AccessDeniedException("Acceso denegado");
+        }
+        UUID ownerId = primerLote.getCampo().getUsuario().getIdUsuario();
+        if (!ownerId.equals(idUsuarioToken) && !ownerId.equals(idDatos)) {
             throw new AccessDeniedException("Acceso denegado");
         }
         if ("CERRADA".equalsIgnoreCase(campania.getEstado())) {
@@ -229,8 +234,13 @@ public class CampaniaService {
         Campania campania = campaniaRepository.findById(idCampania)
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
 
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
         Lote primerLote = campania.getLote();
-        if (primerLote == null || !primerLote.getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        if (primerLote == null) {
+            throw new AccessDeniedException("Acceso denegado");
+        }
+        UUID ownerId = primerLote.getCampo().getUsuario().getIdUsuario();
+        if (!ownerId.equals(idUsuarioToken) && !ownerId.equals(idDatos)) {
             throw new AccessDeniedException("Acceso denegado");
         }
 

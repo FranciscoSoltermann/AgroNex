@@ -194,4 +194,46 @@ class ActividadServiceTest {
         verify(insumoRepository).save(insumo);
         verify(actividadRepository).delete(actividad);
     }
+
+    @Test
+    @DisplayName("registrarActividad - Lanza AccessDeniedException si el insumo pertenece a otro usuario (IDOR)")
+    void registrarActividad_insumoDeOtroUsuario_lanzaAccessDenied() {
+        UUID idCampania = campania.getIdCampania();
+        UUID idInsumo = UUID.randomUUID();
+        Usuario otroUsuario = new Usuario() {};
+        otroUsuario.setIdUsuario(UUID.randomUUID());
+
+        ActividadRequest request = ActividadRequest.builder()
+                .tipoActv("Siembra")
+                .costoServicio(BigDecimal.valueOf(50))
+                .moneda("USD")
+                .fecha(LocalDate.now())
+                .idCampania(idCampania)
+                .hectareasTratadas(BigDecimal.valueOf(50))
+                .insumos(List.of(new DetalleInsumoRequest(idInsumo, BigDecimal.valueOf(2))))
+                .build();
+
+        Insumo insumoDeOtro = Insumo.builder()
+                .idInsumo(idInsumo)
+                .nombre("Semilla Ajena")
+                .cantidad(BigDecimal.valueOf(200))
+                .unidad(UnidadMedida.BOLSAS)
+                .usuario(otroUsuario)
+                .build();
+
+        Actividad actividad = Actividad.builder()
+                .idActividad(UUID.randomUUID())
+                .tipoActv("Siembra")
+                .campania(campania)
+                .hectareasTratadas(BigDecimal.valueOf(50))
+                .build();
+
+        when(campaniaRepository.findById(idCampania)).thenReturn(Optional.of(campania));
+        when(usuarioService.idUsuarioParaAccesoDatos(userId)).thenReturn(userId);
+        when(actividadMapper.toEntity(request, campania)).thenReturn(actividad);
+        when(actividadRepository.save(any(Actividad.class))).thenReturn(actividad);
+        when(insumoRepository.findById(idInsumo)).thenReturn(Optional.of(insumoDeOtro));
+
+        assertThrows(AccessDeniedException.class, () -> actividadService.registrarActividad(request, userId));
+    }
 }

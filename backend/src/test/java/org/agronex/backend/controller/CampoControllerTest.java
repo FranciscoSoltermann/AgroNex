@@ -44,7 +44,7 @@ class CampoControllerTest {
     }
 
     @Test
-    @DisplayName("crearCampo - Retorna 200 OK")
+    @DisplayName("crearCampo - Retorna 201 CREATED")
     void crearCampo_exito() {
         CampoRequest req = new CampoRequest();
         CampoResponse resp = CampoResponse.builder().idCampo(UUID.randomUUID()).build();
@@ -53,7 +53,7 @@ class CampoControllerTest {
 
         ResponseEntity<?> response = campoController.crearCampo(req, jwt);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
     }
 
     @Test

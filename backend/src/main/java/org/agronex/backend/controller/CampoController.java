@@ -7,6 +7,7 @@ import org.agronex.backend.dto.response.CampoResponse;
 import org.agronex.backend.infrastructure.security.SecurityUtils;
 import org.agronex.backend.service.CampoService;
 import org.agronex.backend.service.UsuarioService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -33,7 +34,7 @@ public class CampoController {
 
     @Operation(summary = "Crear un nuevo campo", description = "Crea un campo agrícola vinculado a la cuenta del usuario autenticado.")
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "Campo creado exitosamente"),
+        @ApiResponse(responseCode = "201", description = "Campo creado exitosamente"),
         @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos"),
         @ApiResponse(responseCode = "403", description = "Sin permisos para editar campos")
     })
@@ -41,7 +42,7 @@ public class CampoController {
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<?> crearCampo(@Valid @RequestBody CampoRequest request, @AuthenticationPrincipal Jwt jwt) {
         SecurityUtils.requireUserId(jwt);
-        return ResponseEntity.ok(campoService.crearCampo(request, jwt));
+        return new ResponseEntity<>(campoService.crearCampo(request, jwt), HttpStatus.CREATED);
     }
 
     @Operation(summary = "Listar campos", description = "Obtiene todos los campos asociados al usuario actual o a la empresa en la que colabora.")

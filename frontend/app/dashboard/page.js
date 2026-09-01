@@ -1,14 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
 import {
-    Loader2, TrendingUp, Grid2x2, DollarSign, RefreshCw,
-    Sprout, Droplets, ChevronRight, AlertTriangle, PieChart,
-    FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers, Package
+    TrendingUp, Grid2x2, DollarSign, RefreshCw,
+    Sprout, Droplets, ChevronRight, AlertTriangle, PieChart as PieChartIcon,
+    FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers, Package, Download
 } from "lucide-react";
+import {
+    ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip,
+    BarChart, Bar, XAxis, YAxis
+} from "recharts";
 import dynamic from "next/dynamic";
 import { useCurrency } from "@/lib/currency-context";
 
@@ -24,49 +28,26 @@ const CotizacionesPizarraBCR = dynamic(() => import("@/components/features/dashb
     )
 });
 
-
 const UNIDAD_LABEL = { UNIDADES: "und", LITROS: "L", KILOGRAMOS: "kg", TONELADAS: "tn" };
 const getUnidadLabel = (u) => UNIDAD_LABEL[u] ?? "und";
-const PIE_COLORS = ["#2D6A4F", "#52B788", "#74C69D", "#B7E4C7", "#D8F3DC"];
+const PIE_COLORS = ["#2D6A4F", "#52B788", "#74C69D", "#B7E4C7", "#D8F3DC", "#A7D7C5"];
 
 const getActividadConfig = (tipo) => {
     const t = tipo?.toLowerCase() || "";
+    const style = { bg: "bg-[#2D6A4F]", color: "text-white", size: 15 };
 
-    // Configuramos el estilo único (Verde AgroNex y blanco)
-    const style = {
-        bg: "bg-[#2D6A4F]", // El verde sólido de tu foto
-        color: "text-white", // Icono en blanco para que resalte
-        size: 15
-    };
-
-    if (t.includes("siembra"))
-        return { icon: <Sprout size={style.size} className={style.color} />, bg: style.bg };
-
-    if (t.includes("pulve"))
-        return { icon: <BugOff size={style.size} className={style.color} />, bg: style.bg };
-
-    if (t.includes("fertili"))
-        return { icon: <FlaskConical size={style.size} className={style.color} />, bg: style.bg };
-
-    if (t.includes("riego"))
-        return { icon: <Droplets size={style.size} className={style.color} />, bg: style.bg };
-
-    if (t.includes("cosecha"))
-        return { icon: <Wheat size={style.size} className={style.color} />, bg: style.bg };
-
-    if (t.includes("labranza") || t.includes("laboreo"))
-        return { icon: <Tractor size={style.size} className={style.color} />, bg: style.bg };
-
-    if (t.includes("sanit") || t.includes("control"))
-        return { icon: <Microscope size={style.size} className={style.color} />, bg: style.bg };
-
-    // Caso para "Otra"
+    if (t.includes("siembra")) return { icon: <Sprout size={style.size} className={style.color} />, bg: style.bg };
+    if (t.includes("pulve")) return { icon: <BugOff size={style.size} className={style.color} />, bg: style.bg };
+    if (t.includes("fertili")) return { icon: <FlaskConical size={style.size} className={style.color} />, bg: style.bg };
+    if (t.includes("riego")) return { icon: <Droplets size={style.size} className={style.color} />, bg: style.bg };
+    if (t.includes("cosecha")) return { icon: <Wheat size={style.size} className={style.color} />, bg: style.bg };
+    if (t.includes("labranza") || t.includes("laboreo")) return { icon: <Tractor size={style.size} className={style.color} />, bg: style.bg };
+    if (t.includes("sanit") || t.includes("control")) return { icon: <Microscope size={style.size} className={style.color} />, bg: style.bg };
     return { icon: <Layers size={style.size} className={style.color} />, bg: style.bg };
 };
 
-
 export default function DashboardHome() {
-    const { symbol, convertCurrency } = useCurrency();
+    const { symbol } = useCurrency();
     const [chartMode, setChartMode] = useState("Mensual");
 
     const { data: queryData, isLoading: loading } = useQuery({
@@ -74,8 +55,8 @@ export default function DashboardHome() {
         queryFn: async () => {
             const { data: { session } } = await supabase.auth.getSession();
             const nombre = session?.user?.user_metadata?.nombre || "Productor";
-            const t = new Date().getTime();
-            
+            const userId = session?.user?.id || null;
+
             const [bootstrap, resStats, resActs, resGastos, resCosechas, resInsumos, resSettings] = await Promise.all([
                 getDashboardBootstrapData(),
                 apiClient.get(`/campos/stats`).catch(() => ({ data: {} })),
@@ -87,6 +68,7 @@ export default function DashboardHome() {
             ]);
 
             return {
+                userId,
                 nombre,
                 bootstrap,
                 stats: resStats.data || {},
@@ -99,7 +81,6 @@ export default function DashboardHome() {
         }
     });
 
-    const userName = queryData?.nombre || "Productor";
     const actos = queryData?.actividades || [];
     const gast = queryData?.gastos || [];
     const camps = queryData?.bootstrap?.campanias || [];
@@ -111,126 +92,192 @@ export default function DashboardHome() {
     const userRole = settingsData.rol;
     const userPermisos = settingsData.permisos || [];
 
-    const totalCostosActs = actos.reduce((sum, a) => {
-        const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-        return sum + (a.costoServicio || 0) * ha;
-    }, 0);
-    const totalGastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
+    // Memoized core metrics & stats
+    const { totalCostosActs, totalGastosFijos, stats } = useMemo(() => {
+        const costosActs = actos.reduce((sum, a) => {
+            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+            return sum + (a.costoServicio || 0) * ha;
+        }, 0);
+        const gastosFijos = gast.reduce((sum, g) => sum + (g.montoTotal || 0), 0);
 
-    const stats = {
-        camposActivos: d.camposActivos ?? (campos.length || 0),
-        lotesTotales: d.lotesTotales ?? (queryData?.bootstrap?.lotes?.length || 0),
-        hectareasTotales: d.hectareasTotales ?? 0,
-        gastosAcumulados: totalCostosActs + totalGastosFijos,
-        ciclosActivos: camps.length,
+        return {
+            totalCostosActs: costosActs,
+            totalGastosFijos: gastosFijos,
+            stats: {
+                camposActivos: d.camposActivos ?? (campos.length || 0),
+                lotesTotales: d.lotesTotales ?? (queryData?.bootstrap?.lotes?.length || 0),
+                hectareasTotales: d.hectareasTotales ?? 0,
+                gastosAcumulados: costosActs + gastosFijos,
+                ciclosActivos: camps.length,
+            }
+        };
+    }, [actos, gast, d, campos, queryData?.bootstrap?.lotes, camps]);
+
+    // Memoized low stock inventory alerts
+    const lowStockItems = useMemo(() => {
+        const allInsumos = queryData?.insumos || [];
+        return [...allInsumos]
+            .filter(i => {
+                if (i.cantidad == null) return false;
+                const qty = Number(i.cantidad || 0);
+                const ini = Number(i.cantidadInicial || 0);
+                const pct = ini > 0 ? (qty / ini) * 100 : (qty <= 0 ? 0 : 100);
+                return qty <= 0 || pct < 40 || (ini === 0 && qty <= 10);
+            })
+            .sort((a, b) => Number(a.cantidad) - Number(b.cantidad))
+            .slice(0, 3);
+    }, [queryData?.insumos]);
+
+    // Memoized categorical expense breakdown
+    const gastosPorCategoria = useMemo(() => {
+        const catMap = {};
+        gast.forEach(g => {
+            const cat = g.categoria || "Otros";
+            catMap[cat] = (catMap[cat] || 0) + (g.montoTotal || 0);
+        });
+        const actCosts = actos.reduce((s, a) => {
+            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+            return s + (a.costoServicio || 0) * ha;
+        }, 0);
+        if (actCosts > 0) catMap["Servicios de campo"] = (catMap["Servicios de campo"] || 0) + actCosts;
+        return Object.entries(catMap)
+            .map(([name, value]) => ({ name, value }))
+            .sort((a, b) => b.value - a.value);
+    }, [gast, actos]);
+
+    // Memoized chart dataset for performance
+    const dynChartData = useMemo(() => {
+        const result = [];
+        if (chartMode === "Mensual") {
+            const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+            const monthData = {};
+
+            const processItem = (dateStr, val, type) => {
+                if (!dateStr) return;
+                const dt = new Date(dateStr + "T00:00:00");
+                const key = `${dt.getFullYear()}-${dt.getMonth()}`;
+                monthData[key] = monthData[key] || { costos: 0, cosecha: 0 };
+                monthData[key][type] += val;
+            };
+
+            actos.forEach(a => {
+                const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+                processItem(a.fecha, (a.costoServicio || 0) * ha, "costos");
+            });
+            gast.forEach(g => processItem(g.fecha, g.montoTotal || 0, "costos"));
+            coses.forEach(c => processItem(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
+
+            const currentYear = new Date().getFullYear();
+            monthNames.forEach((label, i) => {
+                const key = `${currentYear}-${i}`;
+                const data = monthData[key] || { costos: 0, cosecha: 0 };
+                result.push({ mes: label, costos: Math.round(data.costos), cosecha: Math.round(data.cosecha) });
+            });
+        } else {
+            const getWeekNumber = (d) => {
+                d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+                return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+            };
+
+            const weekData = {};
+            const processWeekly = (dateStr, val, type) => {
+                if (!dateStr) return;
+                const dt = new Date(dateStr + "T00:00:00");
+                const w = getWeekNumber(dt);
+                weekData[w] = weekData[w] || { costos: 0, cosecha: 0 };
+                weekData[w][type] += val;
+            };
+
+            actos.forEach(a => {
+                const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+                processWeekly(a.fecha, (a.costoServicio || 0) * ha, "costos");
+            });
+            gast.forEach(g => processWeekly(g.fecha, g.montoTotal || 0, "costos"));
+            coses.forEach(c => processWeekly(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
+
+            const now = new Date();
+            const currentWeek = getWeekNumber(now);
+            for (let i = 4; i >= 0; i--) {
+                let wIdx = currentWeek - i;
+                if (wIdx <= 0) wIdx += 52;
+                const data = weekData[wIdx] || { costos: 0, cosecha: 0 };
+                result.push({ mes: `S${wIdx}`, costos: Math.round(data.costos), cosecha: Math.round(data.cosecha) });
+            }
+        }
+        return result;
+    }, [chartMode, actos, gast, coses]);
+
+    // CSV export helper
+    const handleExportSummaryCsv = () => {
+        const rows = [
+            ["AGRONEX - RESUMEN EJECUTIVO DE ESTABLECIMIENTO"],
+            ["Fecha de emision", new Date().toLocaleDateString("es-AR")],
+            [],
+            ["INDICADOR", "VALOR"],
+            ["Hectareas Totales", stats.hectareasTotales],
+            ["Campos Activos", stats.camposActivos],
+            ["Lotes Registrados", stats.lotesTotales],
+            ["Campanias Activas", stats.ciclosActivos],
+            ["Gastos Acumulados", `${symbol} ${stats.gastosAcumulados}`],
+            [],
+            ["DISTRIBUCION DE GASTOS POR CATEGORIA"],
+            ["Categoria", "Monto"],
+            ...gastosPorCategoria.map(g => [g.name, `${symbol} ${g.value}`]),
+            [],
+            ["ALERTAS DE STOCK DE INSUMOS"],
+            ["Insumo", "Stock Actual", "Unidad"],
+            ...lowStockItems.map(i => [i.nombre, i.cantidad, getUnidadLabel(i.unidad)])
+        ];
+
+        const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(";")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `agronex_resumen_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
-    const actividades = actos;
-    
-    // Inventario: solo insumos con bajo o crítico nivel de stock
-    const allInsumos = queryData?.insumos || [];
-    const lowStockItems = [...allInsumos]
-        .filter(i => {
-            if (i.cantidad == null) return false;
-            const qty = Number(i.cantidad || 0);
-            const ini = Number(i.cantidadInicial || 0);
-            const pct = ini > 0 ? (qty / ini) * 100 : (qty <= 0 ? 0 : 100);
-            return qty <= 0 || pct < 40 || (ini === 0 && qty <= 10);
-        })
-        .sort((a, b) => Number(a.cantidad) - Number(b.cantidad))
-        .slice(0, 3);
-
-    // Gastos por categoría para pie chart
-    const catMap = {};
-    gast.forEach(g => {
-        const cat = g.categoria || "Otros";
-        catMap[cat] = (catMap[cat] || 0) + (g.montoTotal || 0);
-    });
-    // Also add activity costs as "Servicios de campo"
-    const actCosts = actos.reduce((s, a) => {
-        const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-        return s + (a.costoServicio || 0) * ha;
-    }, 0);
-    if (actCosts > 0) catMap["Servicios de campo"] = (catMap["Servicios de campo"] || 0) + actCosts;
-    const gastosPorCategoria = Object.entries(catMap)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-
-    // Lógica de Gráfico (Se mantiene igual)
-    const finalChartData = [];
-    let maxChartVal = 100;
-
-    if (chartMode === "Mensual") {
-        const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
-        const monthData = {};
-
-        const processItem = (dateStr, val, type) => {
-            if (!dateStr) return;
-            const dt = new Date(dateStr + "T00:00:00");
-            const key = `${dt.getFullYear()}-${dt.getMonth()}`;
-            monthData[key] = monthData[key] || { costos: 0, cosecha: 0 };
-            monthData[key][type] += val;
-        };
-
-        actos.forEach(a => {
-            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-            processItem(a.fecha, (a.costoServicio || 0) * ha, "costos");
-        });
-        gast.forEach(g => processItem(g.fecha, g.montoTotal || 0, "costos"));
-        coses.forEach(c => processItem(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
-
-        const currentYear = new Date().getFullYear();
-        monthNames.forEach((label, i) => {
-            const key = `${currentYear}-${i}`;
-            const data = monthData[key] || { costos: 0, cosecha: 0 };
-            finalChartData.push({ mes: label, costos: data.costos, cosecha: data.cosecha });
-            if (data.costos > maxChartVal) maxChartVal = data.costos;
-            if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
-        });
-    } else {
-        const getWeekNumber = (d) => {
-            d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-        };
-
-        const weekData = {};
-        const processWeekly = (dateStr, val, type) => {
-            if (!dateStr) return;
-            const dt = new Date(dateStr + "T00:00:00");
-            const w = getWeekNumber(dt);
-            weekData[w] = weekData[w] || { costos: 0, cosecha: 0 };
-            weekData[w][type] += val;
-        };
-
-        actos.forEach(a => {
-            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-            processWeekly(a.fecha, (a.costoServicio || 0) * ha, "costos");
-        });
-        gast.forEach(g => processWeekly(g.fecha, g.montoTotal || 0, "costos"));
-        coses.forEach(c => processWeekly(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
-
-        const now = new Date();
-        const currentWeek = getWeekNumber(now);
-        for (let i = 4; i >= 0; i--) {
-            let wIdx = currentWeek - i;
-            if (wIdx <= 0) wIdx += 52;
-            const data = weekData[wIdx] || { costos: 0, cosecha: 0 };
-            finalChartData.push({ mes: `S${wIdx}`, costos: data.costos, cosecha: data.cosecha });
-            if (data.costos > maxChartVal) maxChartVal = data.costos;
-            if (data.cosecha > maxChartVal) maxChartVal = data.cosecha;
-        }
+    if (loading) {
+        return (
+            <div className="flex flex-col gap-3 animate-pulse h-full overflow-hidden pb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 h-24 border border-gray-100 dark:border-gray-800" />
+                    ))}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 flex-1 min-h-[160px]">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 border border-gray-100 dark:border-gray-800" />
+                    ))}
+                </div>
+                <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 h-48 border border-gray-100 dark:border-gray-800" />
+            </div>
+        );
     }
-
-    const dynChartData = finalChartData;
-    const dynMaxVal = maxChartVal * 1.1;
-
-
-    if (loading) return <div className="flex items-center justify-center h-full"><Loader2 className="h-10 w-10 text-[#2D6A4F] animate-spin" /></div>;
 
     return (
         <div className="flex flex-col gap-3 animate-in fade-in duration-500 h-full overflow-y-auto pr-1 pb-8 custom-scrollbar">
+            {/* Header de bienvenida y Exportar Resumen */}
+            <div className="flex items-center justify-between shrink-0 mb-0.5">
+                <div>
+                    <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Panel de Control Agronómico</h2>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Métricas operativas y financieras en tiempo real</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleExportSummaryCsv}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#1a1f25] hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all shadow-sm"
+                    title="Exportar métricas en formato CSV compatible con Excel"
+                >
+                    <Download size={14} className="text-[#2D6A4F]" />
+                    <span className="hidden sm:inline">Exportar Balance</span> CSV
+                </button>
+            </div>
+
             {/* Stats — 3 cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 shrink-0">
                 <StatCard
@@ -312,12 +359,12 @@ export default function DashboardHome() {
                 </div>
                 )}
 
-                {/* Gastos por Categoría — Pie Chart */}
+                {/* Gastos por Categoría — Recharts Pie */}
                 {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden">
                     <div className="flex items-center gap-2 mb-3">
                         <div className="w-8 h-8 bg-violet-50 rounded-lg flex items-center justify-center">
-                            <PieChart size={16} className="text-violet-500" />
+                            <PieChartIcon size={16} className="text-violet-500" />
                         </div>
                         <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Gastos por Categoría</h3>
                     </div>
@@ -327,15 +374,35 @@ export default function DashboardHome() {
                             No hay gastos registrados.
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center gap-4">
-                            <PieChartSVG data={gastosPorCategoria} />
-                            <div className="w-full space-y-2">
+                        <div className="flex flex-col items-center gap-3">
+                            <div className="w-full h-36">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={gastosPorCategoria}
+                                            innerRadius={32}
+                                            outerRadius={55}
+                                            paddingAngle={3}
+                                            dataKey="value"
+                                        >
+                                            {gastosPorCategoria.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <RechartsTooltip
+                                            formatter={(value) => [`${symbol} ${Number(value).toLocaleString("es-AR")}`, "Monto"]}
+                                            contentStyle={{ backgroundColor: "#1f2937", borderRadius: "0.75rem", border: "none", color: "#fff", fontSize: "12px" }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="w-full space-y-1.5 max-h-28 overflow-y-auto custom-scrollbar pr-1">
                                 {gastosPorCategoria.map((cat, i) => {
                                     const total = gastosPorCategoria.reduce((s, c) => s + c.value, 0);
                                     const pct = total > 0 ? ((cat.value / total) * 100).toFixed(1) : 0;
                                     return (
                                         <div key={cat.name} className="flex items-center gap-2">
-                                            <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                                            <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
                                             <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 flex-1 truncate">{cat.name}</span>
                                             <span className="text-[11px] font-black text-gray-900 dark:text-gray-100">{pct}%</span>
                                         </div>
@@ -351,9 +418,9 @@ export default function DashboardHome() {
                 <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex flex-col overflow-hidden">
                     <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 mb-3">Actividades Recientes</h3>
                     <div className="flex-1 flex flex-col space-y-2.5 overflow-hidden">
-                        {actividades.length === 0 ? (
+                        {actos.length === 0 ? (
                             <p className="flex-1 flex items-center justify-center text-gray-400 text-xs min-h-[120px]">No hay actividades recientes.</p>
-                        ) : actividades.slice(0, 5).map((act, i) => {
+                        ) : actos.slice(0, 5).map((act, i) => {
                             const config = getActividadConfig(act.tipoActv);
                             return (
                                 <div key={act.idActividad || i} className="flex items-start gap-3">
@@ -375,33 +442,46 @@ export default function DashboardHome() {
                 </div>
             </div>
 
-            {/* Crecimiento: Costos vs Cosechas — Full width */}
+            {/* Crecimiento: Costos vs Cosechas — Recharts Responsive Bar */}
             {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex-none lg:flex-[1.5] min-h-[250px] flex flex-col overflow-hidden">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-1">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex-none lg:flex-[1.5] min-h-[260px] flex flex-col overflow-hidden">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-2">
                     <div className="min-w-0">
                         <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Crecimiento: Costos vs Cosechas</h3>
                         <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Análisis comparativo por quintal</p>
                     </div>
                     <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5 shrink-0 self-start">
                         {["Semanal", "Mensual"].map(mode => (
-                            <button key={mode} type="button" onClick={() => setChartMode(mode)} className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wide transition-all ${chartMode === mode ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}>{mode}</button>
+                            <button
+                                key={mode}
+                                type="button"
+                                onClick={() => setChartMode(mode)}
+                                className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wide transition-all ${chartMode === mode ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
+                            >
+                                {mode}
+                            </button>
                         ))}
                     </div>
                 </div>
-                <div className="mt-1 flex-1 min-h-0 flex flex-col overflow-x-auto overflow-y-hidden custom-scrollbar">
-                    <div className="min-w-[400px] flex justify-between gap-3 flex-1 min-h-0 h-full">
-                        {dynChartData.map((d, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full">
-                                <div className="w-full flex-1 flex items-end gap-1 min-h-0">
-                                    <div className="w-1/2 rounded-t-lg bg-[#C1DDD1] hover:bg-[#95C6AE] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.costos / Math.max(1, dynMaxVal)) * 100)}%` }} title={`${symbol}${Number(d.costos).toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
-                                    <div className="w-1/2 rounded-t-lg bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors cursor-default" style={{ height: `${Math.max(1, (d.cosecha / Math.max(1, dynMaxVal)) * 100)}%` }} title={`Rend.: ${d.cosecha}`} />
-                                </div>
-                                <span className="text-[9px] font-bold text-gray-400 dark:text-gray-500">{d.mes}</span>
-                            </div>
-                        ))}
-                    </div>
+
+                <div className="w-full h-44 mt-1">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={dynChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                            <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                            <RechartsTooltip
+                                contentStyle={{ backgroundColor: "#1f2937", borderRadius: "0.75rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                formatter={(val, name) => [
+                                    name === "costos" ? `${symbol} ${Number(val).toLocaleString("es-AR")}` : `${Number(val).toLocaleString("es-AR")} kg`,
+                                    name === "costos" ? "Costos Acumulados" : "Rendimiento Cosecha"
+                                ]}
+                            />
+                            <Bar dataKey="costos" fill="#C1DDD1" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                            <Bar dataKey="cosecha" fill="#2D6A4F" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                        </BarChart>
+                    </ResponsiveContainer>
                 </div>
+
                 <div className="flex flex-wrap gap-3 sm:gap-5 mt-2 shrink-0">
                     <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C1DDD1] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Costos Acumulados</span></div>
                     <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Rendimiento de Cosecha (kg)</span></div>
@@ -413,51 +493,7 @@ export default function DashboardHome() {
             <div className="flex-none lg:flex-[1.5] min-h-min flex flex-col shrink-0">
                 <CotizacionesPizarraBCR />
             </div>
-
         </div>
-    );
-}
-
-function PieChartSVG({ data }) {
-    const total = data.reduce((sum, item) => sum + item.value, 0);
-
-    const getCoordinatesForPercent = (percent) => {
-        const x = Math.cos(2 * Math.PI * percent);
-        const y = Math.sin(2 * Math.PI * percent);
-        return [x, y];
-    };
-
-    const slices = [];
-    let currentAcc = 0;
-    for (const slice of data) {
-        const startPercent = currentAcc;
-        const val = total > 0 ? slice.value / total : 0;
-        currentAcc += val;
-        slices.push({ slice, startPercent, endPercent: currentAcc });
-    }
-
-    return (
-        <svg viewBox="-1 -1 2 2" className="w-24 h-24 transform -rotate-90">
-            {slices.map(({ slice, startPercent, endPercent }, i) => {
-                const [startX, startY] = getCoordinatesForPercent(startPercent);
-                const [endX, endY] = getCoordinatesForPercent(endPercent);
-                const largeArcFlag = endPercent - startPercent > 0.5 ? 1 : 0;
-
-                const pathData = [
-                    `M ${startX} ${startY}`,
-                    `A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-                    `L 0 0`,
-                ].join(" ");
-
-                return (
-                    <path
-                        key={slice.name}
-                        d={pathData}
-                        fill={PIE_COLORS[i % PIE_COLORS.length]}
-                    />
-                );
-            })}
-        </svg>
     );
 }
 

@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "campo")
+@Table(name = "campo", indexes = {
+    @Index(name = "idx_campo_usuario", columnList = "id_usuario")
+})
 @SQLDelete(sql = "UPDATE campo SET eliminado_en = CURRENT_TIMESTAMP WHERE id_campo = ?")
 @SQLRestriction("eliminado_en IS NULL")
 @Getter @Setter

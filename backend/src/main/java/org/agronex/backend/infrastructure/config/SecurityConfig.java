@@ -87,9 +87,9 @@ public class SecurityConfig {
                 .permissionsPolicyHeader(policy ->
                     policy.policy("camera=(), microphone=(), geolocation=()")
                 )
-                // VUL-M04: Content-Security-Policy para prevenir XSS en páginas de error y Swagger
+                // Content-Security-Policy para prevenir XSS y Clickjacking
                 .contentSecurityPolicy(csp ->
-                    csp.policyDirectives("default-src 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'")
+                    csp.policyDirectives("default-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'")
                 )
             )
 

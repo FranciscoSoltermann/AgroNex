@@ -15,6 +15,16 @@ const apiClient = axios.create({
     baseURL: normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL),
 });
 
+let cachedToken = null;
+let tokenExpiresAt = 0;
+
+if (typeof window !== 'undefined' && supabase) {
+    supabase.auth.onAuthStateChange((_event, session) => {
+        cachedToken = session?.access_token || null;
+        tokenExpiresAt = session?.expires_at ? session.expires_at * 1000 : 0;
+    });
+}
+
 apiClient.interceptors.request.use(async (config) => {
     const url = config.url || '';
 
@@ -31,9 +41,16 @@ apiClient.interceptors.request.use(async (config) => {
 
     if (supabase) {
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.access_token) {
-                config.headers.Authorization = `Bearer ${session.access_token}`;
+            const now = Date.now();
+            if (cachedToken && tokenExpiresAt - now > 60000) {
+                config.headers.Authorization = `Bearer ${cachedToken}`;
+            } else {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.access_token) {
+                    cachedToken = session.access_token;
+                    tokenExpiresAt = session.expires_at ? session.expires_at * 1000 : now + 3600000;
+                    config.headers.Authorization = `Bearer ${session.access_token}`;
+                }
             }
         } catch {
             // Ignorar errores de sesión en interceptor

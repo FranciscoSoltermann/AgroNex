@@ -1,5 +1,7 @@
 package org.agronex.backend.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ public class LoteService {
     private final AgromonitoringService agromonitoringService;
     private final AuditService auditService;
     private final UsuarioService usuarioService;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public LoteResponse crearLote(LoteRequest request, UUID idUsuarioToken) {
@@ -55,8 +58,9 @@ public class LoteService {
         // 3. MAPPER: Request -> Entity
         Lote nuevoLote = loteMapper.toEntity(request, campo);
 
-        // Si mandaron coordenadas, registramos en la API externa
+        // Si mandaron coordenadas, validamos y registramos en la API externa
         if (request.getCoordenadasGeoJson() != null && !request.getCoordenadasGeoJson().isBlank()) {
+            validarGeoJson(request.getCoordenadasGeoJson());
             String polyId = agromonitoringService.registrarPoligono(nuevoLote.getNombre(), request.getCoordenadasGeoJson());
             if (polyId != null) {
                 nuevoLote.setIdPoligonoAgro(polyId);
@@ -118,11 +122,13 @@ public class LoteService {
         }
         lote.setCoordenadasGeoJson(coordenadasGeoJson);
         if (coordenadasGeoJson != null && !coordenadasGeoJson.isBlank()) {
+            validarGeoJson(coordenadasGeoJson);
             String polyId = agromonitoringService.registrarPoligono(lote.getNombre(), coordenadasGeoJson);
             if (polyId != null) {
                 lote.setIdPoligonoAgro(polyId);
             }
         }
+        lote.setCoordenadasGeoJson(coordenadasGeoJson);
         Lote guardado = loteRepository.save(lote);
 
         // AUDITORÍA
@@ -165,6 +171,7 @@ public class LoteService {
         lote.setSuperficie(request.getSuperficie());
 
         if (request.getCoordenadasGeoJson() != null && !request.getCoordenadasGeoJson().isBlank() && !request.getCoordenadasGeoJson().equals(lote.getCoordenadasGeoJson())) {
+            validarGeoJson(request.getCoordenadasGeoJson());
             lote.setCoordenadasGeoJson(request.getCoordenadasGeoJson());
             String polyId = agromonitoringService.registrarPoligono(lote.getNombre(), request.getCoordenadasGeoJson());
             if (polyId != null) {
@@ -182,5 +189,26 @@ public class LoteService {
         );
 
         return loteMapper.toResponse(guardado);
+    }
+
+    /**
+     * Valida sintáctica y estructuralmente una cadena GeoJSON, previniendo payloads maliciosos o corruptos.
+     */
+    private void validarGeoJson(String geoJsonStr) {
+        if (geoJsonStr == null || geoJsonStr.isBlank()) return;
+        if (geoJsonStr.toLowerCase().contains("<script") || geoJsonStr.toLowerCase().contains("javascript:")) {
+            throw new IllegalArgumentException("Contenido no permitido detectado en coordenadas GeoJSON");
+        }
+        try {
+            JsonNode root = objectMapper.readTree(geoJsonStr);
+            if (!root.isObject()) {
+                throw new IllegalArgumentException("El GeoJSON debe ser un objeto JSON válido");
+            }
+            if (!root.has("type") && !root.has("geometry") && !root.has("coordinates")) {
+                throw new IllegalArgumentException("Estructura GeoJSON no reconocida");
+            }
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalArgumentException("Formato GeoJSON inválido: no es un JSON válido");
+        }
     }
 }

@@ -44,4 +44,27 @@ public class CosechaController {
         CosechaResponse response = cosechaService.registrarCosecha(request, idUsuario);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
+
+    @PutMapping("/{idCosecha}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
+    public ResponseEntity<CosechaResponse> editarCosecha(
+            @PathVariable UUID idCosecha,
+            @Valid @RequestBody CosechaRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        CosechaResponse response = cosechaService.editarCosecha(idCosecha, request, idUsuario);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{idCosecha}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
+    public ResponseEntity<Void> eliminarCosecha(
+            @PathVariable UUID idCosecha,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        cosechaService.eliminarCosecha(idCosecha, idUsuario);
+        return ResponseEntity.noContent().build();
+    }
 }

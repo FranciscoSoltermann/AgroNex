@@ -65,4 +65,29 @@ class CosechaControllerTest {
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
     }
+
+    @Test
+    @DisplayName("editarCosecha - Retorna 200 OK")
+    void editarCosecha_exito() {
+        UUID idCosecha = UUID.randomUUID();
+        CosechaRequest req = new CosechaRequest();
+        CosechaResponse resp = CosechaResponse.builder().idCosecha(idCosecha).build();
+
+        when(cosechaService.editarCosecha(idCosecha, req, userId)).thenReturn(resp);
+
+        ResponseEntity<CosechaResponse> response = cosechaController.editarCosecha(idCosecha, req, jwt);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+    }
+
+    @Test
+    @DisplayName("eliminarCosecha - Retorna 204 NO CONTENT")
+    void eliminarCosecha_exito() {
+        UUID idCosecha = UUID.randomUUID();
+
+        ResponseEntity<Void> response = cosechaController.eliminarCosecha(idCosecha, jwt);
+
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(cosechaService).eliminarCosecha(idCosecha, userId);
+    }
 }

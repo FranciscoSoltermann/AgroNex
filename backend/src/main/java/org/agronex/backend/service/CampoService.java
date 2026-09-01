@@ -163,7 +163,9 @@ public class CampoService {
         Campo campo = campoRepository.findById(idCampo)
                 .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Campo no encontrado"));
 
-        if (!campo.getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        UUID ownerId = campo.getUsuario().getIdUsuario();
+        if (!ownerId.equals(idUsuarioToken) && !ownerId.equals(idDatos)) {
             throw new org.springframework.security.access.AccessDeniedException("No tenés permiso para eliminar este campo");
         }
 
@@ -175,7 +177,7 @@ public class CampoService {
         );
 
         // Borrar campañas asociadas
-        List<Campania> campanias = campaniaRepository.findByUsuarioIdUsuario(idUsuarioToken).stream()
+        List<Campania> campanias = campaniaRepository.findByUsuarioIdUsuario(idDatos).stream()
                 .filter(c -> c.getLotes().stream().anyMatch(l -> l.getCampo().getIdCampo().equals(idCampo)))
                 .collect(Collectors.toList());
 

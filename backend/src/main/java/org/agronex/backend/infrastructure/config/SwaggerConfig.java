@@ -9,6 +9,7 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import java.util.List;
 
 /**
  * Configuración global de OpenAPI / Swagger UI para AgroNex.
@@ -28,6 +29,11 @@ public class SwaggerConfig {
                                 .name("AgroNex Engineering Team")
                                 .email("soporte@agronex.org"))
                         .license(new License().name("Proprietary")))
+                .servers(List.of(
+                        new io.swagger.v3.oas.models.servers.Server().url("/").description("Servidor Actual"),
+                        new io.swagger.v3.oas.models.servers.Server().url("http://localhost:8080").description("Entorno de Desarrollo"),
+                        new io.swagger.v3.oas.models.servers.Server().url("https://agronex-backend.onrender.com").description("Entorno de Producción")
+                ))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
