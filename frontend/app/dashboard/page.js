@@ -7,7 +7,7 @@ import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
 import {
     TrendingUp, Grid2x2, DollarSign, RefreshCw,
     Sprout, Droplets, ChevronRight, AlertTriangle, PieChart as PieChartIcon,
-    FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers, Package, Download
+    FlaskConical, BugOff, Wheat, Tractor, Microscope, Layers, Package
 } from "lucide-react";
 import {
     ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip,
@@ -209,38 +209,6 @@ export default function DashboardHome() {
         return result;
     }, [chartMode, actos, gast, coses]);
 
-    // CSV export helper
-    const handleExportSummaryCsv = () => {
-        const rows = [
-            ["AGRONEX - RESUMEN EJECUTIVO DE ESTABLECIMIENTO"],
-            ["Fecha de emision", new Date().toLocaleDateString("es-AR")],
-            [],
-            ["INDICADOR", "VALOR"],
-            ["Hectareas Totales", stats.hectareasTotales],
-            ["Campos Activos", stats.camposActivos],
-            ["Lotes Registrados", stats.lotesTotales],
-            ["Campanias Activas", stats.ciclosActivos],
-            ["Gastos Acumulados", `${symbol} ${stats.gastosAcumulados}`],
-            [],
-            ["DISTRIBUCION DE GASTOS POR CATEGORIA"],
-            ["Categoria", "Monto"],
-            ...gastosPorCategoria.map(g => [g.name, `${symbol} ${g.value}`]),
-            [],
-            ["ALERTAS DE STOCK DE INSUMOS"],
-            ["Insumo", "Stock Actual", "Unidad"],
-            ...lowStockItems.map(i => [i.nombre, i.cantidad, getUnidadLabel(i.unidad)])
-        ];
-
-        const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(";")).join("\n");
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `agronex_resumen_${new Date().toISOString().slice(0, 10)}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
     if (loading) {
         return (
             <div className="flex flex-col gap-3 animate-pulse h-full overflow-hidden pb-8">
@@ -261,21 +229,10 @@ export default function DashboardHome() {
 
     return (
         <div className="flex flex-col gap-3 animate-in fade-in duration-500 h-full overflow-y-auto pr-1 pb-8 custom-scrollbar">
-            {/* Header de bienvenida y Exportar Resumen */}
-            <div className="flex items-center justify-between shrink-0 mb-0.5">
-                <div>
-                    <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Panel de Control Agronómico</h2>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">Métricas operativas y financieras en tiempo real</p>
-                </div>
-                <button
-                    type="button"
-                    onClick={handleExportSummaryCsv}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#1a1f25] hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all shadow-sm"
-                    title="Exportar métricas en formato CSV compatible con Excel"
-                >
-                    <Download size={14} className="text-[#2D6A4F]" />
-                    <span className="hidden sm:inline">Exportar Balance</span> CSV
-                </button>
+            {/* Header de bienvenida */}
+            <div className="shrink-0 mb-0.5">
+                <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-gray-100 tracking-tight">Panel de Control Agronómico</h2>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Métricas operativas y financieras en tiempo real</p>
             </div>
 
             {/* Stats — 3 cards */}
