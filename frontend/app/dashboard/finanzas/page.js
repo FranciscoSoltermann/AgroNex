@@ -926,11 +926,11 @@ export default function FinanzasPage() {
                             </select>
                         </FormField>
                         <div className="grid grid-cols-1 min-[480px]:grid-cols-2 gap-3">
-                            <FormField label="Rendimiento (qq)">
-                                <input type="number" step="0.01" max="999999999" required value={formCosecha.rendimientoTotalQq} onChange={e => setFormCosecha(p => ({ ...p, rendimientoTotalQq: e.target.value }))} className={INPUT_CLASS} />
+                            <FormField label="Rendimiento Total (qq)">
+                                <input type="number" step="0.01" max="999999999" required placeholder="Ej: 2000 (40 qq/ha)" value={formCosecha.rendimientoTotalQq} onChange={e => setFormCosecha(p => ({ ...p, rendimientoTotalQq: e.target.value }))} className={INPUT_CLASS} />
                             </FormField>
-                            <FormField label="Precio Venta (x qq)">
-                                <input type="number" step="0.01" max="999999999" required value={formCosecha.precioVentaUnitarioUsd} onChange={e => setFormCosecha(p => ({ ...p, precioVentaUnitarioUsd: e.target.value }))} className={INPUT_CLASS} />
+                            <FormField label="Precio Venta (USD x qq)">
+                                <input type="number" step="0.01" max="999999999" required placeholder="Ej: 30 (= USD 300/tn)" value={formCosecha.precioVentaUnitarioUsd} onChange={e => setFormCosecha(p => ({ ...p, precioVentaUnitarioUsd: e.target.value }))} className={INPUT_CLASS} />
                             </FormField>
                         </div>
 

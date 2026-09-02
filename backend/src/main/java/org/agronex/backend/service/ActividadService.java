@@ -269,6 +269,15 @@ public class ActividadService {
                 if (cantidadARestaurar != null && cantidadARestaurar.compareTo(BigDecimal.ZERO) > 0) {
                     BigDecimal nuevoStock = insumo.getCantidad().add(cantidadARestaurar);
                     insumo.setCantidad(nuevoStock);
+
+                    BigDecimal stockBase = insumo.getCantidadInicial();
+                    if (stockBase != null && stockBase.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal umbralCritico = stockBase.multiply(new BigDecimal("0.20"));
+                        if (nuevoStock.compareTo(umbralCritico) > 0) {
+                            insumo.setAlertaStockBajoEnviada(Boolean.FALSE);
+                        }
+                    }
+
                     insumoRepository.save(insumo);
                 }
             }

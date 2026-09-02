@@ -139,6 +139,17 @@ public class InsumoService {
         insumo.setUnidad(request.getUnidad());
         insumo.setPesoBolsaKg(request.getPesoBolsaKg());
         insumo.setCantidad(request.getCantidad());
+        BigDecimal stockBase = insumo.getCantidadInicial();
+        if (stockBase == null || stockBase.compareTo(BigDecimal.ZERO) <= 0) {
+            insumo.setCantidadInicial(request.getCantidad());
+            stockBase = request.getCantidad();
+        }
+        if (request.getCantidad() != null && stockBase != null && stockBase.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal umbral = stockBase.multiply(new BigDecimal("0.20"));
+            if (request.getCantidad().compareTo(umbral) > 0) {
+                insumo.setAlertaStockBajoEnviada(Boolean.FALSE);
+            }
+        }
 
         // Actualizar campo si viene
         if (request.getIdCampo() != null) {
