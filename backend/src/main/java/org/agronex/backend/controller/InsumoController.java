@@ -67,6 +67,16 @@ public class InsumoController {
     }
 
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_INVENTARIO')")
+    @PostMapping("/{id}/reponer-stock")
+    public ResponseEntity<InsumoResponse> reponerStock(
+            @PathVariable UUID id,
+            @Valid @RequestBody org.agronex.backend.dto.request.ReponerStockRequest request,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        return ResponseEntity.ok(insumoService.reponerStock(id, request, idUsuario));
+    }
+
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_GESTION_INVENTARIO')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminarInsumo(
             @PathVariable UUID id,

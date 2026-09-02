@@ -194,6 +194,44 @@ public class InsumoService {
     }
 
     @Transactional
+    public InsumoResponse reponerStock(UUID id, org.agronex.backend.dto.request.ReponerStockRequest request, UUID idUsuarioToken) {
+        Insumo insumo = insumoRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        validarAccesoInsumo(insumo, idDatos, "No tenés permiso para reponer stock de este insumo");
+
+        BigDecimal stockAnterior = insumo.getCantidad() != null ? insumo.getCantidad() : BigDecimal.ZERO;
+        BigDecimal nuevoStock = stockAnterior.add(request.getCantidadAAgregar());
+        insumo.setCantidad(nuevoStock);
+
+        BigDecimal baseAnterior = insumo.getCantidadInicial() != null ? insumo.getCantidadInicial() : stockAnterior;
+        insumo.setCantidadInicial(baseAnterior.add(request.getCantidadAAgregar()));
+
+        if (request.getNuevoPrecioUnitario() != null && request.getNuevoPrecioUnitario().compareTo(BigDecimal.ZERO) > 0) {
+            insumo.setPrecioUnitario(request.getNuevoPrecioUnitario());
+        }
+
+        BigDecimal umbral = insumo.getCantidadInicial().multiply(new BigDecimal("0.20"));
+        if (nuevoStock.compareTo(umbral) > 0) {
+            insumo.setAlertaStockBajoEnviada(Boolean.FALSE);
+        }
+
+        Insumo guardado = insumoRepository.save(insumo);
+
+        String email = obtenerEmailPropietario(insumo);
+        auditService.registrar(
+                idUsuarioToken, email,
+                EntidadAudit.INSUMO, guardado.getIdInsumo().toString(),
+                guardado.getNombre(),
+                AccionAudit.ACTUALIZAR,
+                "Reponer stock: +" + request.getCantidadAAgregar() + " " + insumo.getUnidad() + ". Stock anterior: " + stockAnterior + ", nuevo: " + nuevoStock
+        );
+
+        return insumoMapper.toResponse(guardado);
+    }
+
+    @Transactional
     public void eliminarInsumo(UUID id, UUID idUsuarioToken) {
         Insumo insumo = insumoRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado"));

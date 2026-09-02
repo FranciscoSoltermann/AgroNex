@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import {
     Plus, Search, AlertTriangle, TrendingUp, Package,
-    Droplets, Loader2, X, Wheat, BugOff, Tractor, Fuel, Wrench, Box, Pencil, Trash2, Bug, FlaskConical
+    Droplets, Loader2, X, Wheat, BugOff, Tractor, Fuel, Wrench, Box, Pencil, Trash2, Bug, FlaskConical, PackagePlus
 } from "lucide-react";
 import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useCurrency } from "@/lib/currency-context";
@@ -44,6 +44,20 @@ const TIPO_ICONS = {
     COMBUSTIBLE: Fuel,
     REPUESTO: Wrench,
     OTRO: Box
+};
+
+const getUnidadLabel = (u = "") => {
+    switch (u) {
+        case "KILOGRAMOS": return "Kg";
+        case "GRAMOS": return "g";
+        case "TONELADAS": return "Tn";
+        case "LITROS": return "Lts";
+        case "CENTIMETROS_CUBICOS": return "cc";
+        case "BOLSAS": return "Bolsas";
+        case "BIDONES": return "Bidones";
+        case "UNIDADES": return "Unidades";
+        default: return u || "unidades";
+    }
 };
 
 const detectFormaFisica = (nombre = "") => {
@@ -343,6 +357,74 @@ export default function InventarioPage() {
             toast.error(errorMsg);
         }
     });
+
+    const [reponerModal, setReponerModal] = useState({
+        isOpen: false,
+        item: null,
+        cantidad: "",
+        precioUnitario: "",
+        monedaInput: "USD"
+    });
+
+    const handleAbrirReponer = (item) => {
+        let precio = item.precioUnitario ?? "";
+        let moneda = "ARS";
+        if (currency === "USD" && exchangeRate && precio !== "") {
+            precio = (Number(precio) / exchangeRate).toFixed(2);
+            moneda = "USD";
+        }
+        setReponerModal({
+            isOpen: true,
+            item,
+            cantidad: "",
+            precioUnitario: precio ? String(precio) : "",
+            monedaInput: moneda
+        });
+    };
+
+    const mutationReponerStock = useMutation({
+        mutationFn: async ({ id, cantidadAAgregar, nuevoPrecioUnitario }) => {
+            const body = {
+                cantidadAAgregar: parseFloat(cantidadAAgregar),
+                nuevoPrecioUnitario: nuevoPrecioUnitario ? parseFloat(nuevoPrecioUnitario) : null
+            };
+            return await apiClient.post(`/insumos/${id}/reponer-stock`, body);
+        },
+        onSuccess: (_data, variables) => {
+            queryClient.invalidateQueries({ queryKey: ['insumos'] });
+            queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+            const itemNombre = reponerModal.item?.nombre || "insumo";
+            const unidadStr = reponerModal.item?.unidad ? getUnidadLabel(reponerModal.item.unidad) : "unidades";
+            toast.success(`¡Se agregaron ${variables.cantidadAAgregar} ${unidadStr} a ${itemNombre}!`);
+            setReponerModal({ isOpen: false, item: null, cantidad: "", precioUnitario: "", monedaInput: "USD" });
+            registrarModificacion();
+        },
+        onError: (err) => {
+            const errorMsg = err.response?.data?.message || err.response?.data?.error || "Error al reponer stock del insumo.";
+            toast.error(errorMsg);
+        }
+    });
+
+    const handleConfirmarReponer = (e) => {
+        e.preventDefault();
+        if (!reponerModal.item || !reponerModal.cantidad || parseFloat(reponerModal.cantidad) <= 0) {
+            toast.error("Ingresá una cantidad válida mayor a cero.");
+            return;
+        }
+        let precioEnARS = null;
+        if (reponerModal.precioUnitario && parseFloat(reponerModal.precioUnitario) > 0) {
+            if (reponerModal.monedaInput === "USD" && exchangeRate) {
+                precioEnARS = parseFloat(reponerModal.precioUnitario) * exchangeRate;
+            } else {
+                precioEnARS = parseFloat(reponerModal.precioUnitario);
+            }
+        }
+        mutationReponerStock.mutate({
+            id: reponerModal.item.idInsumo,
+            cantidadAAgregar: parseFloat(reponerModal.cantidad),
+            nuevoPrecioUnitario: precioEnARS
+        });
+    };
 
     const handleRegistrarInsumo = (e) => {
         e.preventDefault();
@@ -886,12 +968,28 @@ export default function InventarioPage() {
                                                 {/* Acciones */}
                                                 <td className="p-4">
                                                     <div className="flex items-center justify-center gap-1">
-                                                        <button type="button" onClick={() => handleEditar(item)} title="Editar"
-                                                            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 transition-colors">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleAbrirReponer(item)}
+                                                            title="Reponer / Agregar más unidades"
+                                                            className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                                                        >
+                                                            <PackagePlus size={15} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleEditar(item)}
+                                                            title="Editar insumo"
+                                                            className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 transition-colors"
+                                                        >
                                                             <Pencil size={14} />
                                                         </button>
-                                                        <button type="button" onClick={() => handleEliminar(item.idInsumo)} title="Eliminar"
-                                                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleEliminar(item.idInsumo)}
+                                                            title="Eliminar insumo"
+                                                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 transition-colors"
+                                                        >
                                                             <Trash2 size={14} />
                                                         </button>
                                                     </div>
@@ -1266,6 +1364,138 @@ export default function InventarioPage() {
                                     className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-bold text-sm hover:bg-[#1B4332] transition-colors mt-2 shadow-lg shadow-green-900/20 flex items-center justify-center">
                                     {submitLoading ? <Loader2 size={16} className="animate-spin" /> : editingId ? 'Guardar Cambios' : 'Guardar en Inventario'}
                                 </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal Reponer Stock / Agregar más unidades */}
+                {reponerModal.isOpen && reponerModal.item && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-[#1a1f25] border border-gray-100 dark:border-gray-800 rounded-3xl p-6 w-full max-w-md shadow-2xl relative">
+                            <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-100 dark:border-emerald-800/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                                        <PackagePlus size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-base font-black text-gray-900 dark:text-gray-100">Ingreso de Stock</h3>
+                                        <p className="text-xs text-gray-400 font-medium">Sumar unidades al stock disponible</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setReponerModal({ isOpen: false, item: null, cantidad: "", precioUnitario: "", monedaInput: "USD" })}
+                                    className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 transition-colors"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {/* Insumo Info Box */}
+                            <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-[#15191e] border border-gray-100 dark:border-gray-800/60 mb-4">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{reponerModal.item.nombre}</span>
+                                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
+                                        {reponerModal.item.tipoArticulo}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
+                                    <span>Stock Actual:</span>
+                                    <span className="font-bold text-gray-900 dark:text-gray-100">
+                                        {Number(reponerModal.item.cantidad || 0).toLocaleString("es-AR")} {getUnidadLabel(reponerModal.item.unidad)}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                    <span>Campo Asignado:</span>
+                                    <span className="font-semibold text-gray-700 dark:text-gray-300">
+                                        {reponerModal.item.nombreCampo || "General (Todos los campos)"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleConfirmarReponer} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                                        Cantidad a sumar ({getUnidadLabel(reponerModal.item.unidad)}) *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        min="0.0001"
+                                        required
+                                        autoFocus
+                                        value={reponerModal.cantidad}
+                                        onChange={(e) => setReponerModal(prev => ({ ...prev, cantidad: e.target.value }))}
+                                        placeholder={`Ej: 50 (${getUnidadLabel(reponerModal.item.unidad)})`}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1f25] text-gray-900 dark:text-gray-100 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                                    />
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                            Actualizar Precio Unitario (Opcional)
+                                        </label>
+                                        <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5">
+                                            {["USD", "ARS"].map(m => (
+                                                <button
+                                                    key={m}
+                                                    type="button"
+                                                    onClick={() => setReponerModal(prev => ({ ...prev, monedaInput: m }))}
+                                                    className={`px-2 py-0.5 rounded text-[10px] font-bold ${reponerModal.monedaInput === m ? "bg-[#2D6A4F] text-white shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
+                                                >
+                                                    {m}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        min="0"
+                                        value={reponerModal.precioUnitario}
+                                        onChange={(e) => setReponerModal(prev => ({ ...prev, precioUnitario: e.target.value }))}
+                                        placeholder={`Precio actual: ${currSymbol}${convertCurrency(Number(reponerModal.item.precioUnitario || 0)).toLocaleString("es-AR", { minimumFractionDigits: 2 })}`}
+                                        className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1f25] text-gray-900 dark:text-gray-100 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                                    />
+                                    <p className="text-[10px] text-gray-400 mt-1">Si lo dejás vacío, mantiene el precio unitario actual.</p>
+                                </div>
+
+                                {/* Previsualización del nuevo stock */}
+                                {reponerModal.cantidad && parseFloat(reponerModal.cantidad) > 0 && (
+                                    <div className="p-3 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center justify-between">
+                                        <span>Nuevo Stock Total:</span>
+                                        <span className="font-black text-sm">
+                                            {(Number(reponerModal.item.cantidad || 0) + parseFloat(reponerModal.cantidad)).toLocaleString("es-AR")} {getUnidadLabel(reponerModal.item.unidad)}
+                                        </span>
+                                    </div>
+                                )}
+
+                                <div className="flex gap-2.5 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setReponerModal({ isOpen: false, item: null, cantidad: "", precioUnitario: "", monedaInput: "USD" })}
+                                        className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={mutationReponerStock.isPending || !reponerModal.cantidad || parseFloat(reponerModal.cantidad) <= 0}
+                                        className="flex-1 py-2.5 rounded-xl bg-[#2D6A4F] hover:bg-[#23533e] text-white text-xs font-bold shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    >
+                                        {mutationReponerStock.isPending ? (
+                                            <>
+                                                <Loader2 size={14} className="animate-spin" /> Guardando...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <PackagePlus size={14} /> Confirmar Ingreso
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
