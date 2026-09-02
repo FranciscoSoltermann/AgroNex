@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import {
-    LayoutDashboard, Map, RefreshCw, CircleDollarSign, Wheat, Settings,
+    LayoutDashboard, Map, RefreshCw, CircleDollarSign, Leaf, Settings,
     LogOut, Cloud, Activity, Users, Menu, X, Moon, Sun, Tractor, Globe
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -187,15 +187,17 @@ export default function DashboardLayout({ children }) {
         <div className="flex flex-col h-full">
             {/* Logo */}
             <div className="px-5 pt-5 pb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Wheat size={14} className="text-[#2D6A4F]" />
+                <Link href="/dashboard" className="flex items-center gap-2.5 group select-none">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#2D6A4F] to-[#52B788] flex items-center justify-center shadow-md shadow-[#52B788]/20 border border-white/10 flex-shrink-0 transition-transform group-hover:scale-105">
+                        <Leaf className="w-4 h-4 text-white" />
                     </div>
                     <div>
-                        <p className="text-[13px] font-black text-white leading-none tracking-tight uppercase">Agronex</p>
-                        <p className="text-[8px] font-bold text-white/50 uppercase tracking-widest">Cultivador Digital</p>
+                        <span className="text-base font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white from-25% via-[#D8F3DC] via-60% to-[#74C69D] uppercase italic block leading-none">
+                            AGRONEX
+                        </span>
+                        <p className="text-[8px] font-bold text-white/50 uppercase tracking-widest mt-1">Cultivador Digital</p>
                     </div>
-                </div>
+                </Link>
                 {/* Botón cerrar solo en móvil */}
                 <button
                     className="lg:hidden p-1.5 rounded-lg hover:bg-white/10 text-white/60"
