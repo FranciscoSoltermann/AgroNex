@@ -28,6 +28,7 @@ public class ResumenCampaniaResponse {
     private BigDecimal costoTotal;
 
     private List<DetalleInsumoGasto> detallesInsumos; // NEW FIELD PARA GASTOS DETALLADOS
+    private List<DetalleServicioGasto> detallesServicios; // DESGLOSE DETALLADO DE LABORES / SERVICIOS
 
     private BigDecimal ingresosTotales;
     private BigDecimal quintalesTotales;

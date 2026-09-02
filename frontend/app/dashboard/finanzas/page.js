@@ -460,9 +460,23 @@ export default function FinanzasPage() {
                             <div className="bg-black/15 rounded-xl p-4 border border-white/10">
                                 <p className="text-[9px] font-black uppercase text-white/50 mb-2">Desglose de costos</p>
                                 <ul className="text-[12px] space-y-1.5 font-semibold">
-                                    <li className="flex justify-between">
-                                        <span className="text-white/75">Servicios (actividades)</span>
-                                        <span>{fmtDirect(resumenCampania.costoServiciosTotal)}</span>
+                                    <li className="flex flex-col gap-1.5">
+                                        <div className="flex justify-between">
+                                            <span className="text-white/75">Servicios (actividades)</span>
+                                            <span>{fmtDirect(resumenCampania.costoServiciosTotal)}</span>
+                                        </div>
+                                        {resumenCampania.detallesServicios && resumenCampania.detallesServicios.length > 0 && (
+                                            <div className="pl-3 border-l-2 border-white/10 mt-1 space-y-1">
+                                                {resumenCampania.detallesServicios.map((srv, idx) => (
+                                                    <div key={srv.idActividad || idx} className="flex justify-between text-[11px] text-white/50 font-medium">
+                                                        <span className="truncate pr-2">
+                                                            • {srv.tipoActv} ({formatNum(srv.hectareas, 1)} ha × {fmtDirect(srv.costoUnitarioHa)}/ha)
+                                                        </span>
+                                                        <span className="shrink-0">{fmtDirect(srv.costoTotal)}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </li>
                                     <li className="flex flex-col gap-1.5">
                                         <div className="flex justify-between">

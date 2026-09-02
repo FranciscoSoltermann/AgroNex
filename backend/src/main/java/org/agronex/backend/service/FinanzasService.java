@@ -6,6 +6,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.agronex.backend.dto.response.FinanzasCampoResponse;
 import org.agronex.backend.dto.response.ResumenCampaniaResponse;
 import org.agronex.backend.dto.response.DetalleInsumoGasto;
+import org.agronex.backend.dto.response.DetalleServicioGasto;
 import org.agronex.backend.entity.*;
 import org.agronex.backend.repository.*;
 import org.springframework.stereotype.Service;
@@ -201,12 +202,24 @@ public class FinanzasService {
         BigDecimal costoServicios = BigDecimal.ZERO;
         BigDecimal costoInsumos = BigDecimal.ZERO;
         Map<UUID, DetalleInsumoGasto> detalleMap = new HashMap<>();
+        List<DetalleServicioGasto> listaServicios = new ArrayList<>();
 
         for (Actividad a : actividades) {
             BigDecimal ha = hectareasParaCosteoInsumos(a);
             BigDecimal costoServicioOrig = nz(a.getCostoServicio()).multiply(ha);
             BigDecimal costoServicioNorm = convertir(costoServicioOrig, a.getMoneda(), monedaDestino, tipoCambio);
             costoServicios = costoServicios.add(costoServicioNorm);
+
+            BigDecimal costoUnitarioNorm = convertir(nz(a.getCostoServicio()), a.getMoneda(), monedaDestino, tipoCambio);
+            listaServicios.add(DetalleServicioGasto.builder()
+                    .idActividad(a.getIdActividad())
+                    .tipoActv(a.getTipoActv())
+                    .fecha(a.getFecha())
+                    .hectareas(ha)
+                    .costoUnitarioHa(costoUnitarioNorm)
+                    .costoTotal(costoServicioNorm)
+                    .notas(a.getNotas())
+                    .build());
 
             String monedaInsumo = (a.getMoneda() != null && !a.getMoneda().isBlank()) ? a.getMoneda() : "ARS";
             for (ActividadInsumo ai : a.getInsumosUtilizados()) {
@@ -304,6 +317,7 @@ public class FinanzasService {
                 .gastosFijosAsignados(gastosFijos)
                 .costoTotal(costoTotal)
                 .detallesInsumos(listaDetalles)
+                .detallesServicios(listaServicios)
                 .ingresosTotales(ingresos)
                 .quintalesTotales(qqTot)
                 .margenBruto(margen)
