@@ -115,15 +115,16 @@ public class FinanzasService {
             BigDecimal costoServicio = convertir(costoServicioOrig, a.getMoneda(), monedaDestino, tipoCambio);
             BigDecimal costoInsumos = BigDecimal.ZERO;
 
+            String monedaInsumo = (a.getMoneda() != null && !a.getMoneda().isBlank()) ? a.getMoneda() : "ARS";
             for (ActividadInsumo ai : a.getInsumosUtilizados()) {
                 BigDecimal dosis = nz(ai.getDosisHa());
-                BigDecimal precioArs = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
+                BigDecimal precioUnitario = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
                         ? ai.getInsumo().getPrecioUnitario() : BigDecimal.ZERO;
                 BigDecimal cantidadConsumida = (ai.getCantidadConsumida() != null && ai.getCantidadConsumida().compareTo(BigDecimal.ZERO) > 0)
                         ? ai.getCantidadConsumida()
                         : dosis.multiply(ha);
-                BigDecimal costoInsumoArs = cantidadConsumida.multiply(precioArs);
-                costoInsumos = costoInsumos.add(convertir(costoInsumoArs, "ARS", monedaDestino, tipoCambio));
+                BigDecimal costoInsumoOrig = cantidadConsumida.multiply(precioUnitario);
+                costoInsumos = costoInsumos.add(convertir(costoInsumoOrig, monedaInsumo, monedaDestino, tipoCambio));
             }
             costosActividadesPorCampo.put(campoId, costosActividadesPorCampo.getOrDefault(campoId, BigDecimal.ZERO).add(costoServicio).add(costoInsumos));
         }
@@ -207,21 +208,22 @@ public class FinanzasService {
             BigDecimal costoServicioNorm = convertir(costoServicioOrig, a.getMoneda(), monedaDestino, tipoCambio);
             costoServicios = costoServicios.add(costoServicioNorm);
 
+            String monedaInsumo = (a.getMoneda() != null && !a.getMoneda().isBlank()) ? a.getMoneda() : "ARS";
             for (ActividadInsumo ai : a.getInsumosUtilizados()) {
                 BigDecimal dosis = nz(ai.getDosisHa());
-                BigDecimal precioUnitarioArs = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
+                BigDecimal precioUnitario = ai.getInsumo() != null && ai.getInsumo().getPrecioUnitario() != null
                         ? ai.getInsumo().getPrecioUnitario() : BigDecimal.ZERO;
                 BigDecimal cantidad = (ai.getCantidadConsumida() != null && ai.getCantidadConsumida().compareTo(BigDecimal.ZERO) > 0)
                         ? ai.getCantidadConsumida()
                         : dosis.multiply(ha);
-                BigDecimal costoInsumoArs = cantidad.multiply(precioUnitarioArs);
+                BigDecimal costoInsumoOrig = cantidad.multiply(precioUnitario);
 
-                BigDecimal costoInsumoNorm = convertir(costoInsumoArs, "ARS", monedaDestino, tipoCambio);
+                BigDecimal costoInsumoNorm = convertir(costoInsumoOrig, monedaInsumo, monedaDestino, tipoCambio);
                 costoInsumos = costoInsumos.add(costoInsumoNorm);
 
                 if (ai.getInsumo() != null) {
                     UUID idIns = ai.getInsumo().getIdInsumo();
-                    BigDecimal precioUnitarioNorm = convertir(precioUnitarioArs, "ARS", monedaDestino, tipoCambio);
+                    BigDecimal precioUnitarioNorm = convertir(precioUnitario, monedaInsumo, monedaDestino, tipoCambio);
 
                     if (!detalleMap.containsKey(idIns)) {
                         detalleMap.put(idIns, DetalleInsumoGasto.builder()
