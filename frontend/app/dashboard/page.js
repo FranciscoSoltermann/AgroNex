@@ -83,7 +83,7 @@ const getActividadConfig = (tipo) => {
 
 export default function DashboardHome() {
     const { symbol, convert } = useCurrency();
-    const [chartMode, setChartMode] = useState("Mensual");
+    const [chartMode, setChartMode] = useState("Por Campaña");
 
     const { data: queryData, isLoading: loading } = useQuery({
         queryKey: ['dashboardStats'],
@@ -189,33 +189,168 @@ export default function DashboardHome() {
         return map;
     }, [queryData?.insumos]);
 
-    // Memoized chart dataset for performance — Flujo Financiero: Costos vs Ingresos
-    const dynChartData = useMemo(() => {
-        const result = [];
-        const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+    // Summary KPI metrics for the Financial Card
+    const summaryFinanzas = useMemo(() => {
+        let totalCostos = 0;
+        let totalIngresos = 0;
 
-        if (chartMode === "Mensual") {
+        actos.forEach(a => {
+            const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+            const laborCost = (a.costoServicio || 0) * ha;
+            let insumosCost = 0;
+            if (Array.isArray(a.insumos)) {
+                a.insumos.forEach(ai => {
+                    const ins = insumosMap[ai.idInsumo];
+                    const unitPrice = ins?.precioUnitario || 0;
+                    insumosCost += (ai.dosisHa || 0) * ha * unitPrice;
+                });
+            }
+            const actTotal = convert ? convert(laborCost + insumosCost, a.moneda || "USD") : (laborCost + insumosCost);
+            totalCostos += actTotal;
+        });
+
+        gast.forEach(g => {
+            const gTotal = convert ? convert(g.montoTotal || 0, g.moneda || "USD") : (g.montoTotal || 0);
+            totalCostos += gTotal;
+        });
+
+        coses.forEach(c => {
+            const ingresoUsd = (c.rendimientoTotalQq || 0) * (c.precioVentaUnitarioUsd || 0);
+            const ingTotal = convert ? convert(ingresoUsd, "USD") : ingresoUsd;
+            totalIngresos += ingTotal;
+        });
+
+        const margenNeto = totalIngresos - totalCostos;
+        const roi = totalCostos > 0 ? (margenNeto / totalCostos) * 100 : 0;
+
+        return {
+            totalCostos: Math.round(totalCostos),
+            totalIngresos: Math.round(totalIngresos),
+            margenNeto: Math.round(margenNeto),
+            roi: Math.round(roi)
+        };
+    }, [actos, gast, coses, insumosMap, convert]);
+
+    // Memoized chart dataset for performance — Flujo Financiero / Comparativa de Campañas
+    const dynChartData = useMemo(() => {
+        const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+        if (chartMode === "Por Campaña") {
+            const campMap = {};
+
+            camps.forEach(c => {
+                const id = c.idCampania;
+                const loteName = c.nombreLote || c.lote?.nombre || "Lote";
+                const cultivo = c.cultivo || "Cultivo";
+                campMap[id] = {
+                    id,
+                    name: `${cultivo} (${loteName})`,
+                    costos: 0,
+                    ingresos: 0
+                };
+            });
+
+            actos.forEach(a => {
+                const id = a.idCampania || (Object.keys(campMap)[0] || "general");
+                if (!campMap[id]) {
+                    campMap[id] = {
+                        id,
+                        name: a.nombreCultivo ? `${a.nombreCultivo} (${a.nombreLote || 'Lote'})` : "Operaciones",
+                        costos: 0,
+                        ingresos: 0
+                    };
+                }
+                const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
+                const laborCost = (a.costoServicio || 0) * ha;
+                let insumosCost = 0;
+                if (Array.isArray(a.insumos)) {
+                    a.insumos.forEach(ai => {
+                        const ins = insumosMap[ai.idInsumo];
+                        const unitPrice = ins?.precioUnitario || 0;
+                        insumosCost += (ai.dosisHa || 0) * ha * unitPrice;
+                    });
+                }
+                const actTotal = convert ? convert(laborCost + insumosCost, a.moneda || "USD") : (laborCost + insumosCost);
+                campMap[id].costos += actTotal;
+            });
+
+            gast.forEach(g => {
+                const id = g.idCampania || (Object.keys(campMap)[0] || "general");
+                if (campMap[id]) {
+                    const gTotal = convert ? convert(g.montoTotal || 0, g.moneda || "USD") : (g.montoTotal || 0);
+                    campMap[id].costos += gTotal;
+                }
+            });
+
+            coses.forEach(c => {
+                const id = c.idCampania || (Object.keys(campMap)[0] || "general");
+                if (!campMap[id]) {
+                    campMap[id] = {
+                        id,
+                        name: "Cosechas",
+                        costos: 0,
+                        ingresos: 0
+                    };
+                }
+                const ingresoUsd = (c.rendimientoTotalQq || 0) * (c.precioVentaUnitarioUsd || 0);
+                const ingTotal = convert ? convert(ingresoUsd, "USD") : ingresoUsd;
+                campMap[id].ingresos += ingTotal;
+            });
+
+            const list = Object.values(campMap);
+            if (list.length === 0) {
+                return [{ name: "Sin campañas", costos: 0, ingresos: 0, margen: 0, roi: 0 }];
+            }
+
+            return list.map(item => {
+                const costos = Math.round(item.costos);
+                const ingresos = Math.round(item.ingresos);
+                const margen = ingresos - costos;
+                const roi = costos > 0 ? Math.round((margen / costos) * 100) : 0;
+                return {
+                    name: item.name,
+                    costos,
+                    ingresos,
+                    margen,
+                    roi
+                };
+            });
+        } else {
+            // Flujo Temporal: Agrupa sólo los meses con actividades u operaciones reales
             const monthData = {};
 
             const processCost = (dateStr, amount, currencySource) => {
                 if (!dateStr || !amount) return;
                 const dt = new Date(dateStr + "T00:00:00");
-                const key = `${dt.getFullYear()}-${dt.getMonth()}`;
+                const y = dt.getFullYear();
+                const m = dt.getMonth();
+                const key = `${y}-${String(m).padStart(2, '0')}`;
                 const val = convert ? convert(amount, currencySource || "USD") : Number(amount);
-                monthData[key] = monthData[key] || { costos: 0, ingresos: 0 };
+                monthData[key] = monthData[key] || {
+                    sortKey: key,
+                    label: `${monthNames[m]} '${String(y).slice(-2)}`,
+                    costos: 0,
+                    ingresos: 0
+                };
                 monthData[key].costos += val;
             };
 
             const processIngreso = (dateStr, amountUsd) => {
                 if (!dateStr || !amountUsd) return;
                 const dt = new Date(dateStr + "T00:00:00");
-                const key = `${dt.getFullYear()}-${dt.getMonth()}`;
+                const y = dt.getFullYear();
+                const m = dt.getMonth();
+                const key = `${y}-${String(m).padStart(2, '0')}`;
                 const val = convert ? convert(amountUsd, "USD") : Number(amountUsd);
-                monthData[key] = monthData[key] || { costos: 0, ingresos: 0 };
+                monthData[key] = monthData[key] || {
+                    sortKey: key,
+                    label: `${monthNames[m]} '${String(y).slice(-2)}`,
+                    costos: 0,
+                    ingresos: 0
+                };
                 monthData[key].ingresos += val;
             };
 
-            // 1. Actividades: Servicios de maquinaria + Insumos utilizados
             actos.forEach(a => {
                 const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
                 const laborCost = (a.costoServicio || 0) * ha;
@@ -230,116 +365,34 @@ export default function DashboardHome() {
                 processCost(a.fecha, laborCost + insumosCost, a.moneda || "USD");
             });
 
-            // 2. Gastos fijos / estructurales
             gast.forEach(g => {
                 processCost(g.fecha, g.montoTotal || 0, g.moneda || "USD");
             });
 
-            // 3. Cosechas: Ingresos por liquidación de granos
             coses.forEach(c => {
                 const ingresoUsd = (c.rendimientoTotalQq || 0) * (c.precioVentaUnitarioUsd || 0);
                 processIngreso(c.fecha, ingresoUsd);
             });
 
-            // 4. Determinación dinámica de los 12 meses de la campaña
-            const allDates = [
-                ...actos.map(a => a.fecha),
-                ...gast.map(g => g.fecha),
-                ...coses.map(c => c.fecha)
-            ].filter(Boolean).map(d => new Date(d + "T00:00:00"));
-
-            let startMonthDate;
-            if (allDates.length > 0) {
-                const minTime = Math.min(...allDates.map(d => d.getTime()));
-                const earliest = new Date(minTime);
-                startMonthDate = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
-            } else {
-                const now = new Date();
-                startMonthDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+            const sortedKeys = Object.keys(monthData).sort();
+            if (sortedKeys.length === 0) {
+                return [{ name: "Sin datos", costos: 0, ingresos: 0, margen: 0 }];
             }
 
-            for (let i = 0; i < 12; i++) {
-                const d = new Date(startMonthDate.getFullYear(), startMonthDate.getMonth() + i, 1);
-                const key = `${d.getFullYear()}-${d.getMonth()}`;
-                const data = monthData[key] || { costos: 0, ingresos: 0 };
-                const label = `${monthNames[d.getMonth()]} '${String(d.getFullYear()).slice(-2)}`;
-                result.push({
-                    mes: label,
-                    costos: Math.round(data.costos),
-                    ingresos: Math.round(data.ingresos)
-                });
-            }
-        } else {
-            const getWeekNumber = (d) => {
-                d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-                d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-                const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-                return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-            };
-
-            const weekData = {};
-            const processWeeklyCost = (dateStr, amount, currencySource) => {
-                if (!dateStr || !amount) return;
-                const dt = new Date(dateStr + "T00:00:00");
-                const w = getWeekNumber(dt);
-                const key = `${dt.getFullYear()}-W${w}`;
-                const val = convert ? convert(amount, currencySource || "USD") : Number(amount);
-                weekData[key] = weekData[key] || { costos: 0, ingresos: 0, label: `S${w}` };
-                weekData[key].costos += val;
-            };
-
-            const processWeeklyIngreso = (dateStr, amountUsd) => {
-                if (!dateStr || !amountUsd) return;
-                const dt = new Date(dateStr + "T00:00:00");
-                const w = getWeekNumber(dt);
-                const key = `${dt.getFullYear()}-W${w}`;
-                const val = convert ? convert(amountUsd, "USD") : Number(amountUsd);
-                weekData[key] = weekData[key] || { costos: 0, ingresos: 0, label: `S${w}` };
-                weekData[key].ingresos += val;
-            };
-
-            actos.forEach(a => {
-                const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-                const laborCost = (a.costoServicio || 0) * ha;
-                let insumosCost = 0;
-                if (Array.isArray(a.insumos)) {
-                    a.insumos.forEach(ai => {
-                        const ins = insumosMap[ai.idInsumo];
-                        const unitPrice = ins?.precioUnitario || 0;
-                        insumosCost += (ai.dosisHa || 0) * ha * unitPrice;
-                    });
-                }
-                processWeeklyCost(a.fecha, laborCost + insumosCost, a.moneda || "USD");
+            return sortedKeys.map(k => {
+                const item = monthData[k];
+                const costos = Math.round(item.costos);
+                const ingresos = Math.round(item.ingresos);
+                const margen = ingresos - costos;
+                return {
+                    name: item.label,
+                    costos,
+                    ingresos,
+                    margen
+                };
             });
-
-            gast.forEach(g => processWeeklyCost(g.fecha, g.montoTotal || 0, g.moneda || "USD"));
-            coses.forEach(c => {
-                const ingresoUsd = (c.rendimientoTotalQq || 0) * (c.precioVentaUnitarioUsd || 0);
-                processWeeklyIngreso(c.fecha, ingresoUsd);
-            });
-
-            const sortedKeys = Object.keys(weekData).sort();
-            if (sortedKeys.length > 0) {
-                sortedKeys.slice(-8).forEach(k => {
-                    const item = weekData[k];
-                    result.push({
-                        mes: item.label,
-                        costos: Math.round(item.costos),
-                        ingresos: Math.round(item.ingresos)
-                    });
-                });
-            } else {
-                const now = new Date();
-                const curW = getWeekNumber(now);
-                for (let i = 5; i >= 0; i--) {
-                    let wIdx = curW - i;
-                    if (wIdx <= 0) wIdx += 52;
-                    result.push({ mes: `S${wIdx}`, costos: 0, ingresos: 0 });
-                }
-            }
         }
-        return result;
-    }, [chartMode, actos, gast, coses, insumosMap, convert]);
+    }, [chartMode, camps, actos, gast, coses, insumosMap, convert]);
 
     if (loading) {
         return (
@@ -531,16 +584,20 @@ export default function DashboardHome() {
                 </div>
             </div>
 
-            {/* Crecimiento: Costos vs Cosechas — Recharts Responsive Bar */}
+            {/* Crecimiento: Rentabilidad y Flujo Financiero */}
             {(!userRole || userRole !== "EMPLEADO" || userPermisos.includes("GESTION_FINANZAS")) && (
-            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex-none lg:flex-[1.5] min-h-[260px] flex flex-col overflow-hidden">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex-none lg:flex-[1.5] min-h-[300px] flex flex-col overflow-hidden">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-2">
                     <div className="min-w-0">
-                        <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Flujo Financiero: Costos vs Ingresos</h3>
-                        <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Comparativa de egresos totales e ingresos por liquidación de granos ({symbol})</p>
+                        <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Rentabilidad y Flujo Financiero</h3>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+                            {chartMode === "Por Campaña"
+                                ? `Comparativa de inversión, ingresos y margen neto por cultivo (${symbol})`
+                                : `Evolución cronológica de egresos e ingresos por mes operativo (${symbol})`}
+                        </p>
                     </div>
                     <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5 shrink-0 self-start">
-                        {["Semanal", "Mensual"].map(mode => (
+                        {["Por Campaña", "Flujo Temporal"].map(mode => (
                             <button
                                 key={mode}
                                 type="button"
@@ -553,27 +610,67 @@ export default function DashboardHome() {
                     </div>
                 </div>
 
+                {/* KPI Metric Summary Badges */}
+                <div className="grid grid-cols-3 gap-2 my-1.5 p-2 rounded-xl bg-gray-50 dark:bg-[#15191e] border border-gray-100 dark:border-gray-800 shrink-0">
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Total Invertido</span>
+                        <span className="text-[12px] sm:text-[13px] font-black text-[#E07A5F] truncate">
+                            {symbol} {summaryFinanzas.totalCostos.toLocaleString("es-AR")}
+                        </span>
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Total Liquidado</span>
+                        <span className="text-[12px] sm:text-[13px] font-black text-[#2D6A4F] dark:text-[#52B788] truncate">
+                            {symbol} {summaryFinanzas.totalIngresos.toLocaleString("es-AR")}
+                        </span>
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Margen Neto Total</span>
+                        <div className="flex items-center gap-1 min-w-0">
+                            <span className={`text-[12px] sm:text-[13px] font-black truncate ${summaryFinanzas.margenNeto >= 0 ? "text-[#2D6A4F] dark:text-[#52B788]" : "text-red-500"}`}>
+                                {summaryFinanzas.margenNeto >= 0 ? "+" : ""}{symbol} {summaryFinanzas.margenNeto.toLocaleString("es-AR")}
+                            </span>
+                            {summaryFinanzas.roi > 0 && (
+                                <span className="hidden sm:inline-block text-[8px] px-1 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold shrink-0">
+                                    +{summaryFinanzas.roi}% ROI
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 <div className="w-full h-44 mt-1">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={dynChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                            <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                            <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${Math.round(v / 1000)}k` : v} />
+                        <BarChart data={dynChartData} barCategoryGap="25%" barGap={4} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#9ca3af", fontWeight: 600 }} axisLine={false} tickLine={false} />
+                            <YAxis
+                                tick={{ fontSize: 10, fill: "#9ca3af" }}
+                                axisLine={false}
+                                tickLine={false}
+                                tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(1).replace('.0', '')}M` : v >= 1000 ? `${Math.round(v / 1000)}k` : v}
+                            />
                             <RechartsTooltip
-                                contentStyle={{ backgroundColor: "#1f2937", borderRadius: "0.75rem", border: "none", color: "#fff", fontSize: "11px" }}
+                                contentStyle={{ backgroundColor: "#1f2937", borderRadius: "0.75rem", border: "none", color: "#fff", fontSize: "11px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.3)" }}
                                 formatter={(val, name) => [
                                     `${symbol} ${Number(val).toLocaleString("es-AR")}`,
-                                    name === "costos" ? "Costos Totales (Labores + Insumos + Fijos)" : "Ingresos por Cosecha"
+                                    name === "costos" ? "Inversión (Costos)" : name === "ingresos" ? "Ingresos (Cosecha)" : "Margen Neto"
                                 ]}
                             />
-                            <Bar dataKey="costos" fill="#E07A5F" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                            <Bar dataKey="ingresos" fill="#2D6A4F" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                            <Bar dataKey="costos" name="costos" fill="#E07A5F" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                            <Bar dataKey="ingresos" name="ingresos" fill="#2D6A4F" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                            {chartMode === "Por Campaña" && (
+                                <Bar dataKey="margen" name="margen" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                            )}
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div className="flex flex-wrap gap-3 sm:gap-5 mt-2 shrink-0">
-                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#E07A5F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Costos Totales ({symbol})</span></div>
-                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Ingresos por Cosecha ({symbol})</span></div>
+                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#E07A5F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Inversión (Costos)</span></div>
+                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Ingresos (Cosecha)</span></div>
+                    {chartMode === "Por Campaña" && (
+                        <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#3B82F6] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Margen Neto Ganado</span></div>
+                    )}
                 </div>
             </div>
             )}
