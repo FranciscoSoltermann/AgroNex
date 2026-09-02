@@ -517,36 +517,36 @@ export default function DashboardHome() {
                         </div>
                     ) : (
                         <div className="flex flex-col items-center gap-3">
-                            <div className="w-full h-36">
+                            <div className="w-full h-44">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
                                             data={gastosPorCategoria}
-                                            innerRadius={32}
-                                            outerRadius={55}
-                                            paddingAngle={3}
+                                            innerRadius={0}
+                                            outerRadius={72}
+                                            paddingAngle={2}
                                             dataKey="value"
                                         >
                                             {gastosPorCategoria.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name, index)} />
+                                                <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name, index)} stroke="#ffffff" strokeWidth={1.5} />
                                             ))}
                                         </Pie>
                                         <RechartsTooltip
                                             formatter={(value) => [`${symbol} ${Number(value).toLocaleString("es-AR")}`, "Monto"]}
-                                            contentStyle={{ backgroundColor: "#1f2937", borderRadius: "0.75rem", border: "none", color: "#fff", fontSize: "12px" }}
+                                            contentStyle={{ backgroundColor: "#1f2937", borderRadius: "0.75rem", border: "none", color: "#fff", fontSize: "12px", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.3)" }}
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>
                             </div>
-                            <div className="w-full space-y-1.5 max-h-28 overflow-y-auto custom-scrollbar pr-1">
+                            <div className="w-full space-y-2 max-h-36 overflow-y-auto custom-scrollbar pr-1">
                                 {gastosPorCategoria.map((cat, i) => {
                                     const total = gastosPorCategoria.reduce((s, c) => s + c.value, 0);
                                     const pct = total > 0 ? ((cat.value / total) * 100).toFixed(1) : 0;
                                     return (
-                                        <div key={cat.name} className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: getCategoryColor(cat.name, i) }} />
-                                            <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 flex-1 truncate">{cat.name}</span>
-                                            <span className="text-[11px] font-black text-gray-900 dark:text-gray-100">{pct}%</span>
+                                        <div key={cat.name} className="flex items-center gap-2.5">
+                                            <span className="w-3.5 h-3.5 rounded-md flex-shrink-0" style={{ backgroundColor: getCategoryColor(cat.name, i) }} />
+                                            <span className="text-[13px] font-semibold text-gray-700 dark:text-gray-300 flex-1 truncate">{cat.name}</span>
+                                            <span className="text-[13px] font-black text-gray-900 dark:text-gray-100">{pct}%</span>
                                         </div>
                                     );
                                 })}
