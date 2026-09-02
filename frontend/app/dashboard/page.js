@@ -30,7 +30,42 @@ const CotizacionesPizarraBCR = dynamic(() => import("@/components/features/dashb
 
 const UNIDAD_LABEL = { UNIDADES: "und", LITROS: "L", KILOGRAMOS: "kg", TONELADAS: "tn" };
 const getUnidadLabel = (u) => UNIDAD_LABEL[u] ?? "und";
-const PIE_COLORS = ["#2D6A4F", "#52B788", "#74C69D", "#B7E4C7", "#D8F3DC", "#A7D7C5"];
+
+const CATEGORY_COLORS = {
+    "servicios de campo": "#2D6A4F",      // Forest Green
+    "arrendamiento": "#3B82F6",           // Royal Blue
+    "seguro agrícola": "#F59E0B",         // Amber / Orange
+    "seguro agricola": "#F59E0B",         // Amber / Orange
+    "honorarios profesionales": "#8B5CF6",// Violet
+    "asesoría agronómica": "#8B5CF6",     // Violet
+    "asesoria agronomica": "#8B5CF6",     // Violet
+    "mantenimiento": "#EC4899",           // Rose Pink
+    "insumos": "#06B6D4",                 // Cyan
+    "combustible": "#F97316",             // Orange
+    "impuestos": "#EF4444",               // Red
+    "impuestos y tasas": "#EF4444",       // Red
+    "otros": "#64748B",                   // Slate Gray
+};
+
+const PIE_COLORS = [
+    "#2D6A4F", // Forest Green
+    "#3B82F6", // Royal Blue
+    "#F59E0B", // Amber
+    "#8B5CF6", // Purple / Violet
+    "#EC4899", // Rose Pink
+    "#06B6D4", // Cyan
+    "#F97316", // Orange
+    "#10B981", // Emerald
+    "#EF4444", // Red
+    "#6366F1", // Indigo
+    "#64748B", // Slate
+];
+
+const getCategoryColor = (name, index = 0) => {
+    if (!name) return PIE_COLORS[index % PIE_COLORS.length];
+    const key = name.trim().toLowerCase();
+    return CATEGORY_COLORS[key] || PIE_COLORS[index % PIE_COLORS.length];
+};
 
 const getActividadConfig = (tipo) => {
     const t = tipo?.toLowerCase() || "";
@@ -440,7 +475,7 @@ export default function DashboardHome() {
                                             dataKey="value"
                                         >
                                             {gastosPorCategoria.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                                <Cell key={`cell-${index}`} fill={getCategoryColor(entry.name, index)} />
                                             ))}
                                         </Pie>
                                         <RechartsTooltip
@@ -456,7 +491,7 @@ export default function DashboardHome() {
                                     const pct = total > 0 ? ((cat.value / total) * 100).toFixed(1) : 0;
                                     return (
                                         <div key={cat.name} className="flex items-center gap-2">
-                                            <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                                            <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: getCategoryColor(cat.name, i) }} />
                                             <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 flex-1 truncate">{cat.name}</span>
                                             <span className="text-[11px] font-black text-gray-900 dark:text-gray-100">{pct}%</span>
                                         </div>
