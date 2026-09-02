@@ -47,7 +47,7 @@ const getActividadConfig = (tipo) => {
 };
 
 export default function DashboardHome() {
-    const { symbol } = useCurrency();
+    const { symbol, convert } = useCurrency();
     const [chartMode, setChartMode] = useState("Mensual");
 
     const { data: queryData, isLoading: loading } = useQuery({
@@ -145,34 +145,95 @@ export default function DashboardHome() {
             .sort((a, b) => b.value - a.value);
     }, [gast, actos]);
 
-    // Memoized chart dataset for performance
+    // Fast lookup map for insumos
+    const insumosMap = useMemo(() => {
+        const map = {};
+        (queryData?.insumos || []).forEach(ins => {
+            if (ins?.idInsumo) map[ins.idInsumo] = ins;
+        });
+        return map;
+    }, [queryData?.insumos]);
+
+    // Memoized chart dataset for performance — Flujo Financiero: Costos vs Ingresos
     const dynChartData = useMemo(() => {
         const result = [];
+        const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
+
         if (chartMode === "Mensual") {
-            const monthNames = ["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"];
             const monthData = {};
 
-            const processItem = (dateStr, val, type) => {
-                if (!dateStr) return;
+            const processCost = (dateStr, amount, currencySource) => {
+                if (!dateStr || !amount) return;
                 const dt = new Date(dateStr + "T00:00:00");
                 const key = `${dt.getFullYear()}-${dt.getMonth()}`;
-                monthData[key] = monthData[key] || { costos: 0, cosecha: 0 };
-                monthData[key][type] += val;
+                const val = convert ? convert(amount, currencySource || "USD") : Number(amount);
+                monthData[key] = monthData[key] || { costos: 0, ingresos: 0 };
+                monthData[key].costos += val;
             };
 
+            const processIngreso = (dateStr, amountUsd) => {
+                if (!dateStr || !amountUsd) return;
+                const dt = new Date(dateStr + "T00:00:00");
+                const key = `${dt.getFullYear()}-${dt.getMonth()}`;
+                const val = convert ? convert(amountUsd, "USD") : Number(amountUsd);
+                monthData[key] = monthData[key] || { costos: 0, ingresos: 0 };
+                monthData[key].ingresos += val;
+            };
+
+            // 1. Actividades: Servicios de maquinaria + Insumos utilizados
             actos.forEach(a => {
                 const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-                processItem(a.fecha, (a.costoServicio || 0) * ha, "costos");
+                const laborCost = (a.costoServicio || 0) * ha;
+                let insumosCost = 0;
+                if (Array.isArray(a.insumos)) {
+                    a.insumos.forEach(ai => {
+                        const ins = insumosMap[ai.idInsumo];
+                        const unitPrice = ins?.precioUnitario || 0;
+                        insumosCost += (ai.dosisHa || 0) * ha * unitPrice;
+                    });
+                }
+                processCost(a.fecha, laborCost + insumosCost, a.moneda || "USD");
             });
-            gast.forEach(g => processItem(g.fecha, g.montoTotal || 0, "costos"));
-            coses.forEach(c => processItem(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
 
-            const currentYear = new Date().getFullYear();
-            monthNames.forEach((label, i) => {
-                const key = `${currentYear}-${i}`;
-                const data = monthData[key] || { costos: 0, cosecha: 0 };
-                result.push({ mes: label, costos: Math.round(data.costos), cosecha: Math.round(data.cosecha) });
+            // 2. Gastos fijos / estructurales
+            gast.forEach(g => {
+                processCost(g.fecha, g.montoTotal || 0, g.moneda || "USD");
             });
+
+            // 3. Cosechas: Ingresos por liquidación de granos
+            coses.forEach(c => {
+                const ingresoUsd = (c.rendimientoTotalQq || 0) * (c.precioVentaUnitarioUsd || 0);
+                processIngreso(c.fecha, ingresoUsd);
+            });
+
+            // 4. Determinación dinámica de los 12 meses de la campaña
+            const allDates = [
+                ...actos.map(a => a.fecha),
+                ...gast.map(g => g.fecha),
+                ...coses.map(c => c.fecha)
+            ].filter(Boolean).map(d => new Date(d + "T00:00:00"));
+
+            let startMonthDate;
+            if (allDates.length > 0) {
+                const minTime = Math.min(...allDates.map(d => d.getTime()));
+                const earliest = new Date(minTime);
+                startMonthDate = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+            } else {
+                const now = new Date();
+                startMonthDate = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+            }
+
+            for (let i = 0; i < 12; i++) {
+                const d = new Date(startMonthDate.getFullYear(), startMonthDate.getMonth() + i, 1);
+                const key = `${d.getFullYear()}-${d.getMonth()}`;
+                const data = monthData[key] || { costos: 0, ingresos: 0 };
+                const label = `${monthNames[d.getMonth()]} '${String(d.getFullYear()).slice(-2)}`;
+                result.push({
+                    mes: label,
+                    costos: Math.round(data.costos),
+                    ingresos: Math.round(data.ingresos)
+                });
+            }
         } else {
             const getWeekNumber = (d) => {
                 d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -182,32 +243,68 @@ export default function DashboardHome() {
             };
 
             const weekData = {};
-            const processWeekly = (dateStr, val, type) => {
-                if (!dateStr) return;
+            const processWeeklyCost = (dateStr, amount, currencySource) => {
+                if (!dateStr || !amount) return;
                 const dt = new Date(dateStr + "T00:00:00");
                 const w = getWeekNumber(dt);
-                weekData[w] = weekData[w] || { costos: 0, cosecha: 0 };
-                weekData[w][type] += val;
+                const key = `${dt.getFullYear()}-W${w}`;
+                const val = convert ? convert(amount, currencySource || "USD") : Number(amount);
+                weekData[key] = weekData[key] || { costos: 0, ingresos: 0, label: `S${w}` };
+                weekData[key].costos += val;
+            };
+
+            const processWeeklyIngreso = (dateStr, amountUsd) => {
+                if (!dateStr || !amountUsd) return;
+                const dt = new Date(dateStr + "T00:00:00");
+                const w = getWeekNumber(dt);
+                const key = `${dt.getFullYear()}-W${w}`;
+                const val = convert ? convert(amountUsd, "USD") : Number(amountUsd);
+                weekData[key] = weekData[key] || { costos: 0, ingresos: 0, label: `S${w}` };
+                weekData[key].ingresos += val;
             };
 
             actos.forEach(a => {
                 const ha = a.hectareasTratadas != null ? a.hectareasTratadas : (a.superficieLoteHa || 0);
-                processWeekly(a.fecha, (a.costoServicio || 0) * ha, "costos");
+                const laborCost = (a.costoServicio || 0) * ha;
+                let insumosCost = 0;
+                if (Array.isArray(a.insumos)) {
+                    a.insumos.forEach(ai => {
+                        const ins = insumosMap[ai.idInsumo];
+                        const unitPrice = ins?.precioUnitario || 0;
+                        insumosCost += (ai.dosisHa || 0) * ha * unitPrice;
+                    });
+                }
+                processWeeklyCost(a.fecha, laborCost + insumosCost, a.moneda || "USD");
             });
-            gast.forEach(g => processWeekly(g.fecha, g.montoTotal || 0, "costos"));
-            coses.forEach(c => processWeekly(c.fecha, (c.rendimientoTotalQq || 0) * 100, "cosecha"));
 
-            const now = new Date();
-            const currentWeek = getWeekNumber(now);
-            for (let i = 4; i >= 0; i--) {
-                let wIdx = currentWeek - i;
-                if (wIdx <= 0) wIdx += 52;
-                const data = weekData[wIdx] || { costos: 0, cosecha: 0 };
-                result.push({ mes: `S${wIdx}`, costos: Math.round(data.costos), cosecha: Math.round(data.cosecha) });
+            gast.forEach(g => processWeeklyCost(g.fecha, g.montoTotal || 0, g.moneda || "USD"));
+            coses.forEach(c => {
+                const ingresoUsd = (c.rendimientoTotalQq || 0) * (c.precioVentaUnitarioUsd || 0);
+                processWeeklyIngreso(c.fecha, ingresoUsd);
+            });
+
+            const sortedKeys = Object.keys(weekData).sort();
+            if (sortedKeys.length > 0) {
+                sortedKeys.slice(-8).forEach(k => {
+                    const item = weekData[k];
+                    result.push({
+                        mes: item.label,
+                        costos: Math.round(item.costos),
+                        ingresos: Math.round(item.ingresos)
+                    });
+                });
+            } else {
+                const now = new Date();
+                const curW = getWeekNumber(now);
+                for (let i = 5; i >= 0; i--) {
+                    let wIdx = curW - i;
+                    if (wIdx <= 0) wIdx += 52;
+                    result.push({ mes: `S${wIdx}`, costos: 0, ingresos: 0 });
+                }
             }
         }
         return result;
-    }, [chartMode, actos, gast, coses]);
+    }, [chartMode, actos, gast, coses, insumosMap, convert]);
 
     if (loading) {
         return (
@@ -404,8 +501,8 @@ export default function DashboardHome() {
             <div className="bg-white dark:bg-[#1a1f25] rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 dark:border-gray-800 flex-none lg:flex-[1.5] min-h-[260px] flex flex-col overflow-hidden">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-2">
                     <div className="min-w-0">
-                        <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Crecimiento: Costos vs Cosechas</h3>
-                        <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Análisis comparativo por quintal</p>
+                        <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100">Flujo Financiero: Costos vs Ingresos</h3>
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">Comparativa de egresos totales e ingresos por liquidación de granos ({symbol})</p>
                     </div>
                     <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 gap-0.5 shrink-0 self-start">
                         {["Semanal", "Mensual"].map(mode => (
@@ -423,25 +520,25 @@ export default function DashboardHome() {
 
                 <div className="w-full h-44 mt-1">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={dynChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <BarChart data={dynChartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <XAxis dataKey="mes" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                            <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={(v) => v >= 1000 ? `${Math.round(v / 1000)}k` : v} />
                             <RechartsTooltip
                                 contentStyle={{ backgroundColor: "#1f2937", borderRadius: "0.75rem", border: "none", color: "#fff", fontSize: "11px" }}
                                 formatter={(val, name) => [
-                                    name === "costos" ? `${symbol} ${Number(val).toLocaleString("es-AR")}` : `${Number(val).toLocaleString("es-AR")} kg`,
-                                    name === "costos" ? "Costos Acumulados" : "Rendimiento Cosecha"
+                                    `${symbol} ${Number(val).toLocaleString("es-AR")}`,
+                                    name === "costos" ? "Costos Totales (Labores + Insumos + Fijos)" : "Ingresos por Cosecha"
                                 ]}
                             />
-                            <Bar dataKey="costos" fill="#C1DDD1" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                            <Bar dataKey="cosecha" fill="#2D6A4F" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                            <Bar dataKey="costos" fill="#E07A5F" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                            <Bar dataKey="ingresos" fill="#2D6A4F" radius={[4, 4, 0, 0]} maxBarSize={28} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
 
                 <div className="flex flex-wrap gap-3 sm:gap-5 mt-2 shrink-0">
-                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C1DDD1] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Costos Acumulados</span></div>
-                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Rendimiento de Cosecha (kg)</span></div>
+                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#E07A5F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Costos Totales ({symbol})</span></div>
+                    <div className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#2D6A4F] inline-block" /><span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">Ingresos por Cosecha ({symbol})</span></div>
                 </div>
             </div>
             )}
