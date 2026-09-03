@@ -7,7 +7,7 @@ import {
     Tractor, Link2, Unlink, Loader2, AlertCircle, CheckCircle2,
     RefreshCw, Shield, Building2, Calendar, Clock,
     MapPin, Fuel, Gauge, Navigation, LogIn, LogOut, ChevronDown, ChevronUp,
-    Maximize, Globe, AlertTriangle, FileText, Layers, HardDrive,
+    Maximize, Maximize2, Minimize2, Globe, AlertTriangle, FileText, Layers, HardDrive,
     Download, ShieldCheck, Sparkles, Filter, X, Eye, Activity
 } from "lucide-react";
 import ConfirmModal from "@/components/shared/ConfirmModal";
@@ -20,6 +20,16 @@ const FieldMap = dynamic(() => import('@/components/features/dashboard/maquinari
 const MachineLocationMap = dynamic(() => import('@/components/features/dashboard/maquinaria/MachineLocationMap'), {
     ssr: false,
     loading: () => <div className="w-full h-44 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg flex items-center justify-center text-xs text-gray-400">Cargando mapa GPS...</div>
+});
+
+const FieldFullscreenModal = dynamic(() => import('@/components/features/dashboard/maquinaria/FieldFullscreenModal'), {
+    ssr: false,
+    loading: () => <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center text-white text-sm"><Loader2 size={24} className="animate-spin mr-2" /> Cargando mapa de lote...</div>
+});
+
+const MachineFullscreenModal = dynamic(() => import('@/components/features/dashboard/maquinaria/MachineFullscreenModal'), {
+    ssr: false,
+    loading: () => <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center text-white text-sm"><Loader2 size={24} className="animate-spin mr-2" /> Cargando telemetría satelital...</div>
 });
 
 import PermissionGuard from "@/components/shared/PermissionGuard";
@@ -198,6 +208,10 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
 
     // Modal de Capas de Mapa (Map Layers)
     const [selectedFieldForLayers, setSelectedFieldForLayers] = useState(null);
+
+    // Modales de Pantalla Completa
+    const [selectedFieldForFullscreen, setSelectedFieldForFullscreen] = useState(null);
+    const [selectedMachineForFullscreen, setSelectedMachineForFullscreen] = useState(null);
 
     const primaryOrgId = organizations?.[0]?.id || organizations?.[0]?.organizationId;
 
@@ -513,7 +527,7 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                         ) : (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 {machines.map((machine) => (
-                                                    <MachineCard key={machine.id || machine.principalId} machine={machine} />
+                                                    <MachineCard key={machine.id || machine.principalId} machine={machine} onFullscreen={setSelectedMachineForFullscreen} />
                                                 ))}
                                             </div>
                                         )}
@@ -577,8 +591,17 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                                             {farmFields.map((field) => (
                                                                 <div key={field.id} className="bg-white dark:bg-[#1e2329] rounded-xl border border-gray-200/80 dark:border-gray-700 shadow-sm overflow-hidden flex flex-col justify-between transition-all hover:shadow-md">
-                                                                    <div className="relative h-36 w-full bg-gray-100 dark:bg-gray-800 overflow-hidden border-b border-gray-100 dark:border-gray-700">
+                                                                    <div className="relative h-36 w-full bg-gray-100 dark:bg-gray-800 overflow-hidden border-b border-gray-100 dark:border-gray-700 group">
                                                                         <FieldMap field={field} />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setSelectedFieldForFullscreen({ field, farmName: granjaName })}
+                                                                            title="Ampliar mapa a pantalla completa"
+                                                                            className="absolute top-2 right-2 z-10 bg-black/60 hover:bg-black/85 backdrop-blur-md text-white px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-md transition-all hover:scale-105"
+                                                                        >
+                                                                            <Maximize2 size={11} />
+                                                                            <span>Ampliar</span>
+                                                                        </button>
                                                                     </div>
                                                                     <div className="p-3.5 space-y-3">
                                                                         <div>
@@ -600,12 +623,21 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
 
                                                                         <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
                                                                             <span className="text-[10px] text-gray-400 font-mono">ID: {String(field.id).substring(0, 10)}...</span>
-                                                                            <button
-                                                                                onClick={() => setSelectedFieldForLayers(field)}
-                                                                                className="flex items-center gap-1 text-[11px] font-bold text-[#367C2B] dark:text-green-400 hover:underline"
-                                                                            >
-                                                                                <Layers size={12} /> Capas de Mapa
-                                                                            </button>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <button
+                                                                                    onClick={() => setSelectedFieldForFullscreen({ field, farmName: granjaName })}
+                                                                                    className="flex items-center gap-1 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:text-[#367C2B] dark:hover:text-green-400 transition-colors"
+                                                                                    title="Ver mapa en pantalla completa"
+                                                                                >
+                                                                                    <Maximize2 size={12} /> Ampliar
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => setSelectedFieldForLayers(field)}
+                                                                                    className="flex items-center gap-1 text-[11px] font-bold text-[#367C2B] dark:text-green-400 hover:underline"
+                                                                                >
+                                                                                    <Layers size={12} /> Capas de Mapa
+                                                                                </button>
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -651,6 +683,23 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
                     onClose={() => setSelectedFieldForLayers(null)}
                 />
             )}
+
+            {/* Modal de Mapa Pantalla Completa para Lotes / Campos */}
+            {selectedFieldForFullscreen && (
+                <FieldFullscreenModal
+                    field={selectedFieldForFullscreen.field}
+                    farmName={selectedFieldForFullscreen.farmName}
+                    onClose={() => setSelectedFieldForFullscreen(null)}
+                />
+            )}
+
+            {/* Modal de Mapa Pantalla Completa para Maquinaria */}
+            {selectedMachineForFullscreen && (
+                <MachineFullscreenModal
+                    machine={selectedMachineForFullscreen}
+                    onClose={() => setSelectedMachineForFullscreen(null)}
+                />
+            )}
         </div>
     );
 }
@@ -658,7 +707,7 @@ function ProviderCard({ provider, onConnect, onDisconnect, onDeleteConnection })
 /* =========================================================================
    COMPONENTE: TARJETA DE MAQUINARIA
    ========================================================================= */
-function MachineCard({ machine }) {
+function MachineCard({ machine, onFullscreen }) {
     const bc = machine.breadcrumbs;
     const location = bc?.location;
     const lat = location?.lat ?? location?.latitude;
@@ -695,8 +744,17 @@ function MachineCard({ machine }) {
             </div>
 
             {/* Mapa Satelital de Ubicación en Tiempo Real */}
-            <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-800">
+            <div className="relative w-full h-44 bg-gray-100 dark:bg-gray-800 group">
                 <MachineLocationMap machine={machine} height="100%" />
+                <button
+                    type="button"
+                    onClick={() => onFullscreen && onFullscreen(machine)}
+                    title="Ampliar mapa a pantalla completa"
+                    className="absolute top-2.5 right-2.5 z-10 bg-black/60 hover:bg-black/85 backdrop-blur-md text-white px-2.5 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1.5 shadow-md transition-all hover:scale-105"
+                >
+                    <Maximize2 size={12} />
+                    <span>Ampliar Mapa</span>
+                </button>
             </div>
 
             {/* Indicadores de Telemetría */}

@@ -71,6 +71,8 @@ export default function MachineLocationMap({ machine, height = "180px" }) {
             >
                 <TileLayer
                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    maxNativeZoom={18}
+                    maxZoom={19}
                 />
                 
                 <Circle 

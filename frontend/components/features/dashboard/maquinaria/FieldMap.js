@@ -14,7 +14,7 @@ function MapFitter({ bounds }) {
     return null;
 }
 
-function extractPolygonsAndPoints(field) {
+export function extractPolygonsAndPoints(field) {
     let parsedPolygons = [];
     let allPoints = [];
 
@@ -151,6 +151,8 @@ export default function FieldMap({ field }) {
             >
                 <TileLayer
                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    maxNativeZoom={18}
+                    maxZoom={19}
                 />
                 {polygons.map((poly, idx) => (
                     <Polygon 
