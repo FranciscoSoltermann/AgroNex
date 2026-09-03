@@ -7,7 +7,7 @@ import { getDashboardBootstrapData } from "@/lib/dashboard-bootstrap-cache";
 import {
     Cloud, CloudRain, Droplets, Thermometer, Wind, RefreshCw, Loader2,
     Zap, Snowflake, ThermometerSun, CheckCircle2, AlertTriangle, ShieldAlert,
-    Info, X, MapPin, Gauge, Plus, Pencil, Trash2, XCircle
+    Info, X, MapPin, Gauge, Plus, Pencil, Trash2, XCircle, FileDown
 } from "lucide-react";
 import PermissionGuard from "@/components/shared/PermissionGuard";
 
@@ -16,6 +16,11 @@ const ClimaBarsChart = dynamic(() => import("@/components/features/dashboard/cha
     ssr: false,
     loading: () => <div className="h-full w-full bg-blue-50 dark:bg-blue-900/10 rounded-xl animate-pulse" />,
 });
+
+const ExportarClimaPdfModal = dynamic(
+    () => import("@/components/features/dashboard/clima/ExportarClimaPdfModal"),
+    { ssr: false }
+);
 
 // ──────────────────────────────────────────────
 // HELPERS & CONFIG
@@ -470,12 +475,14 @@ function PronosticoBoard({ campo, weatherData, onRefresh, loading }) {
 // ──────────────────────────────────────────────
 // MÓDULO LLUVIAS — editable records table
 // ──────────────────────────────────────────────
-function ModuloLluvias({ campoId, onDataChange }) {
+function ModuloLluvias({ campoId, campo, onDataChange }) {
     const [historial, setHistorial] = useState([]);
+    const [todosLosRegistros, setTodosLosRegistros] = useState([]);
     const [loading, setLoading] = useState(true);
     const [guardando, setGuardando] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [showForm, setShowForm] = useState(false);
+    const [showPdfModal, setShowPdfModal] = useState(false);
 
     const [form, setForm] = useState({
         fecha: new Date().toISOString().split("T")[0],
@@ -498,6 +505,7 @@ function ModuloLluvias({ campoId, onDataChange }) {
                 tempMin: r.tempMin !== null ? parseFloat(r.tempMin) : null,
                 tempMax: r.tempMax !== null ? parseFloat(r.tempMax) : null,
             }));
+            setTodosLosRegistros(data);
             setHistorial(data.slice(-30).reverse()); // most recent first
         } catch {
             // silent
@@ -580,12 +588,24 @@ function ModuloLluvias({ campoId, onDataChange }) {
                         <h3 className="text-base font-black text-gray-900 dark:text-gray-100">Registros Climáticos del Campo</h3>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowForm(v => !v)}
-                    className="flex items-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white px-4 py-2.5 rounded-xl font-bold text-[12px] transition-colors shadow-lg shadow-green-900/20"
-                >
-                    <Plus size={14} /> Nuevo Registro
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setShowPdfModal(true)}
+                        disabled={loading || todosLosRegistros.length === 0}
+                        title={todosLosRegistros.length === 0 ? "No hay registros climáticos para exportar" : "Exportar registros climáticos a PDF"}
+                        className="flex items-center gap-2 bg-white dark:bg-[#1f262e] hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 px-3.5 py-2.5 rounded-xl font-bold text-[12px] transition-all shadow-sm hover:shadow disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        <FileDown size={14} className="text-red-600 dark:text-red-400" />
+                        <span className="hidden sm:inline">Exportar PDF</span>
+                    </button>
+                    <button
+                        onClick={() => setShowForm(v => !v)}
+                        className="flex items-center gap-2 bg-[#2D6A4F] hover:bg-[#1B4332] text-white px-4 py-2.5 rounded-xl font-bold text-[12px] transition-colors shadow-lg shadow-green-900/20"
+                    >
+                        <Plus size={14} /> Nuevo Registro
+                    </button>
+                </div>
             </div>
 
             {/* Add form */}
@@ -779,6 +799,13 @@ function ModuloLluvias({ campoId, onDataChange }) {
                     </table>
                 )}
             </div>
+
+            <ExportarClimaPdfModal
+                isOpen={showPdfModal}
+                onClose={() => setShowPdfModal(false)}
+                campo={campo}
+                registros={todosLosRegistros}
+            />
         </div>
     );
 }
@@ -930,6 +957,7 @@ export default function ClimaPage() {
                         />
                         <ModuloLluvias
                             campoId={campoSeleccionado.idCampo}
+                            campo={campoSeleccionado}
                             onDataChange={fetchWeather}
                         />
                     </div>
@@ -944,6 +972,7 @@ export default function ClimaPage() {
                         </div>
                         <ModuloLluvias
                             campoId={campoSeleccionado.idCampo}
+                            campo={campoSeleccionado}
                         />
                     </div>
                 )
