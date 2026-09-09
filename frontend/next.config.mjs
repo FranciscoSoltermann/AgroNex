@@ -14,6 +14,21 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"]
   },
+  async rewrites() {
+    // Asegurar que la URL del backend termina en /api
+    let backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
+    backendUrl = backendUrl.trim().replace(/\/$/, '');
+    if (!backendUrl.endsWith('/api')) {
+      backendUrl += '/api';
+    }
+
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${backendUrl}/:path*`
+      }
+    ];
+  },
   async headers() {
     return [
       {
