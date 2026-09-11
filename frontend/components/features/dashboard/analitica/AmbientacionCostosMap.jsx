@@ -38,7 +38,7 @@ export default function AmbientacionCostosMap({ lote }) {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center p-12 bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
-                <Loader2 className="w-8 h-8 animate-spin text-agronex-600" />
+                <Loader2 className="w-8 h-8 animate-spin text-[#2D6A4F]" />
                 <span className="ml-3 text-gray-500">Analizando mapas espaciales con John Deere...</span>
             </div>
         );
@@ -64,7 +64,7 @@ export default function AmbientacionCostosMap({ lote }) {
                 <button 
                     onClick={() => autogenerarMutation.mutate()}
                     disabled={autogenerarMutation.isPending}
-                    className="bg-agronex-600 text-white px-6 py-2 rounded-lg hover:bg-agronex-700 transition flex items-center justify-center mx-auto"
+                    className="bg-[#2D6A4F] text-white px-6 py-2 rounded-lg hover:bg-[#1B4332] transition flex items-center justify-center mx-auto"
                 >
                     {autogenerarMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 mr-2" />}
                     Generar Ambientación de Prueba
@@ -158,7 +158,7 @@ export default function AmbientacionCostosMap({ lote }) {
                         <div 
                             key={amb.idAmbientacion} 
                             onClick={() => setSelectedAmbientacion(amb)}
-                            className={`p-4 rounded-xl cursor-pointer border-2 transition-all ${selectedAmbientacion?.idAmbientacion === amb.idAmbientacion ? 'border-agronex-500 bg-gray-50 shadow-md' : 'border-transparent bg-white shadow hover:border-gray-200'}`}
+                            className={`p-4 rounded-xl cursor-pointer border-2 transition-all ${selectedAmbientacion?.idAmbientacion === amb.idAmbientacion ? 'border-[#2D6A4F] bg-gray-50 shadow-md' : 'border-transparent bg-white shadow hover:border-gray-200'}`}
                             style={{ borderLeftColor: amb.colorHex, borderLeftWidth: '6px' }}
                         >
                             <div className="flex justify-between items-start mb-2">
@@ -238,7 +238,7 @@ export default function AmbientacionCostosMap({ lote }) {
                                     </div>
                                     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 text-center border-b-4 border-agronex-500">
                                         <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider">Margen Bruto</p>
-                                        <p className="text-lg font-bold text-agronex-700">${selectedAmbientacion.margenBruto}</p>
+                                        <p className="text-lg font-bold text-[#1B4332]">${selectedAmbientacion.margenBruto}</p>
                                     </div>
                                 </div>
 
