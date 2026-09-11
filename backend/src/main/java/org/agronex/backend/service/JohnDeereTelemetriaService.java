@@ -56,7 +56,7 @@ public class JohnDeereTelemetriaService {
                 .entidad(org.agronex.backend.entity.EntidadAudit.INSUMO)
                 .idEntidad(insumo.getIdInsumo().toString())
                 .nombreEntidad(insumo.getNombre())
-                .accion("DESCUENTO_TELEMETRIA_JD")
+                .accion(org.agronex.backend.entity.AccionAudit.ACTUALIZAR)
                 .detalles(detalle)
                 .fechaHora(LocalDateTime.now())
                 .usuarioId(null) // Representa al Sistema / API
