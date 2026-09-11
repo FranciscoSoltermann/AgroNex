@@ -108,8 +108,14 @@ export default function AmbientacionCostosMap({ lote }) {
                 ]]);
                 
                 try {
-                    // Intersectar el corte con el lote real
-                    const intersection = window.turf.intersect(window.turf.featureCollection([polyCorte, loteGeoJSON]));
+                    // Intersectar el corte con el lote real (manejar si loteGeoJSON es FeatureCollection)
+                    const polyLote = loteGeoJSON.type === 'FeatureCollection' ? loteGeoJSON.features[0] : loteGeoJSON;
+                    
+                    // Turf v6+ require intersect(poly1, poly2)
+                    const intersection = window.turf.intersect(polyCorte, polyLote);
+                    
+                    if (!intersection) return null;
+                    
                     return {
                         ...intersection,
                         properties: {
@@ -120,6 +126,7 @@ export default function AmbientacionCostosMap({ lote }) {
                         }
                     };
                 } catch(e) {
+                    console.error("Error en Turf.js intersect:", e);
                     return null;
                 }
             }).filter(Boolean);
@@ -226,7 +233,7 @@ export default function AmbientacionCostosMap({ lote }) {
                                     
                                     return (
                                         <GeoJSON 
-                                            key={f.properties?.id || i}
+                                            key={`${f.properties?.id || i}-${layerMode}`}
                                             data={f}
                                             style={() => ({
                                                 color: fillColor,
