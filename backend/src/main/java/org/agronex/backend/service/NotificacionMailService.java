@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 /**
@@ -31,6 +32,7 @@ public class NotificacionMailService {
     /**
      * Envía una alerta simple por email (texto plano).
      */
+    @Async
     public void enviarAlerta(String destinatario, String asunto, String mensaje) {
         String maskedEmail = maskEmail(destinatario);
         log.info("📧 Preparando alerta por email para {}: {}", maskedEmail, asunto);
@@ -49,6 +51,7 @@ public class NotificacionMailService {
     /**
      * Envía un correo HTML con el código de verificación de 6 dígitos.
      */
+    @Async
     public void enviarCodigoVerificacion(String destinatario, String codigo) {
         String maskedEmail = maskEmail(destinatario);
         log.info("📧 Enviando código de verificación a {}", maskedEmail);

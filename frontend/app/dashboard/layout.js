@@ -52,11 +52,13 @@ export default function DashboardLayout({ children }) {
 
     useEffect(() => {
         const syncUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
+            const [{ data: { user } }, { data: { session } }] = await Promise.all([
+                supabase.auth.getUser(),
+                supabase.auth.getSession()
+            ]);
+
             if (user) {
                 try {
-                    const { data: { session } } = await supabase.auth.getSession();
-
                     if (!session?.access_token) {
                         setUserName("Usuario");
                         return;

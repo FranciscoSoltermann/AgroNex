@@ -92,26 +92,23 @@ export default function DashboardHome() {
             const nombre = session?.user?.user_metadata?.nombre || "Productor";
             const userId = session?.user?.id || null;
 
-            const [bootstrap, resStats, resActs, resGastos, resCosechas, resInsumos, resSettings] = await Promise.all([
+            const [bootstrap, resResumen] = await Promise.all([
                 getDashboardBootstrapData(),
-                apiClient.get(`/campos/stats`).catch(() => ({ data: {} })),
-                apiClient.get(`/actividades`).catch(() => ({ data: [] })),
-                apiClient.get(`/gastos`).catch(() => ({ data: [] })),
-                apiClient.get(`/cosechas`).catch(() => ({ data: [] })),
-                apiClient.get(`/insumos`).catch(() => ({ data: [] })),
-                apiClient.get(`/usuarios/settings`).catch(() => ({ data: {} })),
+                apiClient.get(`/dashboard/resumen`).catch(() => ({ data: {} })),
             ]);
+
+            const resumen = resResumen.data || {};
 
             return {
                 userId,
                 nombre,
                 bootstrap,
-                stats: resStats.data || {},
-                actividades: resActs.data || [],
-                gastos: resGastos.data || [],
-                cosechas: resCosechas.data || [],
-                insumos: resInsumos.data || [],
-                settings: resSettings?.data || {}
+                stats: resumen.estadisticasCampos || {},
+                actividades: resumen.actividadesRecientes || [],
+                gastos: resumen.gastosRecientes || [],
+                cosechas: resumen.cosechasRecientes || [],
+                insumos: resumen.insumosResumen || [],
+                settings: resumen.configuracion || {}
             };
         }
     });

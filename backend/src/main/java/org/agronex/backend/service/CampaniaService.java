@@ -46,10 +46,16 @@ public class CampaniaService {
         List<CampaniaLoteRequest> lotesReq = normalizarLotes(request);
 
         // Validar todos los lotes
+        List<UUID> lotesIds = lotesReq.stream().map(CampaniaLoteRequest::getIdLote).collect(Collectors.toList());
+        List<Lote> lotesEncontrados = loteRepository.findAllById(lotesIds);
+        java.util.Map<UUID, Lote> lotesMap = lotesEncontrados.stream().collect(Collectors.toMap(Lote::getIdLote, l -> l));
+
         List<Lote> lotesValidados = new ArrayList<>();
         for (CampaniaLoteRequest lr : lotesReq) {
-            Lote lote = loteRepository.findById(lr.getIdLote())
-                    .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado: " + lr.getIdLote()));
+            Lote lote = lotesMap.get(lr.getIdLote());
+            if (lote == null) {
+                throw new EntityNotFoundException("Lote no encontrado: " + lr.getIdLote());
+            }
             if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
                 throw new AccessDeniedException("Acceso denegado al lote: " + lote.getNombre());
             }
@@ -163,10 +169,16 @@ public class CampaniaService {
         // Actualizar asignaciones de lotes
         List<CampaniaLoteRequest> lotesReq = normalizarLotes(request);
 
+        List<UUID> lotesEditIds = lotesReq.stream().map(CampaniaLoteRequest::getIdLote).collect(Collectors.toList());
+        List<Lote> lotesEditEncontrados = loteRepository.findAllById(lotesEditIds);
+        java.util.Map<UUID, Lote> lotesEditMap = lotesEditEncontrados.stream().collect(Collectors.toMap(Lote::getIdLote, l -> l));
+
         List<Lote> lotesEditValidados = new ArrayList<>();
         for (CampaniaLoteRequest lr : lotesReq) {
-            Lote lote = loteRepository.findById(lr.getIdLote())
-                    .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado: " + lr.getIdLote()));
+            Lote lote = lotesEditMap.get(lr.getIdLote());
+            if (lote == null) {
+                throw new EntityNotFoundException("Lote no encontrado: " + lr.getIdLote());
+            }
             if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
                 throw new AccessDeniedException("Acceso denegado al lote: " + lote.getNombre());
             }

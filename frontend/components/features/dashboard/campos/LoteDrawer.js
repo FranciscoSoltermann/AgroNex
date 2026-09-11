@@ -1,8 +1,11 @@
 "use client";
 import React, { useRef, useEffect, useState } from 'react';
-import { MapContainer, TileLayer, FeatureGroup, useMap } from 'react-leaflet';
-import { EditControl } from 'react-leaflet-draw';
-import * as L from 'leaflet';
+import dynamic from 'next/dynamic';
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const FeatureGroup = dynamic(() => import('react-leaflet').then(mod => mod.FeatureGroup), { ssr: false });
+const EditControl = dynamic(() => import('react-leaflet-draw').then(mod => mod.EditControl), { ssr: false });
+import { useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import * as turf from '@turf/turf';
@@ -25,6 +28,7 @@ function GeoJsonLoader({ initialGeoJson, featureGroup }) {
                     parsed = JSON.parse(parsed);
                 }
 
+                const L = require('leaflet');
                 const geoJsonLayer = L.geoJSON(parsed, {
                     style: {
                         color: '#ffffff',
@@ -109,6 +113,7 @@ export default function LoteDrawer({ initialCenter, initialGeoJson, onDrawComple
     }
 
     useEffect(() => {
+        const L = require('leaflet');
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',

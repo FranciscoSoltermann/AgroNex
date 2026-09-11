@@ -14,6 +14,15 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"]
   },
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    remotePatterns: [
+        {
+            protocol: 'https',
+            hostname: '**',
+        },
+    ],
+  },
   async rewrites() {
     // Asegurar que la URL del backend termina en /api
     let backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
