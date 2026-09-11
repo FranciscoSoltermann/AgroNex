@@ -12,6 +12,16 @@ const GeoJSON = dynamic(() => import('react-leaflet').then(mod => mod.GeoJSON), 
 export default function AmbientacionCostosMap({ lote }) {
     const queryClient = useQueryClient();
     const [selectedAmbientacion, setSelectedAmbientacion] = useState(null);
+    const [layerMode, setLayerMode] = useState('RINDE'); // 'RINDE' o 'ROI'
+
+    // Agregar Turf globalmente para la demo si no está
+    useEffect(() => {
+        if (!window.turf) {
+            const script = document.createElement('script');
+            script.src = "https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js";
+            document.head.appendChild(script);
+        }
+    }, []);
 
     // 1. Fetch de los costos y ambientaciones simuladas del backend
     const { data: ambientaciones, isLoading, error } = useQuery({
@@ -26,10 +36,11 @@ export default function AmbientacionCostosMap({ lote }) {
     // 2. Si no hay ambientaciones, podemos llamar a la autogeneración para la demo
     const autogenerarMutation = useMutation({
         mutationFn: async () => {
-            await apiClient.post(`/analitica/espacial/lotes/${lote.idLote}/autogenerar-prueba`);
+            const response = await apiClient.post(`/analitica/espacial/lotes/${lote.idLote}/autogenerar-prueba`);
+            return response.data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['costos-ambientacion', lote.idLote]);
+            queryClient.invalidateQueries(['costos-ambientacion', lote?.idLote]);
         }
     });
 
@@ -55,9 +66,9 @@ export default function AmbientacionCostosMap({ lote }) {
 
     if (!ambientaciones || ambientaciones.length === 0) {
         return (
-            <div className="p-8 text-center bg-white rounded-xl shadow-sm border border-gray-100 mt-6">
-                <Tractor className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">No hay ambientaciones para {lote.nombre}</h3>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 mt-6 text-center flex flex-col items-center">
+                <Tractor className="w-12 h-12 text-gray-300 mb-4" />
+                <h3 className="text-lg font-bold text-gray-800 mb-2">No hay ambientaciones para {lote.nombre}</h3>
                 <p className="text-gray-500 mb-6 max-w-md mx-auto">
                     Para calcular costos a nivel de zona, el lote debe estar ambientado. Para esta demostración, puedes auto-generar zonas de prueba simulando datos de John Deere.
                 </p>
@@ -108,7 +119,7 @@ export default function AmbientacionCostosMap({ lote }) {
                 ]]);
                 
                 try {
-                    // Intersectar el corte con el lote real (manejar si loteGeoJSON es FeatureCollection)
+                    // Intersecado el corte con el lote real (manejar si loteGeoJSON es FeatureCollection)
                     const polyLote = loteGeoJSON.type === 'FeatureCollection' ? loteGeoJSON.features[0] : loteGeoJSON;
                     
                     // Turf v6+ require intersect(poly1, poly2)
@@ -137,19 +148,8 @@ export default function AmbientacionCostosMap({ lote }) {
         }
     };
 
-    // Agregar Turf globalmente para la demo si no está
-    useEffect(() => {
-        if (!window.turf) {
-            const script = document.createElement('script');
-            script.src = "https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js";
-            document.head.appendChild(script);
-        }
-    }, []);
-
     const mapFeatures = getMapFeatures();
     const bounds = mapFeatures && window.turf ? window.turf.bbox(window.turf.featureCollection(mapFeatures)) : null;
-
-    const [layerMode, setLayerMode] = useState('RINDE'); // 'RINDE' o 'ROI'
 
     // Función para calcular color de Rentabilidad (ROI)
     const getRoiColor = (margen) => {
