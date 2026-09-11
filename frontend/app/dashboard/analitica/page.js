@@ -11,6 +11,11 @@ const AnaliticaRindeChart = dynamic(() => import("@/components/features/dashboar
     loading: () => <div className="h-full w-full bg-gray-50 rounded-xl animate-pulse" />,
 });
 
+const AmbientacionCostosMap = dynamic(() => import("@/components/features/dashboard/analitica/AmbientacionCostosMap"), {
+    ssr: false,
+    loading: () => <div className="h-48 w-full bg-gray-50 rounded-xl animate-pulse" />,
+});
+
 export default function AnaliticaPage() {
     const { data, isLoading: loading, error: queryError } = useQuery({
         queryKey: ['analiticaData'],
@@ -186,6 +191,14 @@ export default function AnaliticaPage() {
                     </div>
                 )}
             </div>
+            
+            {/* Análisis Espacial (Solo visible si hay un lote seleccionado) */}
+            {seleccionLote && (
+                <AmbientacionCostosMap 
+                    lote={lotesFiltrados.find(l => l.idLote === seleccionLote)} 
+                />
+            )}
+            
             </div>
         </PermissionGuard>
     );

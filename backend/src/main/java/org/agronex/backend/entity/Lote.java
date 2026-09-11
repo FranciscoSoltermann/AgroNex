@@ -48,6 +48,11 @@ public class Lote extends Auditable {
     @OneToMany(mappedBy = "lote", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<CampaniaLote> campaniaLotes = new ArrayList<>();
 
+    @Builder.Default
+    @JsonIgnore
+    @OneToMany(mappedBy = "lote", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Ambientacion> ambientaciones = new ArrayList<>();
+
     // --- Helpers ---
     /** Retorna las campañas asociadas a este lote. */
     public List<Campania> getCampanias() {
