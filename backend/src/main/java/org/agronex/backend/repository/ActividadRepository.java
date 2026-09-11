@@ -1,6 +1,8 @@
 package org.agronex.backend.repository;
 
 import org.agronex.backend.entity.Actividad;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -20,6 +22,17 @@ public interface ActividadRepository extends JpaRepository<Actividad, UUID> {
            "JOIN c.campaniaLotes cl " +
            "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
     List<Actividad> findByCampaniaLoteCampoUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario);
+
+    @EntityGraph(attributePaths = {"campania", "insumosUtilizados", "insumosUtilizados.insumo"})
+    @Query(value = "SELECT DISTINCT a FROM Actividad a " +
+           "JOIN a.campania c " +
+           "JOIN c.campaniaLotes cl " +
+           "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario",
+           countQuery = "SELECT COUNT(DISTINCT a) FROM Actividad a " +
+           "JOIN a.campania c " +
+           "JOIN c.campaniaLotes cl " +
+           "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
+    Page<Actividad> findByCampaniaLoteCampoUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario, Pageable pageable);
 
     @Modifying
     @Query("DELETE FROM Actividad a WHERE a.campania.idCampania = :idCampania")

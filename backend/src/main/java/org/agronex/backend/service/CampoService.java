@@ -1,6 +1,7 @@
 package org.agronex.backend.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.dto.request.CampoRequest;
 import org.agronex.backend.dto.response.CampoResponse;
 import org.agronex.backend.entity.AccionAudit;
@@ -14,6 +15,8 @@ import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.GastoFijoRepository;
 import org.agronex.backend.repository.InsumoRepository;
 import org.agronex.backend.repository.RegistroClimaRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CampoService {
 
     private final CampoRepository campoRepository;
@@ -36,6 +40,7 @@ public class CampoService {
     private final InsumoRepository insumoRepository;
     private final RegistroClimaRepository registroClimaRepository;
 
+    @CacheEvict(value = {"campoStats", "dashboardResumen"}, allEntries = true)
     @Transactional
     public CampoResponse crearCampo(CampoRequest request, Jwt jwt) {
         Usuario usuario = usuarioService.obtenerOCrearUsuario(jwt);
@@ -70,6 +75,7 @@ public class CampoService {
                 .collect(Collectors.toList());
     }
 
+    @Cacheable(value = "campoStats", key = "#idUsuarioToken")
     @Transactional(readOnly = true)
     public Map<String, Object> obtenerEstadisticas(UUID idUsuarioToken) {
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
@@ -103,6 +109,7 @@ public class CampoService {
         return stats;
     }
 
+    @CacheEvict(value = {"campoStats", "dashboardResumen"}, allEntries = true)
     @Transactional
     public CampoResponse actualizarCampo(UUID idCampo, CampoRequest request, Jwt jwt) {
         Campo campo = campoRepository.findById(idCampo)
@@ -158,6 +165,7 @@ public class CampoService {
         return campoMapper.toResponse(guardado);
     }
 
+    @CacheEvict(value = {"campoStats", "dashboardResumen"}, allEntries = true)
     @Transactional
     public void eliminarCampo(UUID idCampo, UUID idUsuarioToken) {
         Campo campo = campoRepository.findById(idCampo)

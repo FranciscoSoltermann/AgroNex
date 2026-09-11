@@ -142,6 +142,13 @@ public class ActividadService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<ActividadResponse> listarMisActividadesPaginado(UUID idUsuarioToken, org.springframework.data.domain.Pageable pageable) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        return actividadRepository.findByCampaniaLoteCampoUsuarioIdUsuario(idDatos, pageable)
+                .map(actividadMapper::toResponse);
+    }
+
     @Transactional
     public void eliminarActividad(UUID idActividad, UUID idUsuarioToken) {
         Actividad actividad = actividadRepository.findById(idActividad)

@@ -2,6 +2,7 @@ package org.agronex.backend.service;
 
 import lombok.RequiredArgsConstructor;
 import org.agronex.backend.dto.response.DashboardResumenDTO;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ public class DashboardService {
     private final InsumoService insumoService;
     private final UsuarioSettingsService usuarioSettingsService;
 
+    @Cacheable(value = "dashboardResumen", key = "#idUsuarioToken")
     @Transactional(readOnly = true)
     public DashboardResumenDTO obtenerResumenDashboard(UUID idUsuarioToken) {
         return DashboardResumenDTO.builder()

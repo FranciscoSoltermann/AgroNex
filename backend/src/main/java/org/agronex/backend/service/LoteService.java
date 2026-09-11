@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.agronex.backend.dto.request.LoteRequest;
 import org.agronex.backend.dto.response.LoteResponse;
 import org.agronex.backend.entity.AccionAudit;
@@ -14,6 +15,8 @@ import org.agronex.backend.entity.Lote;
 import org.agronex.backend.mapper.LoteMapper;
 import org.agronex.backend.repository.CampoRepository;
 import org.agronex.backend.repository.LoteRepository;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +26,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LoteService {
 
     private final LoteRepository loteRepository;
@@ -33,6 +37,7 @@ public class LoteService {
     private final UsuarioService usuarioService;
     private final ObjectMapper objectMapper;
 
+    @CacheEvict(value = {"campoStats", "dashboardResumen"}, allEntries = true)
     @Transactional
     public LoteResponse crearLote(LoteRequest request, UUID idUsuarioToken) {
         // 1. Buscamos el campo y lanzamos 404 si no existe
@@ -90,6 +95,7 @@ public class LoteService {
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = {"campoStats", "dashboardResumen"}, allEntries = true)
     @Transactional
     public void eliminarLote(UUID idLote, UUID idUsuarioToken) {
         Lote lote = loteRepository.findById(idLote)
@@ -111,6 +117,7 @@ public class LoteService {
         loteRepository.delete(lote);
     }
 
+    @CacheEvict(value = {"campoStats", "dashboardResumen"}, allEntries = true)
     @Transactional
     public LoteResponse actualizarPoligono(UUID idLote, String coordenadasGeoJson, UUID idUsuarioToken) {
         Lote lote = loteRepository.findById(idLote)
@@ -142,6 +149,7 @@ public class LoteService {
         return loteMapper.toResponse(guardado);
     }
 
+    @CacheEvict(value = {"campoStats", "dashboardResumen"}, allEntries = true)
     @Transactional
     public LoteResponse actualizarLote(UUID idLote, LoteRequest request, UUID idUsuarioToken) {
         Lote lote = loteRepository.findById(idLote)

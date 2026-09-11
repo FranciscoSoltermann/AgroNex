@@ -7,6 +7,8 @@ import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import * as turf from "@turf/turf";
 import dynamic from "next/dynamic";
+import ModalCrearCampo from "@/components/features/dashboard/campos/ModalCrearCampo";
+import ModalEditarCampo from "@/components/features/dashboard/campos/ModalEditarCampo";
 const LoteDrawer = dynamic(() => import('@/components/features/dashboard/campos/LoteDrawer'), { ssr: false });
 const ShapefileUploader = dynamic(() => import('@/components/features/dashboard/campos/ShapefileUploader'), { ssr: false });
 const JohnDeereFieldSelector = dynamic(() => import('@/components/features/dashboard/campos/JohnDeereFieldSelector'), { ssr: false });
@@ -1120,141 +1122,22 @@ export default function CamposPage() {
                 </div>
 
                 {/* Modal: Nuevo Campo */}
-                {showModalCampo && (
-                    <Modal titulo="Registro de Campo" onClose={() => { setShowModalCampo(false); setCampoInputMethod('manual'); }}>
-                        {/* Selector de método si JD está conectado */}
-                        {jdConnected && (
-                            <div className="flex gap-2 p-1 bg-gray-100 dark:bg-gray-800 rounded-xl mb-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setCampoInputMethod('manual')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${campoInputMethod === 'manual' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                >
-                                    Manual
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setCampoInputMethod('john-deere')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${campoInputMethod === 'john-deere' ? 'bg-[#367C2B] text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                >
-                                    Importar
-                                </button>
-                            </div>
-                        )}
-
-                        {campoInputMethod === 'john-deere' ? (
-                            <div className="space-y-4">
-                                <JohnDeereFieldSelector
-                                    onConfirm={({ geojsonString, areaHa, bulkItems }) => {
-                                        if (bulkItems && bulkItems.length > 1) {
-                                            handleImportBulkCamposFromJd(bulkItems);
-                                        } else if (geojsonString) {
-                                            handleImportCampoFromJd(geojsonString, areaHa);
-                                        }
-                                    }}
-                                />
-                                {submitError && <ErrorMsg msg={submitError} />}
-                                {submitSuccess && <SuccessMsg msg={submitSuccess} />}
-                            </div>
-                        ) : (
-                            <form onSubmit={handleCrearCampo} className="space-y-4">
-                                <FormField label="Nombre del campo" required>
-                                    <input type="text" required value={formCampo.nombre} onChange={e => setFormCampo(p => ({ ...p, nombre: e.target.value }))} className={INPUT_CLASS} placeholder="ej. Sunset Ridge" />
-                                </FormField>
-                                <FormField label="Referencia de ubicación">
-                                    <SelectorUbicacion
-                                        onSelect={(data) => {
-                                            setFormCampo(p => ({
-                                                ...p,
-                                                ubicacion: data.nombre,
-                                                latitud: data.lat,
-                                                longitud: data.lon
-                                            }));
-                                        }}
-                                    />
-                                    {/* Un pequeño indicador visual (opcional) para dar confianza */}
-                                    {formCampo.latitud && (
-                                        <div className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
-                                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shrink-0" aria-hidden />
-                                            UBICACIÓN GEORREFERENCIADA AUTOMÁTICAMENTE
-                                        </div>
-                                    )}
-                                    {/* Feedback visual para el usuario */}
-                                    {formCampo.latitud && (
-                                        <div className="flex items-center gap-1 mt-1 text-green-600 animate-in fade-in slide-in-from-top-1">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                            <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
-                                        </div>
-                                    )}
-                                </FormField>
-                                <FormField label="Superficie total (Ha)" required>
-                                    <div className="relative">
-                                        <input type="number" step="0.01" min="0.01" required value={formCampo.superficieTotal} onChange={e => setFormCampo(p => ({ ...p, superficieTotal: e.target.value }))} className={`${INPUT_CLASS} pr-10`} placeholder="0.00" />
-                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
-                                    </div>
-                                </FormField>
-                                {submitError && <ErrorMsg msg={submitError} />}
-                                {submitSuccess && <SuccessMsg msg={submitSuccess} />}
-                                <SubmitBtn loading={submitLoading} text="Confirmar Registro" />
-                                <p className="text-[10px] text-gray-400 text-center">Definir un campo crea automáticamente un ciclo de cultivo predeterminado para asignación inmediata.</p>
-                            </form>
-                        )}
-                    </Modal>
-                )}
+                <ModalCrearCampo
+                    isOpen={showModalCampo}
+                    onClose={() => setShowModalCampo(false)}
+                    onCreated={fetchData}
+                    jdConnected={jdConnected}
+                    onImportBulkJd={handleImportBulkCamposFromJd}
+                    onImportSingleJd={handleImportCampoFromJd}
+                />
 
                 {/* Modal: Editar Campo */}
                 {showModalEditCampo && editingCampo && (
-                    <Modal titulo={`Editar Campo: ${editingCampo.nombre}`} onClose={() => setShowModalEditCampo(false)}>
-                        <form onSubmit={handleEditarCampo} className="space-y-4">
-                            <FormField label="Nombre del campo" required>
-                                <input
-                                    type="text"
-                                    required
-                                    value={formEditCampo.nombre}
-                                    onChange={e => setFormEditCampo(p => ({ ...p, nombre: e.target.value }))}
-                                    className={INPUT_CLASS}
-                                    placeholder="ej. Sunset Ridge"
-                                />
-                            </FormField>
-                            <FormField label="Referencia de ubicación">
-                                <SelectorUbicacion
-                                    initialValue={formEditCampo.ubicacion}
-                                    onSelect={(data) => {
-                                        setFormEditCampo(p => ({
-                                            ...p,
-                                            ubicacion: data.nombre,
-                                            latitud: data.lat,
-                                            longitud: data.lon
-                                        }));
-                                    }}
-                                />
-                                {formEditCampo.latitud && (
-                                    <div className="flex items-center gap-1 mt-2 text-green-600">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                                        <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
-                                    </div>
-                                )}
-                            </FormField>
-                            <FormField label="Superficie total (Ha)" required>
-                                <div className="relative">
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        min="0.01"
-                                        required
-                                        value={formEditCampo.superficieTotal}
-                                        onChange={e => setFormEditCampo(p => ({ ...p, superficieTotal: e.target.value }))}
-                                        className={`${INPUT_CLASS} pr-10`}
-                                        placeholder="0.00"
-                                    />
-                                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
-                                </div>
-                            </FormField>
-                            {submitError && <ErrorMsg msg={submitError} />}
-                            {submitSuccess && <SuccessMsg msg={submitSuccess} />}
-                            <SubmitBtn loading={submitLoading} text="Guardar Cambios" />
-                        </form>
-                    </Modal>
+                    <ModalEditarCampo
+                        editingCampo={editingCampo}
+                        onClose={() => { setShowModalEditCampo(false); setEditingCampo(null); }}
+                        onUpdated={fetchData}
+                    />
                 )}
 
                 {/* Modal: Nuevo Lote / Editar Lote Mapeo */}

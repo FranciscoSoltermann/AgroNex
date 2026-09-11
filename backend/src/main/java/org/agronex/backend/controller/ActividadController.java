@@ -57,6 +57,15 @@ public class ActividadController {
         return ResponseEntity.ok(actividadService.listarMisActividades(idUsuario));
     }
 
+    @GetMapping("/paginado")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS', 'PERMISO_EDICION_CAMPOS')")
+    public ResponseEntity<org.springframework.data.domain.Page<ActividadResponse>> listarMisActividadesPaginado(
+            @org.springframework.data.web.PageableDefault(size = 20, sort = "fecha", direction = org.springframework.data.domain.Sort.Direction.DESC) org.springframework.data.domain.Pageable pageable,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = usuarioService.idUsuarioParaAccesoDatos(SecurityUtils.requireUserId(jwt));
+        return ResponseEntity.ok(actividadService.listarMisActividadesPaginado(idUsuario, pageable));
+    }
+
     @DeleteMapping("/{idActividad}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     public ResponseEntity<Void> eliminarActividad(@PathVariable UUID idActividad, @AuthenticationPrincipal Jwt jwt) {
