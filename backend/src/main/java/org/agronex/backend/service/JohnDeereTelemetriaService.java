@@ -58,8 +58,7 @@ public class JohnDeereTelemetriaService {
                 .nombreEntidad(insumo.getNombre())
                 .accion(org.agronex.backend.entity.AccionAudit.ACTUALIZAR)
                 .detalle(detalle)
-                .fechaHora(LocalDateTime.now())
-                .usuarioId(null) // Representa al Sistema / API
+                .idUsuario(null) // Representa al Sistema / API
                 .build();
         
         auditLogRepository.save(audit);
