@@ -46,7 +46,7 @@ public class CampaniaMapper {
         if (campania.getCampaniaLotes() != null && !campania.getCampaniaLotes().isEmpty()) {
             supTotal = campania.getCampaniaLotes().stream()
                     .map(cl -> cl.getLote() != null && cl.getLote().getSuperficie() != null ? cl.getLote().getSuperficie() : java.math.BigDecimal.ZERO)
-                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                    .reduce(java.math.BigDecimal.ZERO, (a, b) -> a.add(b));
         }
 
         return CampaniaResponse.builder()

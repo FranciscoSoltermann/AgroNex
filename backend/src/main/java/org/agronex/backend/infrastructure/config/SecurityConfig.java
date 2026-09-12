@@ -18,8 +18,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.proc.JWSKeySelector;
@@ -205,10 +203,8 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder() {
         try {
-            com.nimbusds.jose.util.DefaultResourceRetriever resourceRetriever =
-                    new com.nimbusds.jose.util.DefaultResourceRetriever(5000, 5000);
-            JWKSource<SecurityContext> jwkSource =
-                    new com.nimbusds.jose.jwk.source.RemoteJWKSet<>(java.net.URI.create(jwkSetUri).toURL(), resourceRetriever);
+            JWKSource<SecurityContext> jwkSource = com.nimbusds.jose.jwk.source.JWKSourceBuilder.create(java.net.URI.create(jwkSetUri).toURL())
+                    .build();
             DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
             JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(
                     Set.of(JWSAlgorithm.ES256, JWSAlgorithm.RS256), jwkSource);

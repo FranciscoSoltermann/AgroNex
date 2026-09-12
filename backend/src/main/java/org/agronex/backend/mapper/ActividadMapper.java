@@ -38,7 +38,7 @@ public class ActividadMapper {
         if (actividad.getCampania() != null && actividad.getCampania().getLotes() != null) {
             supTotal = actividad.getCampania().getLotes().stream()
                     .map(l -> l.getSuperficie() != null ? l.getSuperficie() : java.math.BigDecimal.ZERO)
-                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+                    .reduce(java.math.BigDecimal.ZERO, (a, b) -> a.add(b));
         }
 
         return ActividadResponse.builder()

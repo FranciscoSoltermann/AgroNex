@@ -1,6 +1,5 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.agronex.backend.dto.request.RegistroClimaRequest;
 import org.agronex.backend.dto.response.RegistroClimaResponse;
 import org.agronex.backend.dto.response.ResumenClimaCampaniaResponse;

@@ -31,8 +31,9 @@ public class AnaliticaEspacialService {
      */
     @Transactional(readOnly = true)
     public List<CostoAmbientacionDTO> calcularCostosPorAmbientacion(UUID idLote) {
-        Lote lote = loteRepository.findById(idLote)
-                .orElseThrow(() -> new RuntimeException("Lote no encontrado"));
+        if (!loteRepository.existsById(idLote)) {
+            throw new RuntimeException("Lote no encontrado");
+        }
 
         List<Ambientacion> ambientaciones = ambientacionRepository.findByLote_IdLote(idLote);
         

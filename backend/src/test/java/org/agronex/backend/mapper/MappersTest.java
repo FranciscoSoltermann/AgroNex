@@ -24,8 +24,6 @@ class MappersTest {
     private final InsumoMapper insumoMapper = new InsumoMapper();
     private final GastoFijoMapper gastoFijoMapper = new GastoFijoMapper();
     private final CosechaMapper cosechaMapper = new CosechaMapper();
-    private final ActividadInsumoMapper actividadInsumoMapper = new ActividadInsumoMapper();
-    private final ActividadMapper actividadMapper = new ActividadMapper(actividadInsumoMapper);
     private final CampaniaMapper campaniaMapper = new CampaniaMapper();
     private final MantenimientoMaquinaMapper mantenimientoMapper = new MantenimientoMaquinaMapper();
     private final NotificacionMapper notificacionMapper = new NotificacionMapper();

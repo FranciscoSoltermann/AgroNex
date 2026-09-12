@@ -46,9 +46,9 @@ public class CampaniaService {
         List<CampaniaLoteRequest> lotesReq = normalizarLotes(request);
 
         // Validar todos los lotes
-        List<UUID> lotesIds = lotesReq.stream().map(CampaniaLoteRequest::getIdLote).collect(Collectors.toList());
+        List<UUID> lotesIds = lotesReq.stream().map(req -> req.getIdLote()).collect(Collectors.toList());
         List<Lote> lotesEncontrados = loteRepository.findAllById(lotesIds);
-        java.util.Map<UUID, Lote> lotesMap = lotesEncontrados.stream().collect(Collectors.toMap(Lote::getIdLote, l -> l));
+        java.util.Map<UUID, Lote> lotesMap = lotesEncontrados.stream().collect(Collectors.toMap(l -> l.getIdLote(), l -> l));
 
         List<Lote> lotesValidados = new ArrayList<>();
         for (CampaniaLoteRequest lr : lotesReq) {
@@ -169,9 +169,9 @@ public class CampaniaService {
         // Actualizar asignaciones de lotes
         List<CampaniaLoteRequest> lotesReq = normalizarLotes(request);
 
-        List<UUID> lotesEditIds = lotesReq.stream().map(CampaniaLoteRequest::getIdLote).collect(Collectors.toList());
+        List<UUID> lotesEditIds = lotesReq.stream().map(req -> req.getIdLote()).collect(Collectors.toList());
         List<Lote> lotesEditEncontrados = loteRepository.findAllById(lotesEditIds);
-        java.util.Map<UUID, Lote> lotesEditMap = lotesEditEncontrados.stream().collect(Collectors.toMap(Lote::getIdLote, l -> l));
+        java.util.Map<UUID, Lote> lotesEditMap = lotesEditEncontrados.stream().collect(Collectors.toMap(l -> l.getIdLote(), l -> l));
 
         List<Lote> lotesEditValidados = new ArrayList<>();
         for (CampaniaLoteRequest lr : lotesReq) {

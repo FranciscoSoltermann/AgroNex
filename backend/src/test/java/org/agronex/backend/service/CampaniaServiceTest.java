@@ -1,6 +1,5 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.agronex.backend.dto.request.CampaniaLoteRequest;
 import org.agronex.backend.dto.request.CampaniaRequest;
 import org.agronex.backend.dto.response.CampaniaResponse;
@@ -16,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

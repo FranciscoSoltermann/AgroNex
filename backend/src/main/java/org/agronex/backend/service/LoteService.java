@@ -16,7 +16,6 @@ import org.agronex.backend.mapper.LoteMapper;
 import org.agronex.backend.repository.CampoRepository;
 import org.agronex.backend.repository.LoteRepository;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

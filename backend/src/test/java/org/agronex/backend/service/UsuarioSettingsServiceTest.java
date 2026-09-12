@@ -1,6 +1,5 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.agronex.backend.dto.request.UsuarioSettingsUpdateRequest;
 import org.agronex.backend.dto.response.UsuarioSettingsResponse;
 import org.agronex.backend.entity.PersonaFisica;

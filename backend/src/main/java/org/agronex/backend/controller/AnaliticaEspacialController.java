@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/analitica/espacial")
+@RequestMapping("/api/analitica/espacial/lotes/{idLote}")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_VER_ANALITICA')")
 @Tag(name = "Analítica Espacial", description = "Análisis de costos y rindes por ambientación con John Deere")
@@ -20,12 +20,12 @@ public class AnaliticaEspacialController {
 
     private final AnaliticaEspacialService analiticaEspacialService;
 
-    @GetMapping("/lotes/{idLote}/costos-ambientacion")
+    @GetMapping("/costos-ambientacion")
     public ResponseEntity<List<CostoAmbientacionDTO>> obtenerCostosPorAmbientacion(@PathVariable UUID idLote) {
         return ResponseEntity.ok(analiticaEspacialService.calcularCostosPorAmbientacion(idLote));
     }
 
-    @PostMapping("/lotes/{idLote}/autogenerar-prueba")
+    @PostMapping("/autogenerar-prueba")
     public ResponseEntity<Void> autogenerarAmbientacionesPrueba(@PathVariable UUID idLote) {
         analiticaEspacialService.autoGenerarAmbientacionesPrueba(idLote);
         return ResponseEntity.ok().build();
