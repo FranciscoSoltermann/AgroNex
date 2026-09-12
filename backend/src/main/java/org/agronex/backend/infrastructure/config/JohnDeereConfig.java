@@ -21,11 +21,22 @@ public class JohnDeereConfig {
     /** Client Secret de la aplicación registrada en developer.deere.com */
     private String clientSecret;
 
+    /** URL para autorización OAuth */
+    private String authUrl = "https://signin.johndeere.com/oauth2/aus78tnlaysMraFhC1t7/v1/authorize";
+
     /** URL para obtener tokens OAuth (client_credentials) */
     private String tokenUrl = "https://signin.johndeere.com/oauth2/aus78tnlaysMraFhC1t7/v1/token";
 
     /** Base URL de la API (sandbox por defecto) */
     private String apiBaseUrl = "https://sandboxapi.deere.com/platform";
+
+    /** Sanitiza apiBaseUrl para evitar dobles barras al concatenar */
+    public String getApiBaseUrl() {
+        if (apiBaseUrl == null || apiBaseUrl.isBlank()) {
+            return "https://sandboxapi.deere.com/platform";
+        }
+        return apiBaseUrl.trim().replaceAll("/+$", "");
+    }
 
     /** Indica si la integración está habilitada (requiere credenciales) */
     public boolean isEnabled() {

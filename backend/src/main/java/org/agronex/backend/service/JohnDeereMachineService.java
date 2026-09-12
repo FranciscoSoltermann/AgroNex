@@ -288,7 +288,7 @@ public class JohnDeereMachineService {
             }
         }
 
-        // 2. Intentar consultar endpoint remoto de JD
+        // 2. Intentar consultar endpoint remoto de JD (breadcrumbs)
         String url = config.getApiBaseUrl() + "/machines/" + machineId + "/breadcrumbs";
         try {
             String rawResponse = executeGet(userId, url);
@@ -298,37 +298,69 @@ public class JohnDeereMachineService {
                     List<Map<String, Object>> values = (List<Map<String, Object>>) response.get("values");
                     if (values != null && !values.isEmpty()) return values;
                 }
+                // Algunos endpoints devuelven el breadcrumb directamente sin "values"
+                if (response.containsKey("location") || response.containsKey("lat")) {
+                    return List.of(response);
+                }
             }
         } catch (Exception e) {
             log.debug("Sin breadcrumbs remotos de JD para máquina {}: {}", machineId, e.getMessage());
         }
 
-        // 3. Telemetría GPS activa para equipos conectados en Sandbox
-        int hash = Math.abs(machineId.hashCode());
-        double offsetLat = ((hash % 80) - 40) * 0.0001;
-        double offsetLon = (((hash / 80) % 80) - 40) * 0.0001;
-        double baseLat = -31.6315 + offsetLat;
-        double baseLon = -60.6985 + offsetLon;
+        // 3. Intentar endpoint alternativo: locationHistory (último registro)
+        String historyUrl = config.getApiBaseUrl() + "/machines/" + machineId + "/locationHistory";
+        try {
+            String historyRaw = executeGet(userId, historyUrl);
+            if (historyRaw != null && !historyRaw.isBlank()) {
+                Map<String, Object> historyResp = objectMapper.readValue(historyRaw, Map.class);
+                List<Map<String, Object>> historyValues = null;
+                if (historyResp.containsKey("values")) {
+                    historyValues = (List<Map<String, Object>>) historyResp.get("values");
+                } else if (historyResp.containsKey("elements")) {
+                    historyValues = (List<Map<String, Object>>) historyResp.get("elements");
+                }
+                if (historyValues != null && !historyValues.isEmpty()) {
+                    // Devolver el último punto de ubicación
+                    return List.of(historyValues.get(historyValues.size() - 1));
+                }
+            }
+        } catch (Exception histEx) {
+            log.debug("Sin locationHistory remotos de JD para máquina {}: {}", machineId, histEx.getMessage());
+        }
 
-        Map<String, Object> fallbackBreadcrumb = Map.of(
-            "eventTime", java.time.Instant.now().toString(),
-            "location", Map.of(
-                "lat", baseLat,
-                "lon", baseLon,
-                "latitude", baseLat,
-                "longitude", baseLon,
-                "altitude", 35.0
-            ),
-            "speed", 12.0 + (hash % 6),
-            "heading", (hash % 360),
-            "fuelLevel", 75 + (hash % 20),
-            "engineHours", 320.0 + (hash % 50),
-            "engineState", "En Operación",
-            "machineState", "En Operación (Trabajando en Lote)",
-            "source", "GPS_ONLINE"
-        );
+        // 4. Solo generar telemetría ficticia en entorno Sandbox (para pruebas)
+        boolean isSandbox = config.getApiBaseUrl().contains("sandboxapi");
+        if (isSandbox) {
+            int hash = Math.abs(machineId.hashCode());
+            double offsetLat = ((hash % 80) - 40) * 0.0001;
+            double offsetLon = (((hash / 80) % 80) - 40) * 0.0001;
+            double baseLat = -31.6315 + offsetLat;
+            double baseLon = -60.6985 + offsetLon;
 
-        return List.of(fallbackBreadcrumb);
+            Map<String, Object> fallbackBreadcrumb = Map.of(
+                "eventTime", java.time.Instant.now().toString(),
+                "location", Map.of(
+                    "lat", baseLat,
+                    "lon", baseLon,
+                    "latitude", baseLat,
+                    "longitude", baseLon,
+                    "altitude", 35.0
+                ),
+                "speed", 12.0 + (hash % 6),
+                "heading", (hash % 360),
+                "fuelLevel", 75 + (hash % 20),
+                "engineHours", 320.0 + (hash % 50),
+                "engineState", "En Operación",
+                "machineState", "En Operación (Trabajando en Lote)",
+                "source", "GPS_ONLINE"
+            );
+
+            return List.of(fallbackBreadcrumb);
+        }
+
+        // 5. En producción: sin datos GPS reales disponibles
+        log.info("Máquina {} sin datos de telemetría GPS disponibles en producción.", machineId);
+        return List.of();
     }
 
     /**
