@@ -60,21 +60,34 @@ public class JohnDeereMachineService {
      */
     private String rewriteUrl(String originalUrl) {
         if (originalUrl == null) return null;
-        String baseUrl = config.getApiBaseUrl(); // e.g. "https://sandboxapi.deere.com/platform"
+        String baseUrl = config.getApiBaseUrl();
 
-        // Reemplazar los hosts conocidos de producción por nuestro host configurado
-        String[] productionHosts = {
+        // Todos los hosts conocidos de John Deere que pueden aparecer en links HATEOAS
+        String[] knownHosts = {
             "https://api.deere.com/platform",
-            "https://partnerapi.deere.com/platform"
+            "https://partnerapi.deere.com/platform",
+            "https://sandboxapi.deere.com/platform",
+            "https://connections.deere.com/platform"
         };
 
-        for (String prodHost : productionHosts) {
-            if (originalUrl.startsWith(prodHost)) {
-                String rewritten = baseUrl + originalUrl.substring(prodHost.length());
+        for (String host : knownHosts) {
+            if (originalUrl.startsWith(host)) {
+                String rewritten = baseUrl + originalUrl.substring(host.length());
                 log.debug("JD URL rewrite: {} -> {}", originalUrl, rewritten);
                 return rewritten;
             }
         }
+
+        // Si la URL ya apunta al host configurado, no necesita reescritura
+        if (originalUrl.startsWith(baseUrl)) {
+            return originalUrl;
+        }
+
+        // Log para detectar hosts desconocidos que podamos agregar
+        if (originalUrl.contains("deere.com")) {
+            log.warn("JD URL con host NO reconocido (sin rewrite): {}", originalUrl);
+        }
+
         return originalUrl;
     }
 
