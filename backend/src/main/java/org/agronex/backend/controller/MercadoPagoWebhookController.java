@@ -59,8 +59,12 @@ public class MercadoPagoWebhookController {
                     .id(id)
                     .build();
 
-            // Publish asynchronously to RabbitMQ
-            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_WEBHOOKS, "mercadopago.webhook.received", message);
+            // Publish asynchronously to RabbitMQ if available, otherwise process synchronously
+            try {
+                rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_WEBHOOKS, "mercadopago.webhook.received", message);
+            } catch (Exception amqpEx) {
+                mercadoPagoWebhookService.procesarEvento(rawBody, xSignature, xRequestId, topic, type, action, dataId, id);
+            }
             
             // Return 200 OK immediately
             return ResponseEntity.ok(Map.of("message", "Webhook encolado para procesamiento"));

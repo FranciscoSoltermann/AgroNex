@@ -15,20 +15,20 @@ function getGranoIcon(slug) {
     const s = slug?.toLowerCase() || "";
     
     const iconContainer = (icon) => (
-        <div className="w-6 h-6 bg-green-50 dark:bg-[#2D6A4F]/10 border border-green-100 dark:border-green-900/20 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors">
+        <div className="w-5 h-5 bg-green-50 dark:bg-[#2D6A4F]/10 border border-green-100 dark:border-green-900/20 rounded-md flex items-center justify-center flex-shrink-0 transition-colors">
             {icon}
         </div>
     );
 
     if (s.includes("soja")) {
-        return iconContainer(<Bean size={13} className="text-[#2D6A4F] dark:text-[#52B788]" />);
+        return iconContainer(<Bean size={11} className="text-[#2D6A4F] dark:text-[#52B788]" />);
     }
     if (s.includes("trigo")) {
-        return iconContainer(<Wheat size={13} className="text-[#2D6A4F] dark:text-[#52B788]" />);
+        return iconContainer(<Wheat size={11} className="text-[#2D6A4F] dark:text-[#52B788]" />);
     }
     if (s.includes("maiz") || s.includes("maíz")) {
         return iconContainer(
-            <svg viewBox="0 0 36 36" fill="none" className="w-4 h-4 text-[#2D6A4F] dark:text-[#52B788] transition-colors">
+            <svg viewBox="0 0 36 36" fill="none" className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#52B788] transition-colors">
                 <path 
                     d="M15.373 1.022C13.71 2.686 8.718 9.34 11.214 15.164c2.495 5.823 5.909 2.239 7.486-2.495.832-2.496.832-5.824-.831-10.815-.832-2.496-2.496-.832-2.496-.832zm19.304 19.304c-1.663 1.663-8.319 6.655-14.142 4.159-5.824-2.496-2.241-5.909 2.495-7.486 2.497-.832 5.823-.833 10.814.832 2.496.831.833 2.495.833 2.495z" 
                     fill="currentColor" fillOpacity="0.08" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" 
@@ -49,11 +49,11 @@ function getGranoIcon(slug) {
         );
     }
     if (s.includes("girasol")) {
-        return iconContainer(<Flower2 size={13} className="text-[#2D6A4F] dark:text-[#52B788]" />);
+        return iconContainer(<Flower2 size={11} className="text-[#2D6A4F] dark:text-[#52B788]" />);
     }
     if (s.includes("sorgo")) {
         return iconContainer(
-            <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5 text-[#2D6A4F] dark:text-[#52B788]">
+            <svg viewBox="0 0 24 24" fill="none" className="w-3 h-3 text-[#2D6A4F] dark:text-[#52B788]">
                 <path d="M12 22V10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                 <path d="M12 16C10 15 8 14 7 12" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
                 <path d="M12 13C14 12 16 11 17 9.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
@@ -71,7 +71,7 @@ function getGranoIcon(slug) {
         );
     }
     
-    return iconContainer(<Sprout size={13} className="text-[#2D6A4F] dark:text-[#52B788]" />);
+    return iconContainer(<Sprout size={11} className="text-[#2D6A4F] dark:text-[#52B788]" />);
 }
 
 /**
@@ -136,47 +136,47 @@ export default function CotizacionesPizarraBCR() {
     const displayUnit = currency === "USD" ? "USD/Tn" : "ARS/Tn";
 
     return (
-        <div className="bg-white dark:bg-[#1a1f25] rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col h-full">
+        <div className="bg-white dark:bg-[#1a1f25] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="px-3 pt-3 pb-1.5 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between shrink-0">
-                <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 bg-green-50 dark:bg-[#2D6A4F]/20 rounded-xl flex items-center justify-center border border-green-100 dark:border-green-900/30 shrink-0">
-                        <BarChart3 size={16} className="text-[#2D6A4F] dark:text-[#52B788]" />
+            <div className="px-3 pt-2 pb-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-6 h-6 bg-green-50 dark:bg-[#2D6A4F]/20 rounded-lg flex items-center justify-center border border-green-100 dark:border-green-900/30 shrink-0">
+                        <BarChart3 size={13} className="text-[#2D6A4F] dark:text-[#52B788]" />
                     </div>
                     <div className="min-w-0">
-                        <h3 className="text-[14px] font-bold text-gray-900 dark:text-gray-100 leading-tight">
+                        <h3 className="text-[13px] font-bold text-gray-900 dark:text-gray-100 leading-tight">
                             Precios de Pizarra
                         </h3>
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate">
+                        <p className="text-[9.5px] text-gray-400 dark:text-gray-500 font-medium truncate">
                             {data?.source || "Cámara Arbitral de Cereales (CAC) — BCR"} · {data?.fecha || "—"}
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 self-start sm:self-auto">
+                <div className="flex items-center gap-1.5 self-start sm:self-auto">
                     {data?.apiConfigured === false && (
-                        <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[9px] font-bold border border-amber-100 dark:border-amber-800">
-                            <AlertCircle size={9} /> Ref.
+                        <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 text-[8.5px] font-bold border border-amber-100 dark:border-amber-800">
+                            <AlertCircle size={8.5} /> Ref.
                         </span>
                     )}
                     <button
                         onClick={() => refetch()}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-all cursor-pointer"
+                        className="flex items-center gap-1 px-2 py-1 rounded-md text-[9.5px] font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-all cursor-pointer"
                     >
-                        <RefreshCw size={11} /> Actualizar
+                        <RefreshCw size={10} /> Actualizar
                     </button>
                     <a
                         href="https://www.cac.bcr.com.ar/es/precios-de-pizarra"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold text-[#2D6A4F] hover:text-white bg-green-50 dark:bg-green-900/20 hover:bg-[#2D6A4F] border border-green-200 dark:border-green-800 transition-all"
+                        className="flex items-center gap-1 px-2 py-1 rounded-md text-[9.5px] font-bold text-[#2D6A4F] hover:text-white bg-green-50 dark:bg-green-900/20 hover:bg-[#2D6A4F] border border-green-200 dark:border-green-800 transition-all"
                     >
-                        <ExternalLink size={11} /> CAC
+                        <ExternalLink size={10} /> CAC
                     </a>
                 </div>
             </div>
 
             {/* Grain Cards */}
-            <div className="px-3 pb-3 flex-1 min-h-0 overflow-hidden flex flex-col">
+            <div className="px-3 pb-2 flex-1 min-h-0 overflow-hidden flex flex-col">
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 flex-1 min-h-0">
                     {cotizaciones.map((grano) => (
                         <GranoCard
@@ -192,7 +192,7 @@ export default function CotizacionesPizarraBCR() {
 
                 {/* Disclaimer */}
                 {data?.disclaimer && (
-                    <p className="mt-2 text-[9px] text-gray-400 dark:text-gray-600 text-center font-medium lg:hidden">
+                    <p className="mt-1 text-[8.5px] text-gray-400 dark:text-gray-600 text-center font-medium lg:hidden">
                         {data.disclaimer}
                     </p>
                 )}
@@ -258,43 +258,43 @@ function GranoCard({ grano, currency, symbol, convertCurrency, displayUnit }) {
     };
 
     return (
-        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2 border border-gray-100 dark:border-gray-700/50 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 transition-all group flex flex-col h-full justify-between">
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-1.5 sm:p-2 border border-gray-100 dark:border-gray-700/50 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 transition-all group flex flex-col h-full justify-between">
             {/* Header: Icon + Name */}
-            <div className="flex items-center gap-2 mb-1.5 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1 min-w-0">
                 {getGranoIcon(grano.slug || grano.nombre)}
-                <span className="text-[11px] font-black text-gray-900 dark:text-gray-100 leading-tight truncate">
+                <span className="text-[10px] sm:text-[10.5px] font-black text-gray-900 dark:text-gray-100 leading-tight truncate">
                     {grano.nombre}
                 </span>
             </div>
 
             {/* Price */}
             <div className="mb-0.5">
-                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-wider">Cierre</p>
-                <p className="text-[13px] font-black text-gray-900 dark:text-gray-100 leading-tight tabular-nums">
+                <p className="text-[7.5px] font-bold text-gray-400 uppercase tracking-wider">Cierre</p>
+                <p className="text-[11.5px] sm:text-[12px] font-black text-gray-900 dark:text-gray-100 leading-tight tabular-nums">
                     {formatPrice(grano.cierre || grano.venta)}
                 </p>
             </div>
 
             {/* Compra/Venta */}
-            <div className="flex gap-2 mb-1">
+            <div className="flex gap-1.5 mb-0.5">
                 <div className="flex-1">
-                    <p className="text-[8px] font-bold text-gray-400 uppercase">Compra</p>
-                    <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">
+                    <p className="text-[7px] font-bold text-gray-400 uppercase">Compra</p>
+                    <p className="text-[9px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">
                         {formatPriceDetail(grano.compra)}
                     </p>
                 </div>
                 <div className="flex-1">
-                    <p className="text-[8px] font-bold text-gray-400 uppercase">Venta</p>
-                    <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">
+                    <p className="text-[7px] font-bold text-gray-400 uppercase">Venta</p>
+                    <p className="text-[9px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">
                         {formatPriceDetail(grano.venta)}
                     </p>
                 </div>
             </div>
 
             {/* Variation Badge */}
-            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-lg border ${varBg}`}>
-                <VarIcon size={10} className={varColor} />
-                <span className={`text-[9px] font-black ${varColor}`}>
+            <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded border ${varBg}`}>
+                <VarIcon size={9} className={varColor} />
+                <span className={`text-[8.5px] font-black ${varColor}`}>
                     {isPositive ? "+" : ""}{variacion.toFixed(1)}%
                 </span>
             </div>

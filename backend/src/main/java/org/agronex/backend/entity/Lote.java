@@ -13,7 +13,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "lote")
+@Table(name = "lote", indexes = {
+    @Index(name = "idx_lote_campo", columnList = "id_campo")
+})
 @SQLDelete(sql = "UPDATE lote SET eliminado_en = CURRENT_TIMESTAMP WHERE id_lote = ?")
 @SQLRestriction("eliminado_en IS NULL")
 @Getter @Setter
@@ -47,6 +49,11 @@ public class Lote extends Auditable {
     @JsonIgnore
     @OneToMany(mappedBy = "lote", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<CampaniaLote> campaniaLotes = new ArrayList<>();
+
+    @Builder.Default
+    @JsonIgnore
+    @OneToMany(mappedBy = "lote", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Ambientacion> ambientaciones = new ArrayList<>();
 
     // --- Helpers ---
     /** Retorna las campañas asociadas a este lote. */

@@ -1,6 +1,5 @@
 package org.agronex.backend.service;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.agronex.backend.dto.request.ActividadRequest;
 import org.agronex.backend.dto.request.DetalleInsumoRequest;
 import org.agronex.backend.dto.response.ActividadResponse;

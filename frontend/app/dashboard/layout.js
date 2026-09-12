@@ -144,7 +144,7 @@ export default function DashboardLayout({ children }) {
     };
 
     const baseNavItems = [
-        { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
+        { name: "General", path: "/dashboard", icon: <LayoutDashboard size={18} /> },
         { name: "Campos/Lotes", path: "/dashboard/campos", icon: <Map size={18} />, permission: "LECTURA_CAMPOS" },
         { name: "Campañas", path: "/dashboard/lotes", icon: <RefreshCw size={18} />, permission: "LECTURA_CAMPOS" },
         { name: "Pronósticos", path: "/dashboard/clima", icon: <Cloud size={18} />, permission: "LECTURA_CAMPOS" },
@@ -322,8 +322,8 @@ export default function DashboardLayout({ children }) {
                     </header>
 
                     {/* Página: scroll + ancho máximo en pantallas muy anchas */}
-                    <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain dark:bg-[#0f1419] pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:pt-2 sm:pb-2 lg:px-8 xl:px-10">
-                        <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto min-h-0 h-full">
+                    <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain dark:bg-[#0f1419] pt-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] px-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:px-6 sm:pt-2 sm:pb-2 lg:px-8 xl:px-10 flex flex-col">
+                        <div className="w-full max-w-[1600px] 2xl:max-w-[1920px] mx-auto min-h-0 flex-1 flex flex-col">
                             <InvitacionesBanner />
                             {children}
                         </div>

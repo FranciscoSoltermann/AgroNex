@@ -1,7 +1,6 @@
 package org.agronex.backend.controller;
 
 import org.agronex.backend.dto.request.AsignarEmpleadoRequest;
-import org.agronex.backend.dto.request.UsuarioSettingsUpdateRequest;
 import org.agronex.backend.dto.response.UsuarioSettingsResponse;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.agronex.backend.service.UsuarioService;

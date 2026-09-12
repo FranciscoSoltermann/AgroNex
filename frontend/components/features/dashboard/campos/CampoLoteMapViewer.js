@@ -1,7 +1,10 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
-import * as L from 'leaflet';
+import dynamic from 'next/dynamic';
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const GeoJSON = dynamic(() => import('react-leaflet').then(mod => mod.GeoJSON), { ssr: false });
+import { useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Maximize2, Minimize2, Layers, MapPin, X, ChevronRight, Check } from 'lucide-react';
 
@@ -31,6 +34,7 @@ function MapController({ lotes, center, selectedLoteId, isFullscreen }) {
             const lote = lotes.find(l => l.idLote === selectedLoteId);
             if (lote && lote.coordenadasGeoJson) {
                 try {
+                    const L = require('leaflet');
                     const geo = typeof lote.coordenadasGeoJson === 'string'
                         ? JSON.parse(lote.coordenadasGeoJson)
                         : lote.coordenadasGeoJson;
@@ -56,6 +60,7 @@ function MapController({ lotes, center, selectedLoteId, isFullscreen }) {
         lotes.forEach(lote => {
             if (!lote.coordenadasGeoJson) return;
             try {
+                const L = require('leaflet');
                 const geo = typeof lote.coordenadasGeoJson === 'string'
                     ? JSON.parse(lote.coordenadasGeoJson)
                     : lote.coordenadasGeoJson;
@@ -97,6 +102,7 @@ export default function CampoLoteMapViewer({
     const [showLotesDrawer, setShowLotesDrawer] = useState(true);
 
     useEffect(() => {
+        const L = require('leaflet');
         delete L.Icon.Default.prototype._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',

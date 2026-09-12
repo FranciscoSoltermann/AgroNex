@@ -13,6 +13,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "campania_lote", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"id_campania", "id_lote"})
+}, indexes = {
+        @Index(name = "idx_campania_lote_campania", columnList = "id_campania"),
+        @Index(name = "idx_campania_lote_lote", columnList = "id_lote")
 })
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor

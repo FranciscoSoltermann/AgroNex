@@ -4,6 +4,7 @@ import org.agronex.backend.entity.Campania;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,6 +15,7 @@ public interface CampaniaRepository extends JpaRepository<Campania, UUID> {
     List<Campania> findByLoteIdLote(@Param("idLote") UUID idLote);
 
     /** Campañas del usuario (a través de lote → campo → usuario). */
+    @EntityGraph(attributePaths = {"campaniaLotes", "campaniaLotes.lote", "campaniaLotes.lote.campo"})
     @Query("SELECT DISTINCT c FROM Campania c JOIN c.campaniaLotes cl WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
     List<Campania> findByUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario);
 }

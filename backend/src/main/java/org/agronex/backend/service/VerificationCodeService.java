@@ -3,6 +3,7 @@ package org.agronex.backend.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Async;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -33,6 +34,7 @@ public class VerificationCodeService {
     /**
      * Genera un código de 6 dígitos, lo almacena por 15 minutos y lo envía al correo indicado.
      */
+    @Async
     public void generarYEnviarCodigo(String email) {
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("El correo electrónico es requerido.");

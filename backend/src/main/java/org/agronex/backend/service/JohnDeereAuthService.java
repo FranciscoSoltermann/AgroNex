@@ -107,7 +107,7 @@ public class JohnDeereAuthService {
         } catch (java.io.UnsupportedEncodingException e) {
             log.error("Error encoding redirect URI", e);
         }
-        return AUTHORIZE_URL
+        return config.getAuthUrl()
                 + "?client_id=" + config.getClientId()
                 + "&response_type=code"
                 + "&scope=" + USER_SCOPES.replace(" ", "%20")

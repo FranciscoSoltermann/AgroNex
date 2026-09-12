@@ -46,8 +46,12 @@ class AgromonitoringServiceTest {
         String geoJson = "{\"type\":\"Polygon\",\"coordinates\":[[[0,0],[0,1],[1,1],[1,0],[0,0]]]}";
         Map<String, Object> body = Map.of("id", "poly-abc-123");
 
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.POST), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
-                .thenReturn(ResponseEntity.ok(body));
+        when(restTemplate.exchange(
+                anyString(),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                org.mockito.ArgumentMatchers.<ParameterizedTypeReference<Map<String, Object>>>any()
+        )).thenReturn(new ResponseEntity<>(body, org.springframework.http.HttpStatus.OK));
 
         String polyId = agromonitoringService.registrarPoligono("Lote 1", geoJson);
 

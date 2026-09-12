@@ -1,0 +1,155 @@
+﻿"use client";
+
+import React, { useState, memo } from "react";
+import SelectorUbicacion from "@/components/features/dashboard/campos/SelectorUbicacion";
+import apiClient from "@/lib/api-client";
+import { toast } from "sonner";
+import { Loader2, X } from "lucide-react";
+
+const INPUT_CLASS = "w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-xs text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-[#2D6A4F] focus:ring-1 focus:ring-[#2D6A4F] transition-all";
+
+function FormField({ label, required, children }) {
+    return (
+        <div>
+            <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
+            {children}
+        </div>
+    );
+}
+
+function ModalEditarCampo({ editingCampo, onClose, onUpdated }) {
+    const [formEditCampo, setFormEditCampo] = useState({
+        nombre: editingCampo?.nombre || "",
+        ubicacion: editingCampo?.ubicacion || "",
+        superficieTotal: editingCampo?.superficieTotal || "",
+        latitud: editingCampo?.latitud || null,
+        longitud: editingCampo?.longitud || null
+    });
+    const [submitLoading, setSubmitLoading] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSubmitLoading(true);
+        setSubmitError(null);
+
+        try {
+            const payload = {
+                nombre: formEditCampo.nombre.trim(),
+                ubicacion: formEditCampo.ubicacion?.trim() || null,
+                superficieTotal: formEditCampo.superficieTotal ? parseFloat(formEditCampo.superficieTotal) : null,
+                latitud: formEditCampo.latitud ? parseFloat(formEditCampo.latitud) : null,
+                longitud: formEditCampo.longitud ? parseFloat(formEditCampo.longitud) : null
+            };
+
+            await apiClient.put(`/campos/${editingCampo.idCampo}`, payload);
+            toast.success("Campo actualizado exitosamente");
+            onUpdated?.();
+            onClose();
+        } catch (err) {
+            const msg = err?.response?.data?.message || err?.message || "Error al actualizar campo";
+            setSubmitError(msg);
+            toast.error(msg);
+        } finally {
+            setSubmitLoading(false);
+        }
+    };
+
+    if (!editingCampo) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="bg-white dark:bg-[#1a1f25] rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+                <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <h3 className="text-sm font-black text-gray-900 dark:text-gray-100 tracking-tight">
+                        Editar Campo: {editingCampo.nombre}
+                    </h3>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                    <FormField label="Nombre del campo" required>
+                        <input
+                            type="text"
+                            required
+                            value={formEditCampo.nombre}
+                            onChange={e => setFormEditCampo(p => ({ ...p, nombre: e.target.value }))}
+                            className={INPUT_CLASS}
+                            placeholder="ej. Sunset Ridge"
+                        />
+                    </FormField>
+
+                    <FormField label="Referencia de ubicación">
+                        <SelectorUbicacion
+                            initialValue={formEditCampo.ubicacion}
+                            onSelect={(data) => {
+                                setFormEditCampo(p => ({
+                                    ...p,
+                                    ubicacion: data.nombre,
+                                    latitud: data.lat,
+                                    longitud: data.lon
+                                }));
+                            }}
+                        />
+                        {formEditCampo.latitud && (
+                            <div className="flex items-center gap-1 mt-2 text-green-600">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Coordenadas Vinculadas</span>
+                            </div>
+                        )}
+                    </FormField>
+
+                    <FormField label="Superficie total (Ha)" required>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0.01"
+                                required
+                                value={formEditCampo.superficieTotal}
+                                onChange={e => setFormEditCampo(p => ({ ...p, superficieTotal: e.target.value }))}
+                                className={`${INPUT_CLASS} pr-10`}
+                                placeholder="0.00"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-gray-400 font-bold">Ha</span>
+                        </div>
+                    </FormField>
+
+                    {submitError && (
+                        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl text-xs text-red-600 dark:text-red-400 font-medium">
+                            {submitError}
+                        </div>
+                    )}
+
+                    <div className="pt-2 flex gap-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={submitLoading}
+                            className="flex-1 py-2.5 bg-[#2D6A4F] hover:bg-[#1B4332] text-white rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                        >
+                            {submitLoading && <Loader2 size={13} className="animate-spin" />}
+                            <span>{submitLoading ? "Guardando..." : "Guardar Cambios"}</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+export default memo(ModalEditarCampo);
