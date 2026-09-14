@@ -54,6 +54,9 @@ public class CampaniaService {
         for (CampaniaLoteRequest lr : lotesReq) {
             Lote lote = lotesMap.get(lr.getIdLote());
             if (lote == null) {
+                lote = loteRepository.findById(lr.getIdLote()).orElse(null);
+            }
+            if (lote == null) {
                 throw new EntityNotFoundException("Lote no encontrado: " + lr.getIdLote());
             }
             if (!lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
@@ -176,6 +179,9 @@ public class CampaniaService {
         List<Lote> lotesEditValidados = new ArrayList<>();
         for (CampaniaLoteRequest lr : lotesReq) {
             Lote lote = lotesEditMap.get(lr.getIdLote());
+            if (lote == null) {
+                lote = loteRepository.findById(lr.getIdLote()).orElse(null);
+            }
             if (lote == null) {
                 throw new EntityNotFoundException("Lote no encontrado: " + lr.getIdLote());
             }

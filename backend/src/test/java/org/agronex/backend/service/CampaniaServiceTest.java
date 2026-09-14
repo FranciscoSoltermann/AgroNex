@@ -85,6 +85,7 @@ class CampaniaServiceTest {
         Campania camp = Campania.builder().idCampania(UUID.randomUUID()).cultivo("Trigo").build();
 
         when(usuarioService.idUsuarioParaAccesoDatos(userId)).thenReturn(userId);
+        when(loteRepository.findAllById(any())).thenReturn(List.of(lote));
         when(loteRepository.findById(lote.getIdLote())).thenReturn(Optional.of(lote));
         when(campaniaRepository.save(any(Campania.class))).thenReturn(camp);
         when(campaniaMapper.toResponse(any())).thenReturn(CampaniaResponse.builder().idCampania(camp.getIdCampania()).build());
