@@ -17,10 +17,10 @@ const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
-        {
-            protocol: 'https',
-            hostname: '**',
-        },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
     ],
   },
   async rewrites() {

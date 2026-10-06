@@ -57,8 +57,15 @@ export async function proxy(request) {
     },
   });
 
+  const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard");
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.warn("⚠️ [AgroNex] NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY no están definidos.");
+    console.error("❌ [AgroNex] NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY no están definidos.");
+    if (isProtectedRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
     return response;
   }
 
@@ -99,8 +106,6 @@ export async function proxy(request) {
   if (process.env.NODE_ENV === "development" && request.cookies.get("playwright-bypass")?.value === "true") {
     user = { id: "mock-user-123" };
   }
-
-  const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard");
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();

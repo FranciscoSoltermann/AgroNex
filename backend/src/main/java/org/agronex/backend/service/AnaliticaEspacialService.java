@@ -17,6 +17,9 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -24,15 +27,21 @@ public class AnaliticaEspacialService {
 
     private final AmbientacionRepository ambientacionRepository;
     private final LoteRepository loteRepository;
+    private final UsuarioService usuarioService;
 
     /**
      * Calcula los costos cruzados por ambientación simulando la lectura de Mapas
-     * de Aplicación de John Deere.
+     * de Aplicación de John Deere, validando que el lote pertenezca al usuario.
      */
     @Transactional(readOnly = true)
-    public List<CostoAmbientacionDTO> calcularCostosPorAmbientacion(UUID idLote) {
-        if (!loteRepository.existsById(idLote)) {
-            throw new RuntimeException("Lote no encontrado");
+    public List<CostoAmbientacionDTO> calcularCostosPorAmbientacion(UUID idLote, UUID idUsuarioToken) {
+        Lote lote = loteRepository.findById(idLote)
+                .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        if (lote.getCampo() == null || lote.getCampo().getUsuario() == null ||
+                !lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tenés permiso para acceder a este lote");
         }
 
         List<Ambientacion> ambientaciones = ambientacionRepository.findByLote_IdLote(idLote);
@@ -109,9 +118,15 @@ public class AnaliticaEspacialService {
      * En producción, esto se dibujaría en el frontend o se importaría de un shapefile.
      */
     @Transactional
-    public List<Ambientacion> autoGenerarAmbientacionesPrueba(UUID idLote) {
+    public List<Ambientacion> autoGenerarAmbientacionesPrueba(UUID idLote, UUID idUsuarioToken) {
         Lote lote = loteRepository.findById(idLote)
-                .orElseThrow(() -> new RuntimeException("Lote no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Lote no encontrado"));
+
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+        if (lote.getCampo() == null || lote.getCampo().getUsuario() == null ||
+                !lote.getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tenés permiso para modificar este lote");
+        }
 
         List<Ambientacion> existentes = ambientacionRepository.findByLote_IdLote(idLote);
         if (!existentes.isEmpty()) return existentes;

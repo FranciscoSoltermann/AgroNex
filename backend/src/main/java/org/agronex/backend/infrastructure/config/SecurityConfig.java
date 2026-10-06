@@ -26,6 +26,9 @@ import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import java.util.Set;
 
 import java.util.Arrays;
@@ -115,9 +118,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/public/**", "/public/**").permitAll()
 
                 // Health Checks de Actuator permitidos para sondas Liveness/Readiness
-                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
 
-                // Resto de Actuator (Prometheus, etc.) requiere ROLE_ADMIN
+                // Resto de Actuator (Prometheus, metrics, etc.) requiere ROLE_ADMIN
                 .requestMatchers("/actuator/**").hasAuthority("ROLE_ADMIN")
 
                 // VUL-M01: Swagger/OpenAPI requiere ROLE_ADMIN (no exponer la API a usuarios anónimos)
@@ -197,6 +200,9 @@ public class SecurityConfig {
         return source;
     }
 
+    @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri:${SUPABASE_ISSUER_URI:https://qgokssagrwpsfryhczug.supabase.co/auth/v1}}")
+    private String issuerUri;
+
     @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri:${SUPABASE_JWK_SET_URI:https://qgokssagrwpsfryhczug.supabase.co/auth/v1/.well-known/jwks.json}}")
     private String jwkSetUri;
 
@@ -209,7 +215,12 @@ public class SecurityConfig {
             JWSKeySelector<SecurityContext> keySelector = new JWSVerificationKeySelector<>(
                     Set.of(JWSAlgorithm.ES256, JWSAlgorithm.RS256), jwkSource);
             jwtProcessor.setJWSKeySelector(keySelector);
-            return new NimbusJwtDecoder(jwtProcessor);
+            NimbusJwtDecoder decoder = new NimbusJwtDecoder(jwtProcessor);
+            if (issuerUri != null && !issuerUri.isBlank()) {
+                OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
+                decoder.setJwtValidator(withIssuer);
+            }
+            return decoder;
         } catch (Exception e) {
             throw new IllegalStateException("Error al inicializar JwtDecoder con JWK Set dinámico (" + jwkSetUri + ")", e);
         }

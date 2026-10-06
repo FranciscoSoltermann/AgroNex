@@ -30,7 +30,7 @@ public class ClimaController {
     private final ClimaService climaService;
     private final UsuarioService usuarioService;
 
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     @PostMapping
     public ResponseEntity<RegistroClimaResponse> registrarClima(
             @Valid @RequestBody RegistroClimaRequest request,
@@ -57,7 +57,7 @@ public class ClimaController {
         return ResponseEntity.ok(climaService.calcularResumenClimaCampania(idCampania, idUsuario));
     }
 
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     @PutMapping("/{idRegistro}")
     public ResponseEntity<RegistroClimaResponse> actualizarRegistro(
             @PathVariable UUID idRegistro,
@@ -68,7 +68,7 @@ public class ClimaController {
                 idRegistro, body.getPrecipitacionesMm(), body.getTempMin(), body.getTempMax(), idUsuario));
     }
 
-    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_LECTURA_CAMPOS')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO', 'PERMISO_EDICION_CAMPOS')")
     @DeleteMapping("/{idRegistro}")
     public ResponseEntity<Void> eliminarRegistro(
             @PathVariable UUID idRegistro,

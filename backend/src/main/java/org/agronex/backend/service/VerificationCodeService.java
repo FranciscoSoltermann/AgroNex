@@ -24,10 +24,12 @@ public class VerificationCodeService {
     private static class CodeEntry {
         final String code;
         final LocalDateTime expiresAt;
+        int intentosRestantes;
 
         CodeEntry(String code, LocalDateTime expiresAt) {
             this.code = code;
             this.expiresAt = expiresAt;
+            this.intentosRestantes = 5;
         }
     }
 
@@ -46,13 +48,13 @@ public class VerificationCodeService {
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(15);
 
         codesMap.put(emailClean, new CodeEntry(code, expiresAt));
-        log.info("📧 Código de verificación generado para: {} -> CÓDIGO (SOLO DEV): {}", emailClean, code);
+        log.info("📧 Código de verificación generado y enviado para: {}", emailClean);
 
         mailService.enviarCodigoVerificacion(emailClean, code);
     }
 
     /**
-     * Valida el código de verificación ingresado por el usuario.
+     * Valida el código de verificación ingresado por el usuario con límite de intentos.
      */
     public boolean verificarCodigo(String email, String codigoIngresado) {
         if (email == null || codigoIngresado == null) {
@@ -72,7 +74,13 @@ public class VerificationCodeService {
         }
 
         if (!entry.code.equals(codeClean)) {
-            throw new IllegalArgumentException("El código de verificación ingresado es incorrecto.");
+            entry.intentosRestantes--;
+            if (entry.intentosRestantes <= 0) {
+                codesMap.remove(emailClean);
+                log.warn("⚠️ Código de verificación para {} invalidado por superar el límite de intentos fallidos.", emailClean);
+                throw new IllegalArgumentException("Demasiados intentos fallidos. El código ha sido invalidado por seguridad. Solicita uno nuevo.");
+            }
+            throw new IllegalArgumentException(String.format("El código de verificación ingresado es incorrecto. Intentos restantes: %d", entry.intentosRestantes));
         }
 
         // Si es válido, removemos el código para evitar reúso

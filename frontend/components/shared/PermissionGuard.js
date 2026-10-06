@@ -34,8 +34,10 @@ export default function PermissionGuard({ requiredPermission, requiredRole, chil
                 }
                 setAuthorized(true);
             } catch (err) {
-                console.warn("Error validando permisos:", err);
-                setAuthorized(true); // Fallback: let backend API return 403
+                console.error("Error validando permisos:", err);
+                toast.error("No se pudieron verificar los permisos de acceso.");
+                setAuthorized(false);
+                router.replace("/dashboard");
             } finally {
                 setLoading(false);
             }

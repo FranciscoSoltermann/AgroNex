@@ -1,7 +1,7 @@
 # ==========================================
 # ETAPA 1: BUILDER (Compilación y optimización)
 # ==========================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Instalar dependencias necesarias para algunos módulos nativos
@@ -25,7 +25,7 @@ RUN npm run build
 # ==========================================
 # ETAPA 2: RUNNER (Imagen liviana de producción)
 # ==========================================
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV production

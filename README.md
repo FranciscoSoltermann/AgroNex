@@ -15,13 +15,14 @@ Agronex es una solución de software diseñada para optimizar la gestión operat
 
 ## Stack Tecnológico
 
-- **Lenguaje:** Java 21 (LTS)
-- **Framework:** Spring Boot 3.x
-- **Persistencia:** Spring Data JPA + Hibernate
-- **Base de Datos:** PostgreSQL (Alojada en Supabase)
-- **Seguridad:** Spring Security + OAuth2 Resource Server (JWT)
-- **Documentación:** Swagger / OpenAPI 3
-- **Gestión de Entorno:** Dotenv para la protección de secretos (.env)
+- **Backend:** Java 21 (LTS), Spring Boot, Spring Security (OAuth2 Resource Server con JWKS dinámico)
+- **Frontend:** Next.js 16 (App Router), React 19, Tailwind CSS 4, TanStack React Query
+- **Persistencia:** PostgreSQL (Supabase) con políticas RLS endurecidas y migraciones versionadas
+- **Caché y Límites:** Redis distribuido con fallback local (Bucket4j)
+- **Mensajería:** RabbitMQ (TopicExchange) para procesamiento asíncrono de eventos
+- **Integraciones:** John Deere Operations Center API, Mercado Pago Webhooks (HMAC), Agromonitoring, Cotizaciones BCR
+- **Monitoreo & Métricas:** Actuator, Micrometer, Prometheus y Grafana
+- **Documentación API:** Swagger / OpenAPI 3 (SpringDoc)
 
 ## Arquitectura del Sistema
 

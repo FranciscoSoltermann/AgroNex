@@ -35,8 +35,24 @@ class VerificationCodeServiceTest {
     }
 
     @Test
-    @DisplayName("verificarCodigo - Falla si no se solicitó código")
-    void verificarCodigo_sinCodigoPrevio_lanzaError() {
-        assertThrows(IllegalArgumentException.class, () -> verificationCodeService.verificarCodigo("nadie@agro.com", "123456"));
+    @DisplayName("verificarCodigo - Falla y se bloquea tras superar el límite de intentos")
+    void verificarCodigo_superaIntentos_invalidaCodigo() {
+        String email = "lockout@agro.com";
+        verificationCodeService.generarYEnviarCodigo(email);
+
+        // 4 intentos fallidos
+        for (int i = 0; i < 4; i++) {
+            assertThrows(IllegalArgumentException.class, () -> verificationCodeService.verificarCodigo(email, "999999"));
+        }
+
+        // El 5to intento fallido debe invalidar el código
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, 
+            () -> verificationCodeService.verificarCodigo(email, "999999"));
+        assertTrue(ex.getMessage().contains("Demasiados intentos fallidos"));
+
+        // El 6to intento ya no encuentra código activo
+        IllegalArgumentException exFinal = assertThrows(IllegalArgumentException.class, 
+            () -> verificationCodeService.verificarCodigo(email, "999999"));
+        assertTrue(exFinal.getMessage().contains("No hay ningún código de verificación activo"));
     }
 }
