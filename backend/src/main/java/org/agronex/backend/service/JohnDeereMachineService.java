@@ -34,6 +34,8 @@ public class JohnDeereMachineService {
     private final RestClient restClient = RestClient.create();
 
     private static final String ACCEPT_HEADER = "application/vnd.deere.axiom.v3+json";
+    private static final int MAX_SIMULATED_MACHINES = 1000;
+    private static final int MAX_SIMULATED_USERS = 1000;
     private final Map<UUID, List<Map<String, Object>>> simulatedMachinesByUser = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
@@ -132,6 +134,9 @@ public class JohnDeereMachineService {
      * Si el reintento o el refresh fallan, desconecta al usuario en BD (autocleanup) y lanza una excepción limpia.
      */
     private String executeGet(UUID userId, String url) {
+        if (url == null || !url.startsWith(config.getApiBaseUrl())) {
+            throw new IllegalArgumentException("URL externa no permitida: " + url);
+        }
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
         String token = authService.getUserAccessToken(idDatos);
 
@@ -1322,7 +1327,19 @@ public class JohnDeereMachineService {
 
             simMachine.put("breadcrumbs", breadcrumb);
 
-            simulatedMachinesByUser.computeIfAbsent(userId, k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(0, simMachine);
+            if (simulatedMachinesByUser.size() >= MAX_SIMULATED_USERS && !simulatedMachinesByUser.containsKey(userId)) {
+                var it = simulatedMachinesByUser.keySet().iterator();
+                if (it.hasNext()) {
+                    it.next();
+                    it.remove();
+                }
+            }
+
+            List<Map<String, Object>> userMachines = simulatedMachinesByUser.computeIfAbsent(userId, k -> new java.util.concurrent.CopyOnWriteArrayList<>());
+            userMachines.add(0, simMachine);
+            while (userMachines.size() > MAX_SIMULATED_MACHINES) {
+                userMachines.remove(userMachines.size() - 1);
+            }
 
             pw.println("=======================================================");
             pw.flush();

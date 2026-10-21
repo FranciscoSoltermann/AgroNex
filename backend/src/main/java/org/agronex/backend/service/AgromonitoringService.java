@@ -113,7 +113,8 @@ public class AgromonitoringService {
 
     /** Fallback para registrarPoligono cuando Agromonitoring falla */
     public String fallbackRegistrarPoligono(String name, String geoJson, Throwable t) {
-        log.warn("CircuitBreaker ABIERTO o error al llamar a Agromonitoring. Fallback ejecutado para '{}'. Razón: {}", name, t.getMessage());
+        String errorDetail = (t != null) ? (t.getClass().getSimpleName() + ": " + (t.getMessage() != null ? t.getMessage() : "sin mensaje")) : "Causa desconocida";
+        log.warn("CircuitBreaker ABIERTO o error al llamar a Agromonitoring. Fallback ejecutado para '{}'. Detalle del error: {}", name, errorDetail, t);
         // En producción podríamos guardar el evento en una cola para reintentos asíncronos.
         // Aquí devolvemos null para que el sistema superior maneje la falla grácilmente.
         return null;

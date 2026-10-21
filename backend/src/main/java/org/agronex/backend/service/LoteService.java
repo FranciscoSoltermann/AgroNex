@@ -68,6 +68,9 @@ public class LoteService {
             String polyId = agromonitoringService.registrarPoligono(nuevoLote.getNombre(), request.getCoordenadasGeoJson());
             if (polyId != null) {
                 nuevoLote.setIdPoligonoAgro(polyId);
+            } else {
+                // Estado de integración con Agromonitoring: PENDING (pendiente de sincronización)
+                log.warn("La integración con Agromonitoring falló para el lote '{}'. El lote se guardó sin idPoligonoAgro (estado: PENDING).", nuevoLote.getNombre());
             }
         }
 
@@ -132,6 +135,9 @@ public class LoteService {
             String polyId = agromonitoringService.registrarPoligono(lote.getNombre(), coordenadasGeoJson);
             if (polyId != null) {
                 lote.setIdPoligonoAgro(polyId);
+            } else {
+                // Estado de integración con Agromonitoring: PENDING (pendiente de sincronización)
+                log.warn("La integración con Agromonitoring falló al actualizar polígono del lote '{}' (id: {}). Se guardó sin nuevo idPoligonoAgro (estado: PENDING).", lote.getNombre(), lote.getIdLote());
             }
         }
         lote.setCoordenadasGeoJson(coordenadasGeoJson);
@@ -183,6 +189,9 @@ public class LoteService {
             String polyId = agromonitoringService.registrarPoligono(lote.getNombre(), request.getCoordenadasGeoJson());
             if (polyId != null) {
                 lote.setIdPoligonoAgro(polyId);
+            } else {
+                // Estado de integración con Agromonitoring: PENDING (pendiente de sincronización)
+                log.warn("La integración con Agromonitoring falló al actualizar coordenadas del lote '{}' (id: {}). Se guardó sin nuevo idPoligonoAgro (estado: PENDING).", lote.getNombre(), lote.getIdLote());
             }
         }
 
@@ -203,6 +212,11 @@ public class LoteService {
      */
     private void validarGeoJson(String geoJsonStr) {
         if (geoJsonStr == null || geoJsonStr.isBlank()) return;
+
+        if (geoJsonStr.length() > 5 * 1024 * 1024) {
+            throw new IllegalArgumentException("El GeoJSON supera el tamaño máximo permitido de 5MB");
+        }
+
         if (geoJsonStr.toLowerCase().contains("<script") || geoJsonStr.toLowerCase().contains("javascript:")) {
             throw new IllegalArgumentException("Contenido no permitido detectado en coordenadas GeoJSON");
         }
@@ -214,8 +228,33 @@ public class LoteService {
             if (!root.has("type") && !root.has("geometry") && !root.has("coordinates")) {
                 throw new IllegalArgumentException("Estructura GeoJSON no reconocida");
             }
+            
+            int totalVertices = countVertices(root);
+            if (totalVertices > 5000) {
+                throw new IllegalArgumentException("El GeoJSON excede el límite de 5000 vértices");
+            }
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             throw new IllegalArgumentException("Formato GeoJSON inválido: no es un JSON válido");
         }
+    }
+
+    private int countVertices(JsonNode node) {
+        if (node.isArray()) {
+            if (node.size() >= 2 && node.get(0).isNumber() && node.get(1).isNumber()) {
+                return 1;
+            }
+            int count = 0;
+            for (JsonNode child : node) {
+                count += countVertices(child);
+            }
+            return count;
+        } else if (node.isObject()) {
+            int count = 0;
+            for (JsonNode child : node) {
+                count += countVertices(child);
+            }
+            return count;
+        }
+        return 0;
     }
 }

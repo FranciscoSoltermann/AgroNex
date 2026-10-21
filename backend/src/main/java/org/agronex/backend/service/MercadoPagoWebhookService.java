@@ -62,7 +62,7 @@ public class MercadoPagoWebhookService {
         Map<String, Object> body = parseBody(rawBody);
         String preapprovalId = extractPreapprovalId(body, dataId, id);
         if (preapprovalId == null || preapprovalId.isBlank()) {
-            return; // Cannot validate without preapprovalId, will be ignored later anyway
+            throw new IllegalArgumentException("Webhook de MP rechazado: schema inválido, falta id o data.id");
         }
         validarFirmaWebhook(preapprovalId, xSignature, xRequestId);
     }

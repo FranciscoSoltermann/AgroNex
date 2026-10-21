@@ -1,6 +1,8 @@
 package org.agronex.backend.repository;
 
 import org.agronex.backend.entity.Insumo;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,7 +15,12 @@ public interface InsumoRepository extends JpaRepository<Insumo, UUID> {
     @Query("SELECT i FROM Insumo i LEFT JOIN i.campo c LEFT JOIN c.usuario cu WHERE i.usuario.idUsuario = :idUsuario OR cu.idUsuario = :idUsuario")
     List<Insumo> findByUsuarioOrCampoUsuario(@Param("idUsuario") UUID idUsuario);
 
+    @Query(value = "SELECT i FROM Insumo i LEFT JOIN i.campo c LEFT JOIN c.usuario cu WHERE i.usuario.idUsuario = :idUsuario OR cu.idUsuario = :idUsuario",
+           countQuery = "SELECT COUNT(i) FROM Insumo i LEFT JOIN i.campo c LEFT JOIN c.usuario cu WHERE i.usuario.idUsuario = :idUsuario OR cu.idUsuario = :idUsuario")
+    Page<Insumo> findByUsuarioOrCampoUsuario(@Param("idUsuario") UUID idUsuario, Pageable pageable);
+
     List<Insumo> findByCampoUsuarioIdUsuario(UUID idUsuario);
+    Page<Insumo> findByCampoUsuarioIdUsuario(UUID idUsuario, Pageable pageable);
     List<Insumo> findByCampoIdCampo(UUID idCampo);
     List<Insumo> findByCampaniaIdCampania(UUID idCampania);
 

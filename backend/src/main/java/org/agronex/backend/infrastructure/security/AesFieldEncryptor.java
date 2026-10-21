@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.Cipher;
-import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -13,50 +13,53 @@ import java.util.Arrays;
 import java.util.Base64;
 
 /**
- * Cifrado/descifrado AES-256-CBC para campos sensibles en la base de datos.
+ * Cifrado/descifrado AES-256-GCM para campos sensibles en la base de datos.
  * <p>
- * Mitiga VUL-A03: los tokens OAuth de John Deere se almacenan cifrados en BD.
- * <p>
- * Formato del valor almacenado: Base64(IV[16 bytes] + ciphertext)
- * La clave se lee de {@code ENCRYPTION_SECRET_KEY} (debe ser exactamente 32 chars UTF-8).
+ * Formato del valor almacenado: Base64(IV[12 bytes] + ciphertext + tag)
+ * La clave se lee de {@code ENCRYPTION_SECRET_KEY} (debe ser 32 bytes en Base64).
  */
 @Component
 public class AesFieldEncryptor {
 
-    private static final String ALGORITHM = "AES/CBC/PKCS5Padding";
-    private static final int IV_LENGTH = 16;
-    private static final int KEY_LENGTH = 32;
+    private static final String ALGORITHM = "AES/GCM/NoPadding";
+    private static final int IV_LENGTH = 12; // GCM recommended nonce length
+    private static final int TAG_LENGTH_BIT = 128;
 
     private final byte[] keyBytes;
 
     public AesFieldEncryptor(@Value("${encryption.secret-key:}") String secretKey) {
-        if (!StringUtils.hasText(secretKey) || secretKey.length() < KEY_LENGTH) {
-            // En desarrollo sin clave configurada, usar clave de placeholder NO SEGURA
-            // En producción se debe forzar el error — ver application.properties
-            byte[] placeholder = new byte[KEY_LENGTH];
+        if (!StringUtils.hasText(secretKey)) {
+            // Fallback para dev/test sin clave configurada
+            byte[] placeholder = new byte[32];
             Arrays.fill(placeholder, (byte) 0x00);
             this.keyBytes = placeholder;
-        } else {
-            this.keyBytes = secretKey.substring(0, KEY_LENGTH).getBytes(StandardCharsets.UTF_8);
+            return;
         }
+        byte[] decoded;
+        try {
+            decoded = Base64.getDecoder().decode(secretKey);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("encryption.secret-key must be Base64 encoded.");
+        }
+        if (decoded.length != 32) {
+            throw new IllegalStateException("encryption.secret-key must be exactly 32 bytes long after Base64 decoding.");
+        }
+        this.keyBytes = decoded;
     }
 
     /**
      * Cifra un valor de texto plano.
-     *
-     * @param plaintext texto a cifrar (puede ser null → retorna null)
-     * @return Base64(IV + ciphertext), o null si el input es null
      */
     public String encrypt(String plaintext) {
         if (plaintext == null) return null;
         try {
             byte[] iv = new byte[IV_LENGTH];
             new SecureRandom().nextBytes(iv);
-            IvParameterSpec ivSpec = new IvParameterSpec(iv);
+            GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_LENGTH_BIT, iv);
             SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
+            cipher.init(Cipher.ENCRYPT_MODE, keySpec, gcmSpec);
             byte[] encrypted = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
 
             byte[] combined = new byte[IV_LENGTH + encrypted.length];
@@ -70,10 +73,7 @@ public class AesFieldEncryptor {
     }
 
     /**
-     * Descifra un valor previamente cifrado con {@link #encrypt(String)}.
-     *
-     * @param ciphertext Base64(IV + ciphertext), puede ser null → retorna null
-     * @return texto plano descifrado
+     * Descifra un valor previamente cifrado.
      */
     public String decrypt(String ciphertext) {
         if (ciphertext == null) return null;
@@ -82,11 +82,11 @@ public class AesFieldEncryptor {
             byte[] iv = Arrays.copyOfRange(combined, 0, IV_LENGTH);
             byte[] encrypted = Arrays.copyOfRange(combined, IV_LENGTH, combined.length);
 
-            IvParameterSpec ivSpec = new IvParameterSpec(iv);
+            GCMParameterSpec gcmSpec = new GCMParameterSpec(TAG_LENGTH_BIT, iv);
             SecretKeySpec keySpec = new SecretKeySpec(keyBytes, "AES");
 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, gcmSpec);
             byte[] decrypted = cipher.doFinal(encrypted);
 
             return new String(decrypted, StandardCharsets.UTF_8);

@@ -42,15 +42,18 @@ public class Campania {
      */
     @Builder.Default
     @JsonIgnore
+    @org.hibernate.annotations.BatchSize(size = 100)
     @OneToMany(mappedBy = "campania", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<CampaniaLote> campaniaLotes = new ArrayList<>();
 
     @Builder.Default
     @JsonIgnore
+    @org.hibernate.annotations.BatchSize(size = 100)
     @OneToMany(mappedBy = "campania", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Actividad> actividades = new ArrayList<>();
 
     @Builder.Default
+    @org.hibernate.annotations.BatchSize(size = 100)
     @OneToMany(mappedBy = "campania", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Cosecha> cosechas = new ArrayList<>();
 

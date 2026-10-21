@@ -31,8 +31,9 @@ const writeSessionCache = (value) => {
     }
 };
 
-export const invalidateDashboardBootstrapCache = () => {
+export const clearBootstrapCache = () => {
     memoryCache = null;
+    inFlightPromise = null;
     if (typeof window !== "undefined") {
         try {
             window.sessionStorage.removeItem(BOOTSTRAP_CACHE_KEY);
@@ -41,6 +42,8 @@ export const invalidateDashboardBootstrapCache = () => {
         }
     }
 };
+
+export const invalidateDashboardBootstrapCache = clearBootstrapCache;
 
 export const getDashboardBootstrapData = async ({ forceRefresh = false } = {}) => {
     if (!forceRefresh && isFresh(memoryCache)) {
@@ -62,15 +65,15 @@ export const getDashboardBootstrapData = async ({ forceRefresh = false } = {}) =
     inFlightPromise = (async () => {
         const timestamp = Date.now();
         const [camposRes, lotesRes, campaniasRes] = await Promise.all([
-            apiClient.get(`/campos?t=${timestamp}`).catch(() => ({ data: [] })),
-            apiClient.get(`/lotes?t=${timestamp}`).catch(() => ({ data: [] })),
-            apiClient.get(`/campanias?t=${timestamp}`).catch(() => ({ data: [] })),
+            apiClient.get(`/campos?t=${timestamp}`),
+            apiClient.get(`/lotes?t=${timestamp}`),
+            apiClient.get(`/campanias?t=${timestamp}`),
         ]);
 
         const data = {
-            campos: camposRes.data || [],
-            lotes: lotesRes.data || [],
-            campanias: campaniasRes.data || [],
+            campos: Array.isArray(camposRes?.data) ? camposRes.data : [],
+            lotes: Array.isArray(lotesRes?.data) ? lotesRes.data : [],
+            campanias: Array.isArray(campaniasRes?.data) ? campaniasRes.data : [],
         };
 
         const snapshot = {

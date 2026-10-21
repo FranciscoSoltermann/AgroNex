@@ -207,7 +207,7 @@ public class SecurityConfig {
     private String jwkSetUri;
 
     @Bean
-    public JwtDecoder jwtDecoder() {
+    public JwtDecoder jwtDecoder(org.agronex.backend.repository.UsuarioConfiguracionRepository configRepo) {
         try {
             JWKSource<SecurityContext> jwkSource = com.nimbusds.jose.jwk.source.JWKSourceBuilder.create(java.net.URI.create(jwkSetUri).toURL())
                     .build();
@@ -218,7 +218,30 @@ public class SecurityConfig {
             NimbusJwtDecoder decoder = new NimbusJwtDecoder(jwtProcessor);
             if (issuerUri != null && !issuerUri.isBlank()) {
                 OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer(issuerUri);
-                decoder.setJwtValidator(withIssuer);
+                
+                OAuth2TokenValidator<Jwt> mfaValidator = jwt -> {
+                    try {
+                        String sub = jwt.getSubject();
+                        if (sub != null) {
+                            java.util.UUID userId = java.util.UUID.fromString(sub);
+                            java.util.Optional<org.agronex.backend.entity.UsuarioConfiguracion> configOpt = configRepo.findByUsuario_IdUsuario(userId);
+                            if (configOpt.isPresent() && Boolean.TRUE.equals(configOpt.get().getDosFactoresHabilitado())) {
+                                String aal = jwt.getClaimAsString("aal");
+                                if (!"aal2".equals(aal)) {
+                                    return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.failure(
+                                            new org.springframework.security.oauth2.core.OAuth2Error("insufficient_authentication", "MFA required (aal2)", null)
+                                    );
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // ignore UUID parsing or DB errors gracefully to avoid breaking other logic
+                    }
+                    return org.springframework.security.oauth2.core.OAuth2TokenValidatorResult.success();
+                };
+
+                OAuth2TokenValidator<Jwt> combinedValidator = new org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator<>(withIssuer, mfaValidator);
+                decoder.setJwtValidator(combinedValidator);
             }
             return decoder;
         } catch (Exception e) {

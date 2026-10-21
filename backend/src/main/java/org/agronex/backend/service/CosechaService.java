@@ -10,6 +10,7 @@ import org.agronex.backend.mapper.CosechaMapper;
 import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.CosechaRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class CosechaService {
                 .collect(Collectors.toList());
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public CosechaResponse registrarCosecha(CosechaRequest request, UUID idUsuarioToken) {
         Campania campania = campaniaRepository.findById(request.getIdCampania())
@@ -60,6 +62,7 @@ public class CosechaService {
         return cosechaMapper.toResponse(guardada);
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public CosechaResponse editarCosecha(UUID idCosecha, CosechaRequest request, UUID idUsuarioToken) {
         Cosecha cosecha = cosechaRepository.findById(idCosecha)
@@ -94,6 +97,7 @@ public class CosechaService {
         return cosechaMapper.toResponse(guardada);
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public void eliminarCosecha(UUID idCosecha, UUID idUsuarioToken) {
         Cosecha cosecha = cosechaRepository.findById(idCosecha)

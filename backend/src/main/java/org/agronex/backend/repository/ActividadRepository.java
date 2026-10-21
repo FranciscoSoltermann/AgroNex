@@ -23,7 +23,7 @@ public interface ActividadRepository extends JpaRepository<Actividad, UUID> {
            "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
     List<Actividad> findByCampaniaLoteCampoUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario);
 
-    @EntityGraph(attributePaths = {"campania", "insumosUtilizados", "insumosUtilizados.insumo"})
+    @EntityGraph(attributePaths = {"campania"})
     @Query(value = "SELECT DISTINCT a FROM Actividad a " +
            "JOIN a.campania c " +
            "JOIN c.campaniaLotes cl " +

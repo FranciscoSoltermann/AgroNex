@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import {
   Leaf,
@@ -96,10 +97,12 @@ export function Hero() {
       <section id="hero" className="relative min-h-[calc(100vh-80px)] flex flex-col justify-center overflow-hidden snap-start py-12 sm:py-20">
         {/* Fondo agrícola */}
         <div className="absolute inset-0 z-0 pointer-events-none">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
             alt="Fondo agrícola"
+            width={1920}
+            height={1080}
+            priority
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-[#0A1612]/90 via-[#0A1612]/70 to-[#0A1612]/40" />
@@ -166,10 +169,12 @@ export function Hero() {
                         <div className="w-2 h-2 rounded-full bg-[#050505] border border-[#2a2c30]" />
                       </div>
 
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src="/mockups/dashboard.png"
                         alt="AgroNex Dashboard"
+                        width={1600}
+                        height={900}
+                        priority
                         className="w-full h-full object-fill select-none"
                       />
                     </div>
@@ -205,10 +210,12 @@ export function Hero() {
             >
               <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#52B788]/30 bg-[#0d0d0e] p-2">
                 <div className="rounded-xl overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src="/mockups/dashboard.png"
                     alt="AgroNex Dashboard"
+                    width={1600}
+                    height={900}
+                    priority
                     className="w-full h-auto object-cover"
                   />
                 </div>
@@ -227,10 +234,12 @@ export function Hero() {
       <section id="campos-lotes" className="relative min-h-screen flex flex-col justify-center py-20 sm:py-28 overflow-hidden snap-start">
         {/* Fondo agrícola sección */}
         <div className="absolute inset-0 z-0 pointer-events-none">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
             alt="Campos agrícolas"
+            width={1920}
+            height={1080}
+            loading="lazy"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-[#0A1612]/60" />
@@ -283,10 +292,12 @@ export function Hero() {
                 {/* Campo 1 */}
                 <div className="group relative rounded-xl overflow-hidden border border-white/15 hover:border-[#52B788]/60 transition-all duration-300 cursor-pointer">
                   <div className="h-32 sm:h-36 relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src="https://images.unsplash.com/photo-1560493676-04071c5f467b?auto=format&fit=crop&q=80&w=600"
                       alt="Don Ramón"
+                      width={600}
+                      height={400}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
@@ -304,10 +315,12 @@ export function Hero() {
                 {/* Campo 2 */}
                 <div className="group relative rounded-xl overflow-hidden border border-white/15 hover:border-[#52B788]/60 transition-all duration-300 cursor-pointer">
                   <div className="h-32 sm:h-36 relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=600"
                       alt="La Delfina"
+                      width={600}
+                      height={400}
+                      loading="lazy"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
@@ -345,10 +358,12 @@ export function Hero() {
       <section id="finanzas" className="relative min-h-screen flex flex-col justify-center py-20 sm:py-28 overflow-hidden snap-start">
         {/* Fondo agrícola */}
         <div className="absolute inset-0 z-0 pointer-events-none">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
             alt="Campos de cultivo"
+            width={1920}
+            height={1080}
+            loading="lazy"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-[#0A1612]/65" />
@@ -442,10 +457,12 @@ export function Hero() {
       <section id="inventario" className="relative min-h-screen flex flex-col justify-center py-20 sm:py-28 overflow-hidden snap-start">
         {/* Fondo agrícola */}
         <div className="absolute inset-0 z-0 pointer-events-none">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920"
             alt="Campos verdes"
+            width={1920}
+            height={1080}
+            loading="lazy"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-[#0A1612]/60" />

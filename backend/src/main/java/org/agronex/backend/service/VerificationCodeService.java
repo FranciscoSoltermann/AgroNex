@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -14,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 @Slf4j
 public class VerificationCodeService {
+
+    private static final int MAX_CODES_LIMIT = 5000;
 
     private final NotificacionMailService mailService;
     private final SecureRandom random = new SecureRandom();
@@ -34,6 +37,15 @@ public class VerificationCodeService {
     }
 
     /**
+     * Limpieza periódica de códigos expirados en memoria cada 10 minutos (600.000 ms).
+     */
+    @Scheduled(fixedRate = 600000)
+    public void limpiarCodigosExpirados() {
+        LocalDateTime now = LocalDateTime.now();
+        codesMap.entrySet().removeIf(entry -> now.isAfter(entry.getValue().expiresAt));
+    }
+
+    /**
      * Genera un código de 6 dígitos, lo almacena por 15 minutos y lo envía al correo indicado.
      */
     @Async
@@ -42,6 +54,14 @@ public class VerificationCodeService {
             throw new IllegalArgumentException("El correo electrónico es requerido.");
         }
         String emailClean = email.trim().toLowerCase();
+
+        // Eviction preventiva si la colección alcanza el límite máximo
+        if (codesMap.size() >= MAX_CODES_LIMIT) {
+            limpiarCodigosExpirados();
+            if (codesMap.size() >= MAX_CODES_LIMIT) {
+                codesMap.keySet().stream().findFirst().ifPresent(codesMap::remove);
+            }
+        }
 
         // Generar código numérico de 6 dígitos (100000 - 999999)
         String code = String.valueOf(100000 + random.nextInt(900000));

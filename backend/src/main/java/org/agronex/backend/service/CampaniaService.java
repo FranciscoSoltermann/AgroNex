@@ -11,6 +11,7 @@ import org.agronex.backend.mapper.CampaniaMapper;
 import org.agronex.backend.repository.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -39,6 +40,7 @@ public class CampaniaService {
     private final UsuarioService usuarioService;
 
     @Transactional
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     public CampaniaResponse crearCampania(CampaniaRequest request, UUID idUsuarioToken) {
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
 
@@ -153,6 +155,7 @@ public class CampaniaService {
     }
 
     @Transactional
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     public CampaniaResponse editarCampania(UUID idCampania, CampaniaRequest request, UUID idUsuarioToken) {
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
 
@@ -248,6 +251,7 @@ public class CampaniaService {
     }
 
     @Transactional
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     public void eliminarCampania(UUID idCampania, UUID idUsuarioToken) {
         Campania campania = campaniaRepository.findById(idCampania)
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));

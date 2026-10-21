@@ -51,11 +51,25 @@ export async function proxy(request) {
     }
   }
 
+  // CSP Nonce Generation
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  request.headers.set('x-nonce', nonce);
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
+
+  const isDev = process.env.NODE_ENV === 'development';
+  let cspHeader = "";
+  if (isDev) {
+    cspHeader = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self' https: wss: http://localhost:*;`;
+  } else {
+    cspHeader = `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self' https: wss:;`;
+  }
+  
+  response.headers.set('Content-Security-Policy', cspHeader);
 
   const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard");
 

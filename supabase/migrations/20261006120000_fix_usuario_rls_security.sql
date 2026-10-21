@@ -14,7 +14,8 @@ GRANT SELECT ON public.usuario TO authenticated;
 DROP POLICY IF EXISTS usuario_update_own ON public.usuario;
 
 -- 4. Asegurar que SELECT propio continúe funcionando para lectura
-CREATE OR REPLACE POLICY usuario_select_own ON public.usuario
+DROP POLICY IF EXISTS usuario_select_own ON public.usuario;
+CREATE POLICY usuario_select_own ON public.usuario
   FOR SELECT
   TO authenticated
   USING ((id_usuario = auth.uid()));

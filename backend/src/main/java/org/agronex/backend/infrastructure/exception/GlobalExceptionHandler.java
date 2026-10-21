@@ -46,10 +46,15 @@ public class GlobalExceptionHandler {
     // 2. Errores de Base de Datos (Ej: Email o CUIT duplicado) -> 409 CONFLICT
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
-        log.error("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
+        String sqlState = "UNKNOWN";
+        Throwable rootCause = ex.getMostSpecificCause();
+        if (rootCause instanceof java.sql.SQLException) {
+            sqlState = ((java.sql.SQLException) rootCause).getSQLState();
+        }
+        log.error("Data integrity violation. SQLSTATE: {}", sqlState);
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
                 HttpStatus.CONFLICT,
-                ex.getMostSpecificCause().getMessage()
+                "La operación no pudo completarse debido a un conflicto en los datos."
         );
         problemDetail.setTitle("Conflicto de Integridad de Datos");
         problemDetail.setType(URI.create("https://agronex.org/errors/data-conflict"));

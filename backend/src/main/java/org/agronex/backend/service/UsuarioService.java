@@ -17,6 +17,7 @@ import org.agronex.backend.repository.UsuarioConfiguracionRepository;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -42,6 +43,7 @@ public class UsuarioService {
      * Elimina permanentemente la cuenta del usuario y sus datos asociados.
      */
     @Transactional
+    @CacheEvict(value = {"dashboardResumen", "campoStats"}, allEntries = true)
     public void eliminarCuenta(UUID idUsuario) {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
@@ -94,6 +96,7 @@ public class UsuarioService {
     }
 
     @Transactional
+    @CacheEvict(value = {"dashboardResumen", "campoStats"}, allEntries = true)
     public void actualizarRol(UUID idUsuarioObjetivo, ActualizarRolUsuarioRequest request) {
         Usuario u = usuarioRepository.findById(idUsuarioObjetivo)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
@@ -120,6 +123,7 @@ public class UsuarioService {
     }
 
     @Transactional
+    @CacheEvict(value = {"dashboardResumen", "campoStats"}, allEntries = true)
     public void asignarEmpleado(UUID idPropietario, org.agronex.backend.dto.request.AsignarEmpleadoRequest request) {
         Usuario propietario = usuarioRepository.findById(idPropietario)
                 .orElseThrow(() -> new EntityNotFoundException("Propietario no encontrado"));
@@ -236,6 +240,7 @@ public class UsuarioService {
      * Desvincula un empleado de la cuenta del propietario.
      */
     @Transactional
+    @CacheEvict(value = {"dashboardResumen", "campoStats"}, allEntries = true)
     public void desvincularEmpleado(UUID idPropietario, UUID idEmpleado) {
         Usuario empleado = usuarioRepository.findById(idEmpleado)
                 .orElseThrow(() -> new EntityNotFoundException("Empleado no encontrado"));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { supabase } from "@/lib/supabase";
@@ -32,6 +33,7 @@ const INPUT_CLASS = "w-full bg-gray-50 dark:bg-[#0f1419] dark:text-gray-100 bord
 export default function SettingsPage() {
     const { currency, setCurrency, dolarType, setDolarType, dolarTypes, rates, exchangeRate, rateLoading, rateError, fechaActualizacion } = useCurrency();
     const queryClient = useQueryClient();
+    const router = useRouter();
     const [draft, setDraft] = useState(null);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
@@ -258,7 +260,7 @@ export default function SettingsPage() {
         try {
             await apiClient.delete("/usuarios/me");
             await supabase.auth.signOut();
-            window.location.href = "/login";
+            router.replace("/login");
         } catch (e) {
             console.error("Error al eliminar cuenta:", e);
             setError("No se pudo eliminar la cuenta: " + (e?.response?.data?.message || e?.message || "Error desconocido"));

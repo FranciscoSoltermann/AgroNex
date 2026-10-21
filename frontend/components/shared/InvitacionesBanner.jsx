@@ -3,23 +3,21 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
-import { Users, CheckCircle2, XCircle, Loader2, ShieldCheck, Mail } from "lucide-react";
+import { assertArrayContract } from "@/lib/api-contracts";
+import { Users, CheckCircle2, XCircle, Loader2, ShieldCheck, Mail, AlertCircle } from "lucide-react";
 
 export default function InvitacionesBanner() {
     const queryClient = useQueryClient();
     const [actionError, setActionError] = useState(null);
 
-    const { data: invitaciones = [] } = useQuery({
+    const { data: invitaciones, error: contractOrFetchError } = useQuery({
         queryKey: ['misInvitacionesPendientes'],
         queryFn: async () => {
-            try {
-                const { data } = await apiClient.get("/invitaciones/mis-pendientes");
-                return data || [];
-            } catch (e) {
-                return [];
-            }
+            const { data } = await apiClient.get("/invitaciones/mis-pendientes");
+            return assertArrayContract(data, "/invitaciones/mis-pendientes");
         },
         refetchInterval: 15000,
+        retry: false,
     });
 
     const aceptarMutation = useMutation({
@@ -53,7 +51,16 @@ export default function InvitacionesBanner() {
         }
     });
 
-    if (!invitaciones || invitaciones.length === 0) return null;
+    if (contractOrFetchError?.name === "ContractValidationError") {
+        return (
+            <div className="mb-4 rounded-xl border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-xs text-amber-200 flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0 text-amber-400" />
+                <span>{contractOrFetchError.message}</span>
+            </div>
+        );
+    }
+
+    if (!Array.isArray(invitaciones) || invitaciones.length === 0) return null;
 
     return (
         <div className="mb-4 space-y-3 animate-in fade-in duration-300">

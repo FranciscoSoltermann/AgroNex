@@ -8,6 +8,7 @@ import org.agronex.backend.entity.*;
 import org.agronex.backend.repository.UsuarioConfiguracionRepository;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class UsuarioSettingsService {
     }
 
     @Transactional
+    @CacheEvict(value = "dashboardResumen", key = "#idUsuario")
     public UsuarioSettingsResponse actualizarSettings(UUID idUsuario, UsuarioSettingsUpdateRequest request) {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));

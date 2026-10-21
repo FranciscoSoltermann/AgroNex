@@ -3,8 +3,10 @@
 import { Box } from 'lucide-react';
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
+import { clearBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
 import {
     LayoutDashboard, Map, RefreshCw, CircleDollarSign, Leaf, Settings,
     LogOut, Cloud, Activity, Users, Menu, X, Moon, Sun, Tractor, Globe
@@ -44,6 +46,7 @@ function CurrencySelector() {
 export default function DashboardLayout({ children }) {
     const pathname = usePathname();
     const router = useRouter();
+    const queryClient = useQueryClient();
     const [userName, setUserName] = useState("Usuario");
     const [userRole, setUserRole] = useState(null);
     const [userPermisos, setUserPermisos] = useState([]);
@@ -76,6 +79,8 @@ export default function DashboardLayout({ children }) {
                             ? "No podés usar Google sin una cuenta AgroNex: registrate con correo y contraseña y vinculá Google en Ajustes."
                             : "Acceso denegado: tu usuario no está dado de alta en AgroNex. Registrate primero.";
                         toast.error(msg, { duration: 8000 });
+                        clearBootstrapCache();
+                        queryClient.clear();
                         await supabase.auth.signOut();
                         console.log("Redirecting to login from layout.js (not registered)");
                         router.push("/login");
@@ -89,6 +94,8 @@ export default function DashboardLayout({ children }) {
                             "Para usar Google necesitás haber creado la cuenta en AgroNex y vinculado Google en Ajustes.",
                             { duration: 8000 }
                         );
+                        clearBootstrapCache();
+                        queryClient.clear();
                         await supabase.auth.signOut();
                         console.log("Redirecting to login from layout.js (Google only)");
                         router.push("/login");
@@ -122,12 +129,14 @@ export default function DashboardLayout({ children }) {
             if (session?.user) {
                 syncUser();
             } else {
+                clearBootstrapCache();
+                queryClient.clear();
                 setUserName("Usuario");
             }
         });
 
         return () => subscription.unsubscribe();
-    }, [router]);
+    }, [router, queryClient]);
 
     // Cierra el sidebar móvil al cambiar de ruta
     const [prevPathname, setPrevPathname] = useState(pathname);
@@ -139,6 +148,8 @@ export default function DashboardLayout({ children }) {
     const handleLogout = async () => {
         await supabase.auth.signOut();
         sessionStorage.clear();
+        clearBootstrapCache();
+        queryClient.clear();
         router.push("/login");
         setTimeout(() => router.refresh(), 100);
     };

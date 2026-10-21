@@ -67,7 +67,7 @@ class AuthControllerTest {
         PersonaFisicaRequest req = new PersonaFisicaRequest();
         PersonaFisicaResponse resp = PersonaFisicaResponse.builder().idUsuario(userId).build();
 
-        when(authService.registrarPersonaFisica(req, userId)).thenReturn(resp);
+        when(authService.registrarPersonaFisica(eq(req), eq(userId), any())).thenReturn(resp);
 
         ResponseEntity<PersonaFisicaResponse> response = authController.registrarPersonaFisica(req, jwt);
 
@@ -81,7 +81,7 @@ class AuthControllerTest {
         PersonaJuridicaRequest req = new PersonaJuridicaRequest();
         PersonaJuridicaResponse resp = PersonaJuridicaResponse.builder().idUsuario(userId).build();
 
-        when(authService.registrarPersonaJuridica(req, userId)).thenReturn(resp);
+        when(authService.registrarPersonaJuridica(eq(req), eq(userId), any())).thenReturn(resp);
 
         ResponseEntity<PersonaJuridicaResponse> response = authController.registrarPersonaJuridica(req, jwt);
 

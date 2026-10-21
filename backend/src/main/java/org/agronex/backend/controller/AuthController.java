@@ -96,7 +96,8 @@ public class AuthController {
 
         // VUL-08 fix: UUID garantizado por Supabase, no puede ser inventado
         UUID supabaseId = UUID.fromString(jwt.getSubject());
-        return new ResponseEntity<>(authService.registrarPersonaFisica(request, supabaseId), HttpStatus.CREATED);
+        String tokenEmail = jwt.getClaimAsString("email");
+        return new ResponseEntity<>(authService.registrarPersonaFisica(request, supabaseId, tokenEmail), HttpStatus.CREATED);
     }
 
     /**
@@ -115,6 +116,7 @@ public class AuthController {
             @AuthenticationPrincipal Jwt jwt) {
 
         UUID supabaseId = UUID.fromString(jwt.getSubject());
-        return new ResponseEntity<>(authService.registrarPersonaJuridica(request, supabaseId), HttpStatus.CREATED);
+        String tokenEmail = jwt.getClaimAsString("email");
+        return new ResponseEntity<>(authService.registrarPersonaJuridica(request, supabaseId, tokenEmail), HttpStatus.CREATED);
     }
 }

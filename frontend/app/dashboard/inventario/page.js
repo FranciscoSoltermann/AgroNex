@@ -17,28 +17,16 @@ const JohnDeereLaborSimulator = dynamic(() => import("@/components/features/dash
     ssr: false
 });
 
-const normalizeStr = (s = "") => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-
-// Mapa de subtipos por tipo de artículo
-const SUBTIPOS_POR_TIPO = {
-    SEMILLA: ["Maíz", "Trigo", "Soja", "Girasol", "Sorgo", "Cebada", "Otro"],
-    HERBICIDA: ["Glifosato", "Atrazina", "2,4-D", "Dicamba", "Metsulfurón", "Paraquat", "Cletodim", "Pivot", "Flumizin", "Otro"],
-    FERTILIZANTE: ["Urea", "Fosfato Diamónico (DAP)", "MAP", "Sulfato de Amonio", "Nitrato de Amonio", "KCl", "NPK", "Otro"],
-    INSECTICIDA: ["Cipermetrina", "Clorpirifós", "Lambda-cihalotrina", "Fipronil", "Imidacloprid", "Engeo", "Piretroide", "Otro"],
-    INOCULANTE_CURASEMILLA: ["Inoculante Biológico", "Curasemilla Fungicida", "Curasemilla Insecticida", "Pack Inoculante + Curasemilla", "Otro"],
-    COMBUSTIBLE: ["Gasoil", "Nafta", "Otro"],
-    OTRO: []
-};
-
-const TIPO_LABELS = {
-    SEMILLA: "Semilla",
-    HERBICIDA: "Herbicida",
-    FERTILIZANTE: "Fertilizante",
-    INSECTICIDA: "Insecticida",
-    INOCULANTE_CURASEMILLA: "Inoculante/Curasemilla",
-    COMBUSTIBLE: "Combustible",
-    OTRO: "Otro"
-};
+import {
+    normalizeStr,
+    SUBTIPOS_POR_TIPO,
+    TIPO_LABELS,
+    getUnidadLabel,
+    detectFormaFisica,
+    getUnidadesDisponibles,
+    getSemillaType,
+    isSemillaPorUnidades
+} from "@/lib/inventario-domain";
 
 const TIPO_ICONS = {
     SEMILLA: Wheat,
@@ -49,206 +37,6 @@ const TIPO_ICONS = {
     COMBUSTIBLE: Fuel,
     REPUESTO: Wrench,
     OTRO: Box
-};
-
-const getUnidadLabel = (u = "") => {
-    switch (u) {
-        case "KILOGRAMOS": return "Kg";
-        case "GRAMOS": return "g";
-        case "TONELADAS": return "Tn";
-        case "LITROS": return "Lts";
-        case "CENTIMETROS_CUBICOS": return "cc";
-        case "BOLSAS": return "Bolsas";
-        case "BIDONES": return "Bidones";
-        case "UNIDADES": return "Unidades";
-        default: return u || "unidades";
-    }
-};
-
-const detectFormaFisica = (nombre = "") => {
-    const nom = (nombre || "").toLowerCase().trim();
-    if (!nom) return "AMBAS";
-
-    const solidKeywords = [
-        "granulado", "granulos", "gránulos", "polvo", "seco", "solido", "sólido",
-        "wg", "sg", "wdg", "df", "sp", "tab", "wp", "ws", "gr ", " 90%", " 80%", " 70%", "70 dg",
-        "turba", "cristales", "perlado"
-    ];
-
-    const liquidKeywords = [
-        "liquido", "líquido", "líquida", "liquida", "solucion", "solución",
-        "ec", "sl", "sc", "cs", "ew", "me", "fs", "uan", "sachet", "vejiga", "fertirriego"
-    ];
-
-    const hasSolidWord = solidKeywords.some(k => {
-        const regex = new RegExp(`\\b${k.trim()}\\b`, "i");
-        return regex.test(nom) || nom.includes(k);
-    });
-
-    const hasLiquidWord = liquidKeywords.some(k => {
-        const regex = new RegExp(`\\b${k.trim()}\\b`, "i");
-        return regex.test(nom) || nom.includes(k);
-    });
-
-    if (hasSolidWord && !hasLiquidWord) return "SOLIDO";
-    if (hasLiquidWord && !hasSolidWord) return "LIQUIDO";
-
-    return "AMBAS";
-};
-
-const getUnidadesDisponibles = (tipoArticulo, nombre = "", subtipo = "") => {
-    const text = `${nombre || ""} ${subtipo || ""}`;
-    const nom = text.toLowerCase().trim();
-    const forma = detectFormaFisica(text);
-
-    // Strictly SOLID products:
-    const isStrictlySolid = nom.includes("metsulfuron") || nom.includes("metsulfurón") ||
-        nom.includes("dap") || nom.includes("fosfato diamonico") || nom.includes("fosfato diamónico") ||
-        nom.includes("kcl") || nom.includes("cloruro de potasio");
-
-    // Strictly LIQUID products:
-    const isStrictlyLiquid = nom.includes("paraquat") ||
-        nom.includes("cletodim") || nom.includes("clethodim") ||
-        nom.includes("engeo");
-
-    if (isStrictlySolid) {
-        if (tipoArticulo === "FERTILIZANTE") {
-            return [
-                { value: "TONELADAS", label: "Toneladas" },
-                { value: "KILOGRAMOS", label: "Kilogramos" }
-            ];
-        }
-        return [
-            { value: "KILOGRAMOS", label: "Kilogramos" },
-            { value: "GRAMOS", label: "Gramos" }
-        ];
-    }
-
-    if (isStrictlyLiquid) {
-        return [
-            { value: "LITROS", label: "Litros" },
-            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
-        ];
-    }
-
-    if (tipoArticulo === "HERBICIDA") {
-        if (forma === "LIQUIDO") {
-            return [
-                { value: "LITROS", label: "Litros" },
-                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
-            ];
-        }
-        if (forma === "SOLIDO") {
-            return [
-                { value: "KILOGRAMOS", label: "Kilogramos" },
-                { value: "GRAMOS", label: "Gramos" }
-            ];
-        }
-        return [
-            { value: "LITROS", label: "Litros" },
-            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
-            { value: "KILOGRAMOS", label: "Kilogramos" },
-            { value: "GRAMOS", label: "Gramos" }
-        ];
-    }
-
-    if (tipoArticulo === "FERTILIZANTE") {
-        if (forma === "LIQUIDO") {
-            return [
-                { value: "LITROS", label: "Litros" },
-                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
-            ];
-        }
-        if (forma === "SOLIDO") {
-            return [
-                { value: "TONELADAS", label: "Toneladas" },
-                { value: "KILOGRAMOS", label: "Kilogramos" }
-            ];
-        }
-        return [
-            { value: "TONELADAS", label: "Toneladas" },
-            { value: "KILOGRAMOS", label: "Kilogramos" },
-            { value: "LITROS", label: "Litros" }
-        ];
-    }
-
-    if (tipoArticulo === "INSECTICIDA") {
-        if (forma === "SOLIDO") {
-            return [
-                { value: "KILOGRAMOS", label: "Kilogramos" },
-                { value: "GRAMOS", label: "Gramos" }
-            ];
-        }
-        if (forma === "LIQUIDO") {
-            return [
-                { value: "LITROS", label: "Litros" },
-                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" }
-            ];
-        }
-        return [
-            { value: "LITROS", label: "Litros" },
-            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
-            { value: "KILOGRAMOS", label: "Kilogramos" },
-            { value: "GRAMOS", label: "Gramos" }
-        ];
-    }
-
-    if (tipoArticulo === "INOCULANTE_CURASEMILLA") {
-        if (forma === "SOLIDO") {
-            return [
-                { value: "KILOGRAMOS", label: "Kilogramos" },
-                { value: "GRAMOS", label: "Gramos" }
-            ];
-        }
-        if (forma === "LIQUIDO") {
-            return [
-                { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
-                { value: "LITROS", label: "Litros" }
-            ];
-        }
-        return [
-            { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
-            { value: "LITROS", label: "Litros" },
-            { value: "KILOGRAMOS", label: "Kilogramos" },
-            { value: "GRAMOS", label: "Gramos" }
-        ];
-    }
-
-    if (tipoArticulo === "COMBUSTIBLE") {
-        return [
-            { value: "LITROS", label: "Litros" }
-        ];
-    }
-
-    return [
-        { value: "KILOGRAMOS", label: "Kilogramos" },
-        { value: "GRAMOS", label: "Gramos" },
-        { value: "LITROS", label: "Litros" },
-        { value: "CENTIMETROS_CUBICOS", label: "Centímetros Cúbicos" },
-        { value: "TONELADAS", label: "Toneladas" }
-    ];
-};
-
-const getSemillaType = (tipoArticulo, subtipo = "", nombre = "") => {
-    if (tipoArticulo !== "SEMILLA") return null;
-    const sub = (subtipo || "").toLowerCase();
-    const nom = (nombre || "").toLowerCase();
-
-    if (sub.includes("maíz") || sub.includes("maiz") || nom.includes("maíz") || nom.includes("maiz")) {
-        return "MAIZ";
-    }
-    if (sub.includes("girasol") || nom.includes("girasol") || sub.includes("sorgo") || nom.includes("sorgo")) {
-        return "GIRASOL";
-    }
-    if (sub.includes("trigo") || nom.includes("trigo") || sub.includes("soja") || nom.includes("soja")) {
-        return "TRIGO_SOJA";
-    }
-    return "OTRO";
-};
-
-const isSemillaPorUnidades = (tipoArticulo, subtipo = "", nombre = "") => {
-    const type = getSemillaType(tipoArticulo, subtipo, nombre);
-    return type === "MAIZ" || type === "GIRASOL";
 };
 
 export default function InventarioPage() {
@@ -1075,7 +863,7 @@ export default function InventarioPage() {
                             <form onSubmit={handleRegistrarInsumo} className="space-y-4">
                                 <div>
                                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Nombre del Artículo</label>
-                                    <input required type="text" value={formInsumo.nombre} onChange={e => {
+                                    <input name="nombre" required type="text" value={formInsumo.nombre} onChange={e => {
                                         const nuevoNombre = e.target.value;
                                         setFormInsumo(p => {
                                             const disponibles = getUnidadesDisponibles(p.tipoArticulo, nuevoNombre, p.subtipo);
@@ -1204,7 +992,7 @@ export default function InventarioPage() {
                                     <div>
                                         <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Precio Unitario</label>
                                         <div className="relative flex items-center bg-gray-50 border border-gray-200 rounded-xl focus-within:border-[#2D6A4F] transition-colors">
-                                            <input required type="number" step="0.01" min="0" value={formInsumo.precioUnitario} onChange={e => setFormInsumo(p => ({ ...p, precioUnitario: e.target.value }))}
+                                            <input name="precioUnitario" required type="number" step="0.01" min="0" value={formInsumo.precioUnitario} onChange={e => setFormInsumo(p => ({ ...p, precioUnitario: e.target.value }))}
                                                 className="w-full bg-transparent text-gray-900 pl-3 pr-2 py-2 text-sm font-bold outline-none" placeholder="0.00" />
                                             <div className="flex items-center gap-0.5 bg-gray-200/80 dark:bg-gray-700/80 p-0.5 rounded-lg mr-1.5 shrink-0">
                                                 <button
@@ -1277,7 +1065,7 @@ export default function InventarioPage() {
                                                 return "Stock Inicial";
                                             })()}
                                         </label>
-                                        <input required type="number" step="0.01" min="0" value={formInsumo.cantidad} onChange={e => setFormInsumo(p => ({ ...p, cantidad: e.target.value }))}
+                                        <input name="cantidad" required type="number" step="0.01" min="0" value={formInsumo.cantidad} onChange={e => setFormInsumo(p => ({ ...p, cantidad: e.target.value }))}
                                             className="w-full bg-gray-50 border border-gray-200 text-gray-500 rounded-xl px-3 py-2.5 text-sm font-medium focus:border-[#2D6A4F] outline-none" placeholder="0.00" />
                                     </div>
                                 </div>
@@ -1348,7 +1136,7 @@ export default function InventarioPage() {
                                                     )}
                                                     {/* Selector de unidad (solo si eligió Peso) */}
                                                     {formInsumo.semillaMode === "PESO" && (
-                                                        <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-[#2D6A4F] outline-none">
+                                                        <select name="unidad" required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-[#2D6A4F] outline-none">
                                                             <option value="" disabled>-- Seleccionar unidad --</option>
                                                             <option value="KILOGRAMOS">Kilogramos</option>
                                                             <option value="GRAMOS">Gramos</option>
@@ -1357,7 +1145,7 @@ export default function InventarioPage() {
                                                     )}
                                                 </div>
                                             ) : (
-                                                <select required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-[#2D6A4F] outline-none">
+                                                <select name="unidad" required value={formInsumo.unidad} onChange={e => setFormInsumo(p => ({ ...p, unidad: e.target.value }))} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-3 py-2.5 text-sm font-bold focus:border-[#2D6A4F] outline-none">
                                                     <option value="" disabled>-- Seleccionar unidad --</option>
                                                     {getUnidadesDisponibles(formInsumo.tipoArticulo, formInsumo.nombre, formInsumo.subtipo).map(op => (
                                                         <option key={op.value} value={op.value}>{op.label}</option>

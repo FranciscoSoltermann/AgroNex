@@ -120,4 +120,29 @@ class LoteServiceTest {
         assertDoesNotThrow(() -> loteService.eliminarLote(loteId, userId));
         verify(loteRepository).delete(lote);
     }
+
+    @Test
+    @DisplayName("crearLote - Fallback en Agromonitoring permite guardar lote sin idPoligonoAgro")
+    void crearLote_fallbackAgromonitoring_guardaLoteSinPoligonoId() {
+        LoteRequest req = new LoteRequest();
+        req.setIdCampo(campo.getIdCampo());
+        req.setNombre("Lote Sin Sync");
+        req.setSuperficie(BigDecimal.valueOf(20));
+        req.setCoordenadasGeoJson("{\"type\":\"Polygon\"}");
+
+        Lote lote = Lote.builder().idLote(UUID.randomUUID()).nombre("Lote Sin Sync").campo(campo).superficie(BigDecimal.valueOf(20)).build();
+
+        when(campoRepository.findById(campo.getIdCampo())).thenReturn(Optional.of(campo));
+        when(usuarioService.idUsuarioParaAccesoDatos(userId)).thenReturn(userId);
+        when(loteMapper.toEntity(req, campo)).thenReturn(lote);
+        when(agromonitoringService.registrarPoligono(any(), any())).thenReturn(null);
+        when(loteRepository.save(any(Lote.class))).thenReturn(lote);
+        when(loteMapper.toResponse(lote)).thenReturn(LoteResponse.builder().idLote(lote.getIdLote()).build());
+
+        LoteResponse res = loteService.crearLote(req, userId);
+
+        assertNotNull(res);
+        assertNull(lote.getIdPoligonoAgro());
+        verify(loteRepository).save(lote);
+    }
 }

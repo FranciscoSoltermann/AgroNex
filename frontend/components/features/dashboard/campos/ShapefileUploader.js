@@ -72,6 +72,16 @@ export default function ShapefileUploader({ onGeoJsonReady, onBulkReady, initial
         } else if (geojson.type === 'Polygon' || geojson.type === 'MultiPolygon') {
             features = [{ type: 'Feature', geometry: geojson, properties: {} }];
         }
+
+        // Validate vertices to prevent browser exhaustion (S14)
+        const MAX_VERTICES = 5000;
+        let totalVertices = 0;
+        turf.coordEach({ type: 'FeatureCollection', features }, () => { totalVertices++; });
+        
+        if (totalVertices > MAX_VERTICES) {
+            throw new Error(`El archivo contiene demasiados vértices (${totalVertices}). El máximo permitido es ${MAX_VERTICES} para evitar problemas de rendimiento.`);
+        }
+
         return features;
     };
 
@@ -115,6 +125,9 @@ export default function ShapefileUploader({ onGeoJsonReady, onBulkReady, initial
             const kmlFile = Object.keys(zip.files).find(n => n.toLowerCase().endsWith('.kml'));
             if (!kmlFile) throw new Error('No se encontró un archivo .kml dentro del .kmz');
             const kmlText = await zip.files[kmlFile].async('text');
+            if (kmlText.length > MAX_FILE_SIZE * 5) {
+                throw new Error('El archivo descomprimido es demasiado grande.');
+            }
             const dom = new DOMParser().parseFromString(kmlText, 'application/xml');
             return toGeoJSON.kml(dom);
         }
@@ -305,7 +318,9 @@ export default function ShapefileUploader({ onGeoJsonReady, onBulkReady, initial
                                 weight: 2
                             }}
                             onEachFeature={(f, layer) => {
-                                layer.bindTooltip(featureNames[idx] || `Lote ${idx + 1}`, {
+                                const tooltipEl = document.createElement('span');
+                                tooltipEl.textContent = featureNames[idx] || `Lote ${idx + 1}`;
+                                layer.bindTooltip(tooltipEl, {
                                     permanent: isBulk,
                                     direction: 'center',
                                     className: 'bg-black/70 text-white text-[10px] font-bold border-0 rounded-lg px-2 py-1 shadow-lg'

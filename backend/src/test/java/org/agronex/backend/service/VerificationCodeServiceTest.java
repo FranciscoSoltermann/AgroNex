@@ -55,4 +55,25 @@ class VerificationCodeServiceTest {
             () -> verificationCodeService.verificarCodigo(email, "999999"));
         assertTrue(exFinal.getMessage().contains("No hay ningún código de verificación activo"));
     }
+
+    @Test
+    @DisplayName("limpiarCodigosExpirados - Elimina entradas expiradas y mantiene las vigentes")
+    void limpiarCodigosExpirados_eliminaExpirados() {
+        verificationCodeService.generarYEnviarCodigo("vigente@agro.com");
+        verificationCodeService.generarYEnviarCodigo("expirado@agro.com");
+
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> map = (java.util.Map<String, Object>) org.springframework.test.util.ReflectionTestUtils.getField(verificationCodeService, "codesMap");
+        assertNotNull(map);
+        assertEquals(2, map.size());
+
+        Object expiredEntry = map.get("expirado@agro.com");
+        org.springframework.test.util.ReflectionTestUtils.setField(expiredEntry, "expiresAt", java.time.LocalDateTime.now().minusMinutes(5));
+
+        verificationCodeService.limpiarCodigosExpirados();
+
+        assertEquals(1, map.size());
+        assertTrue(map.containsKey("vigente@agro.com"));
+        assertFalse(map.containsKey("expirado@agro.com"));
+    }
 }

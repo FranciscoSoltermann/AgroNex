@@ -25,17 +25,25 @@ public class ActividadInsumoService {
     private final ActividadInsumoMapper actividadInsumoMapper;
     private final AuditService auditService;
 
+    private final UsuarioService usuarioService;
+
     @Transactional
     public ActividadInsumoResponse agregarInsumo(ActividadInsumoRequest request, UUID idUsuarioToken) {
+        UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
+
         Actividad actividad = actividadRepository.findById(request.getIdActividad())
                 .orElseThrow(() -> new EntityNotFoundException("Actividad no encontrada"));
 
-        if (actividad.getCampania().getLote() == null || !actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idUsuarioToken)) {
+        if (actividad.getCampania().getLote() == null || !actividad.getCampania().getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
             throw new AccessDeniedException("No tienes permiso para modificar esta actividad");
         }
 
         Insumo insumo = insumoRepository.findById(request.getIdInsumo())
                 .orElseThrow(() -> new EntityNotFoundException("Insumo no encontrado en el catálogo"));
+
+        if (insumo.getUsuario() != null && !insumo.getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tienes permiso para usar este insumo");
+        }
 
         ActividadInsumo nuevoVinculo = actividadInsumoMapper.toEntity(request, actividad, insumo);
         ActividadInsumo guardado = actividadInsumoRepository.save(nuevoVinculo);
