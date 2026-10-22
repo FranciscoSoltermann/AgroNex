@@ -134,7 +134,10 @@ public class JohnDeereMachineService {
      * Si el reintento o el refresh fallan, desconecta al usuario en BD (autocleanup) y lanza una excepción limpia.
      */
     private String executeGet(UUID userId, String url) {
-        if (url == null || !url.startsWith(config.getApiBaseUrl())) {
+        if (url == null || (!url.startsWith(config.getApiBaseUrl())
+                && !url.startsWith("https://api.deere.com/")
+                && !url.startsWith("https://sandboxapi.deere.com/")
+                && !url.startsWith("https://partnerapi.deere.com/"))) {
             throw new IllegalArgumentException("URL externa no permitida: " + url);
         }
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(userId);
@@ -227,7 +230,7 @@ public class JohnDeereMachineService {
         }
 
         // 2. Fallback: URLs construidas manualmente
-        if (endpointsToTry.isEmpty()) {
+        if (!endpointsToTry.contains(config.getApiBaseUrl() + "/organizations/" + orgId + "/machines")) {
             endpointsToTry.add(config.getApiBaseUrl() + "/organizations/" + orgId + "/machines");
             endpointsToTry.add(config.getApiBaseUrl() + "/organizations/" + orgId + "/equipment");
         }

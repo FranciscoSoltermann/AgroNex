@@ -11,12 +11,6 @@ import ConfirmModal from "@/components/shared/ConfirmModal";
 import { useCurrency } from "@/lib/currency-context";
 import PermissionGuard from "@/components/shared/PermissionGuard";
 import { toast } from "sonner";
-import dynamic from "next/dynamic";
-
-const JohnDeereLaborSimulator = dynamic(() => import("@/components/features/dashboard/inventario/JohnDeereLaborSimulator"), {
-    ssr: false
-});
-
 import {
     normalizeStr,
     SUBTIPOS_POR_TIPO,
@@ -514,7 +508,7 @@ export default function InventarioPage() {
                     <div className="flex justify-center items-center h-40"><Loader2 className="w-8 h-8 text-[#2D6A4F] animate-spin" /></div>
                 ) : (
                     <>
-                        <JohnDeereLaborSimulator insumos={displayInsumos} />
+
 
                         {/* Stats */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
