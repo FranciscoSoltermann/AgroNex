@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { Loader2, Download, X } from "lucide-react";
 import apiClient from "@/lib/api-client";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import { useCurrency } from "@/lib/currency-context";
 
 export default function PdfDownloadButton({ campanias, resumen, gastos, campos, loading }) {
@@ -33,10 +31,13 @@ export default function PdfDownloadButton({ campanias, resumen, gastos, campos, 
                 ? campanias.filter(c => c.idCampo === selectedCampo || c.lotes?.some(l => l.idCampo === selectedCampo) || c.nombreCampo === campos.find(cam => cam.idCampo === selectedCampo)?.nombre)
                 : campanias;
 
-            // Traer la info de las campañas filtradas
-            const campaniasData = await Promise.all(
-                filteredCampanias.map(c => apiClient.get(`/finanzas/campania/${c.idCampania}/resumen?t=${new Date().getTime()}`).then(r => r.data).catch(() => null))
-            );
+            // Traer la info de las campañas filtradas y cargar jsPDF bajo demanda en paralelo
+            const [[{ jsPDF }, { default: autoTable }], campaniasData] = await Promise.all([
+                Promise.all([import("jspdf"), import("jspdf-autotable")]),
+                Promise.all(
+                    filteredCampanias.map(c => apiClient.get(`/finanzas/campania/${c.idCampania}/resumen?t=${new Date().getTime()}`).then(r => r.data).catch(() => null))
+                )
+            ]);
 
             const doc = new jsPDF();
             

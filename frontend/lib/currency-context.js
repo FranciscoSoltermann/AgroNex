@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 const DOLAR_TYPES = [
     { id: "blue", label: "Dólar Blue", shortLabel: "Blue" },
@@ -157,6 +157,29 @@ export function CurrencyProvider({ children }) {
     const config = CURRENCY_CONFIG[currency];
 
     /**
+     * Instancia memoizada de Intl.NumberFormat para evitar recrearla en cada llamada a formatCurrency.
+     */
+    const currencyFormatter = useMemo(
+        () =>
+            new Intl.NumberFormat(config.locale, {
+                style: "currency",
+                currency: config.code,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }),
+        [config.locale, config.code]
+    );
+
+    const numberFormatter = useMemo(
+        () =>
+            new Intl.NumberFormat(config.locale, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }),
+        [config.locale]
+    );
+
+    /**
      * Convierte un valor de ARS a la moneda seleccionada.
      * Si currency === "ARS", retorna el valor sin cambios.
      * Si currency === "USD" y hay cotización, divide por el tipo de cambio del dólar seleccionado.
@@ -181,27 +204,22 @@ export function CurrencyProvider({ children }) {
     }, [currency, exchangeRate]);
 
     /**
-     * Formatea un valor monetario usando Intl.NumberFormat.
+     * Formatea un valor monetario usando Intl.NumberFormat memoizado.
      * Aplica la conversión de moneda automáticamente.
      */
     const formatCurrency = useCallback((val) => {
         const converted = convertCurrency(val);
-        return new Intl.NumberFormat(config.locale, {
-            style: "currency",
-            currency: config.code,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(converted);
-    }, [config, convertCurrency]);
+        return currencyFormatter.format(converted);
+    }, [currencyFormatter, convertCurrency]);
 
     /** Compact format: symbol + number (no currency code). Aplica conversión. */
     const formatMoney = useCallback((val) => {
         const converted = convertCurrency(val);
-        return `${config.symbol}${converted.toLocaleString(config.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    }, [config, convertCurrency]);
+        return `${config.symbol}${numberFormatter.format(converted)}`;
+    }, [config.symbol, numberFormatter, convertCurrency]);
 
-    return (
-        <CurrencyContext.Provider value={{
+    const contextValue = useMemo(
+        () => ({
             currency,
             symbol: config.symbol,
             setCurrency,
@@ -218,7 +236,27 @@ export function CurrencyProvider({ children }) {
             convertCurrency,
             convert,
             config: CURRENCY_CONFIG,
-        }}>
+        }),
+        [
+            currency,
+            config.symbol,
+            setCurrency,
+            dolarType,
+            setDolarType,
+            rates,
+            exchangeRate,
+            rateLoading,
+            rateError,
+            fechaActualizacion,
+            formatCurrency,
+            formatMoney,
+            convertCurrency,
+            convert,
+        ]
+    );
+
+    return (
+        <CurrencyContext.Provider value={contextValue}>
             {children}
         </CurrencyContext.Provider>
     );

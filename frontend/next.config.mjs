@@ -12,7 +12,7 @@ const nextConfig = {
     root: __dirname,
   },
   experimental: {
-    optimizePackageImports: ["lucide-react"]
+    optimizePackageImports: ["lucide-react", "recharts", "framer-motion", "@turf/turf"]
   },
   images: {
     formats: ['image/avif', 'image/webp'],

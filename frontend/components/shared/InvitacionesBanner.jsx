@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { assertArrayContract } from "@/lib/api-contracts";
 import { Users, CheckCircle2, XCircle, Loader2, ShieldCheck, Mail, AlertCircle } from "lucide-react";
 
-export default function InvitacionesBanner() {
+function InvitacionesBanner() {
     const queryClient = useQueryClient();
     const [actionError, setActionError] = useState(null);
 
@@ -146,3 +146,5 @@ export default function InvitacionesBanner() {
         </div>
     );
 }
+
+export default memo(InvitacionesBanner);

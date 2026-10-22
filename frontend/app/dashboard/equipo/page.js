@@ -8,7 +8,8 @@ import {
     Loader2, AlertTriangle, CheckCircle2, Trash2, Users, X, Search, RefreshCcw, Briefcase, Settings2, Activity, Mail, Clock, Ban
 } from "lucide-react";
 import PermissionGuard from "@/components/shared/PermissionGuard";
-import AuditoriaPanel from "@/components/features/dashboard/equipo/AuditoriaPanel";
+import dynamic from "next/dynamic";
+const AuditoriaPanel = dynamic(() => import("@/components/features/dashboard/equipo/AuditoriaPanel"), { ssr: false });
 
 const CARD_CLASS = "bg-white dark:bg-[#1a1f25] rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm";
 const INPUT_CLASS = "w-full bg-gray-50 dark:bg-[#0f1419] dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-gray-800 focus:outline-none focus:border-[#2D6A4F] dark:focus:bg-[#1a1f25] transition-colors";

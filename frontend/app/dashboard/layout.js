@@ -11,14 +11,14 @@ import {
     LayoutDashboard, Map, RefreshCw, CircleDollarSign, Leaf, Settings,
     LogOut, Cloud, Activity, Users, Menu, X, Moon, Sun, Tractor, Globe
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import { useTheme } from "@/app/components/ThemeProvider";
 import { toast } from "sonner";
 import NotificationBell from "@/components/shared/notifications/NotificationBell";
 import InvitacionesBanner from "@/components/shared/InvitacionesBanner";
 import { CurrencyProvider, useCurrency, CURRENCY_CONFIG } from "@/lib/currency-context";
 
-function CurrencySelector() {
+const CurrencySelector = memo(function CurrencySelector() {
     const { currency, setCurrency } = useCurrency();
     return (
         <div className="flex bg-gray-100 dark:bg-gray-800/80 rounded-xl p-0.5 border border-gray-200/50 dark:border-gray-750/30">
@@ -40,7 +40,7 @@ function CurrencySelector() {
             })}
         </div>
     );
-}
+});
 
 
 export default function DashboardLayout({ children }) {
@@ -65,9 +65,15 @@ export default function DashboardLayout({ children }) {
                         return;
                     }
 
-                    const [res, settingsRes] = await Promise.all([
+                    const [res, settingsData] = await Promise.all([
                         apiClient.get("/usuarios/me/check", { timeout: 15000 }),
-                        apiClient.get("/usuarios/settings", { timeout: 15000 }).catch(() => null)
+                        queryClient
+                            .fetchQuery({
+                                queryKey: ["userSettings"],
+                                queryFn: () => apiClient.get("/usuarios/settings", { timeout: 15000 }).then((r) => r.data),
+                                staleTime: 5 * 60 * 1000,
+                            })
+                            .catch(() => null),
                     ]);
 
                     const data = res?.data;
@@ -102,10 +108,10 @@ export default function DashboardLayout({ children }) {
                         return;
                     }
 
-                    if (settingsRes?.data) {
-                        setUserName(settingsRes.data.nombreMostrar?.trim() || "Usuario");
-                        setUserRole(settingsRes.data.rol);
-                        setUserPermisos(settingsRes.data.permisos || []);
+                    if (settingsData) {
+                        setUserName(settingsData.nombreMostrar?.trim() || "Usuario");
+                        setUserRole(settingsData.rol);
+                        setUserPermisos(settingsData.permisos || []);
                     } else {
                         setUserName("Usuario");
                     }
@@ -125,7 +131,9 @@ export default function DashboardLayout({ children }) {
 
         syncUser();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            // Evitar llamada duplicada en el montaje inicial (ya cubierta por syncUser arriba)
+            if (event === "INITIAL_SESSION") return;
             if (session?.user) {
                 syncUser();
             } else {

@@ -856,7 +856,7 @@ function EnrollMFAModal({ onClose, onEnrolled }) {
                             <div className="flex justify-center mb-4">
                                 <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={qr} alt="QR Code para 2FA" className="w-48 h-48" />
+                                    <img src={qr} alt="QR Code para 2FA" width={192} height={192} decoding="async" className="w-48 h-48" />
                                 </div>
                             </div>
                         )}

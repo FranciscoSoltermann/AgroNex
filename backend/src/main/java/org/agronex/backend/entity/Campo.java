@@ -49,6 +49,7 @@ public class Campo extends Auditable {
 
     @Builder.Default
     @JsonIgnore
+    @org.hibernate.annotations.BatchSize(size = 100)
     @OneToMany(mappedBy = "campo", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Lote> lotes = new ArrayList<>();
 

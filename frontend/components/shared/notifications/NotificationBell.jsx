@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api-client";
 import { Bell, CheckCheck, Loader2, X, AlertCircle, Info, Thermometer, Leaf, ChevronRight } from "lucide-react";
@@ -24,7 +24,7 @@ function getNotifIcon(titulo = "") {
     return <Info size={14} className="text-blue-500" />;
 }
 
-export default function NotificationBell() {
+function NotificationBell() {
     const queryClient = useQueryClient();
     const [open, setOpen] = useState(false);
     const [authAvailable, setAuthAvailable] = useState(true);
@@ -315,3 +315,5 @@ export default function NotificationBell() {
         </div>
     );
 }
+
+export default memo(NotificationBell);

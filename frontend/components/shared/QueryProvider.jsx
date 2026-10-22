@@ -9,6 +9,7 @@ export default function QueryProvider({ children }) {
         defaultOptions: {
             queries: {
                 staleTime: 60 * 1000, // 1 minuto
+                gcTime: 10 * 60 * 1000, // 10 minutos de retención en memoria
                 retry: 1,
                 refetchOnWindowFocus: false,
             },

@@ -1,14 +1,14 @@
 "use client";
-import SelectorUbicacion from "@/components/features/dashboard/campos/SelectorUbicacion";
-import { useState, useEffect, useCallback, useMemo } from "react";
+
+import { memo, useState, useEffect, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import apiClient from "@/lib/api-client";
 import { getDashboardBootstrapData, invalidateDashboardBootstrapCache } from "@/lib/dashboard-bootstrap-cache";
-import * as turf from "@turf/turf";
+import { polygon as turfPolygon, area as turfArea } from "@turf/turf";
 import dynamic from "next/dynamic";
-import ModalCrearCampo from "@/components/features/dashboard/campos/ModalCrearCampo";
-import ModalEditarCampo from "@/components/features/dashboard/campos/ModalEditarCampo";
+const ModalCrearCampo = dynamic(() => import("@/components/features/dashboard/campos/ModalCrearCampo"), { ssr: false });
+const ModalEditarCampo = dynamic(() => import("@/components/features/dashboard/campos/ModalEditarCampo"), { ssr: false });
 const LoteDrawer = dynamic(() => import('@/components/features/dashboard/campos/LoteDrawer'), { ssr: false });
 const ShapefileUploader = dynamic(() => import('@/components/features/dashboard/campos/ShapefileUploader'), { ssr: false });
 const JohnDeereFieldSelector = dynamic(() => import('@/components/features/dashboard/campos/JohnDeereFieldSelector'), { ssr: false });
@@ -30,7 +30,7 @@ const IMAGES = [
     // Hectáreas verdes desde el aire
     "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=600&auto=format&fit=crop",
     // Cultivo de maíz en hileras
-    "https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=1920",
+    "https://images.unsplash.com/photo-1760125597705-36c84a990a79?auto=format&fit=crop&q=80&w=600",
 ];
 
 function extractPolygonsAndPoints(field) {
@@ -179,8 +179,8 @@ function calculateFieldAreaHa(field) {
                         coords.push([...first]);
                     }
                     if (coords.length >= 4) {
-                        const feat = turf.polygon([coords]);
-                        totalHa += turf.area(feat) / 10000;
+                        const feat = turfPolygon([coords]);
+                        totalHa += turfArea(feat) / 10000;
                     }
                 }
             });
@@ -1576,7 +1576,7 @@ export default function CamposPage() {
     );
 }
 
-function CampoCard({ campo, imagen, vista, editMode, isJohnDeere, onClickDetalle, onEliminarCampo, onGestionarLotes, onEditarCampo }) {
+function CampoCardInner({ campo, imagen, vista, editMode, isJohnDeere, onClickDetalle, onEliminarCampo, onGestionarLotes, onEditarCampo }) {
     if (vista === "lista") {
         return (
             <div
@@ -1674,6 +1674,8 @@ function CampoCard({ campo, imagen, vista, editMode, isJohnDeere, onClickDetalle
         </div>
     );
 }
+
+const CampoCard = memo(CampoCardInner);
 
 // ─── Componentes reutilizables ───
 const INPUT_CLASS = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-gray-900 focus:outline-none focus:border-[#2D6A4F] focus:ring-4 focus:ring-[#2D6A4F]/15 focus:bg-white transition-all placeholder:text-gray-400";

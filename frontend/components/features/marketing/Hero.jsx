@@ -660,7 +660,7 @@ export function Hero() {
               {/* AFIP Data Fiscal Placeholder */}
               <a href="http://www.afip.gob.ar/datafiscal/" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="https://www.afip.gob.ar/images/f960/DATAWEB.jpg" alt="Data Fiscal" className="h-10 object-contain" />
+                <img src="https://www.afip.gob.ar/images/f960/DATAWEB.jpg" alt="Data Fiscal" width={36} height={40} loading="lazy" decoding="async" className="h-10 w-auto object-contain" />
               </a>
             </div>
           </div>

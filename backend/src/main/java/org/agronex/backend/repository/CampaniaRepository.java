@@ -11,6 +11,7 @@ import java.util.UUID;
 public interface CampaniaRepository extends JpaRepository<Campania, UUID> {
 
     /** Campañas que tienen al menos un lote con el id dado. */
+    @EntityGraph(attributePaths = {"campaniaLotes", "campaniaLotes.lote", "campaniaLotes.lote.campo"})
     @Query("SELECT DISTINCT c FROM Campania c JOIN c.campaniaLotes cl WHERE cl.lote.idLote = :idLote")
     List<Campania> findByLoteIdLote(@Param("idLote") UUID idLote);
 

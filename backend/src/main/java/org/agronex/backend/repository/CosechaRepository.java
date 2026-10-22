@@ -3,6 +3,7 @@ package org.agronex.backend.repository;
 import org.agronex.backend.entity.Cosecha;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,15 +12,19 @@ import java.util.List;
 import java.util.UUID;
 
 public interface CosechaRepository extends JpaRepository<Cosecha, UUID> {
+
+    @EntityGraph(attributePaths = {"campania"})
     List<Cosecha> findByCampaniaIdCampania(UUID idCampania);
 
     /** Cosechas del usuario, navegando: Cosecha → Campaña → CampaniaLote → Lote → Campo → Usuario. */
+    @EntityGraph(attributePaths = {"campania"})
     @Query("SELECT DISTINCT co FROM Cosecha co " +
            "JOIN co.campania c " +
            "JOIN c.campaniaLotes cl " +
            "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
     List<Cosecha> findByCampaniaLoteCampoUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario);
 
+    @EntityGraph(attributePaths = {"campania"})
     @Query(value = "SELECT DISTINCT co FROM Cosecha co " +
            "JOIN co.campania c " +
            "JOIN c.campaniaLotes cl " +

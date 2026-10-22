@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Download, FileText, Loader2, X, Calendar, Droplets, Thermometer, CheckCircle2, AlertCircle, ArrowDownUp } from "lucide-react";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+import { Download, FileText, Loader2, X } from "lucide-react";
 
 export default function ExportarClimaPdfModal({ isOpen, onClose, campo, registros = [] }) {
     const [filtroPeriodo, setFiltroPeriodo] = useState("todos"); // 'todos' | 'ultimos_30' | 'ultimos_90' | 'mes_actual' | 'personalizado'
@@ -115,8 +113,8 @@ export default function ExportarClimaPdfModal({ isOpen, onClose, campo, registro
         };
     }, [registrosFiltrados]);
 
-    // Generación del documento PDF con jsPDF y jsPDF-AutoTable
-    const generarPDF = () => {
+    // Generación del documento PDF con jsPDF y jsPDF-AutoTable cargados bajo demanda
+    const generarPDF = async () => {
         if (registrosFiltrados.length === 0) {
             alert("No hay registros que coincidan con los filtros seleccionados.");
             return;
@@ -124,6 +122,11 @@ export default function ExportarClimaPdfModal({ isOpen, onClose, campo, registro
 
         setPdfLoading(true);
         try {
+            const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+                import("jspdf"),
+                import("jspdf-autotable")
+            ]);
+
             const doc = new jsPDF({
                 orientation: "portrait",
                 unit: "mm",
