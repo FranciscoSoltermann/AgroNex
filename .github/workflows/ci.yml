@@ -116,7 +116,7 @@ jobs:
 
       - name: Install Playwright Browsers
         working-directory: ./frontend
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium || (sudo apt-get update -o Acquire::Retries=3 && npx playwright install --with-deps chromium)
 
       - name: Run Playwright UI Tests
         working-directory: ./frontend
