@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -15,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class VerificationCodeService {
 
+    private static final int MAX_CODES_LIMIT = 5000;
+
     private final NotificacionMailService mailService;
     private final SecureRandom random = new SecureRandom();
     
@@ -24,11 +27,22 @@ public class VerificationCodeService {
     private static class CodeEntry {
         final String code;
         final LocalDateTime expiresAt;
+        int intentosRestantes;
 
         CodeEntry(String code, LocalDateTime expiresAt) {
             this.code = code;
             this.expiresAt = expiresAt;
+            this.intentosRestantes = 5;
         }
+    }
+
+    /**
+     * Limpieza periódica de códigos expirados en memoria cada 10 minutos (600.000 ms).
+     */
+    @Scheduled(fixedRate = 600000)
+    public void limpiarCodigosExpirados() {
+        LocalDateTime now = LocalDateTime.now();
+        codesMap.entrySet().removeIf(entry -> now.isAfter(entry.getValue().expiresAt));
     }
 
     /**
@@ -41,18 +55,26 @@ public class VerificationCodeService {
         }
         String emailClean = email.trim().toLowerCase();
 
+        // Eviction preventiva si la colección alcanza el límite máximo
+        if (codesMap.size() >= MAX_CODES_LIMIT) {
+            limpiarCodigosExpirados();
+            if (codesMap.size() >= MAX_CODES_LIMIT) {
+                codesMap.keySet().stream().findFirst().ifPresent(codesMap::remove);
+            }
+        }
+
         // Generar código numérico de 6 dígitos (100000 - 999999)
         String code = String.valueOf(100000 + random.nextInt(900000));
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(15);
 
         codesMap.put(emailClean, new CodeEntry(code, expiresAt));
-        log.info("📧 Código de verificación generado para: {} -> CÓDIGO (SOLO DEV): {}", emailClean, code);
+        log.info("📧 Código de verificación generado y enviado para: {}", emailClean);
 
         mailService.enviarCodigoVerificacion(emailClean, code);
     }
 
     /**
-     * Valida el código de verificación ingresado por el usuario.
+     * Valida el código de verificación ingresado por el usuario con límite de intentos.
      */
     public boolean verificarCodigo(String email, String codigoIngresado) {
         if (email == null || codigoIngresado == null) {
@@ -72,7 +94,13 @@ public class VerificationCodeService {
         }
 
         if (!entry.code.equals(codeClean)) {
-            throw new IllegalArgumentException("El código de verificación ingresado es incorrecto.");
+            entry.intentosRestantes--;
+            if (entry.intentosRestantes <= 0) {
+                codesMap.remove(emailClean);
+                log.warn("⚠️ Código de verificación para {} invalidado por superar el límite de intentos fallidos.", emailClean);
+                throw new IllegalArgumentException("Demasiados intentos fallidos. El código ha sido invalidado por seguridad. Solicita uno nuevo.");
+            }
+            throw new IllegalArgumentException(String.format("El código de verificación ingresado es incorrecto. Intentos restantes: %d", entry.intentosRestantes));
         }
 
         // Si es válido, removemos el código para evitar reúso

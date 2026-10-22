@@ -1,6 +1,8 @@
 package org.agronex.backend.repository;
 
 import org.agronex.backend.entity.Cosecha;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,6 +19,16 @@ public interface CosechaRepository extends JpaRepository<Cosecha, UUID> {
            "JOIN c.campaniaLotes cl " +
            "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
     List<Cosecha> findByCampaniaLoteCampoUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario);
+
+    @Query(value = "SELECT DISTINCT co FROM Cosecha co " +
+           "JOIN co.campania c " +
+           "JOIN c.campaniaLotes cl " +
+           "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario",
+           countQuery = "SELECT COUNT(DISTINCT co) FROM Cosecha co " +
+           "JOIN co.campania c " +
+           "JOIN c.campaniaLotes cl " +
+           "WHERE cl.lote.campo.usuario.idUsuario = :idUsuario")
+    Page<Cosecha> findByCampaniaLoteCampoUsuarioIdUsuario(@Param("idUsuario") UUID idUsuario, Pageable pageable);
 
     // Elimina físicamente (bypass del soft-delete @SQLDelete) para cascada al borrar campaña
     @Modifying

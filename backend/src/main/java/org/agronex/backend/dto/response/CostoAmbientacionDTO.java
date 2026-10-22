@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +27,13 @@ public class CostoAmbientacionDTO {
     private BigDecimal costoTotalInsumos; // USD/ha
     private BigDecimal margenBruto; // USD/ha
 
+    // Metadatos de procedencia y modo operativo vs demostración (F03)
+    private boolean modoDemo;
+    private String fuenteDatos; // OPERATIVO_CAMPANIA | SIMULACION_DEMO
+    private String fuentePrecioGrano; // COSECHA_REGISTRADA | REFERENCIA_ESTIMADA
+    private BigDecimal precioGranoReferenciaUsd;
+    private OffsetDateTime fechaCalculo;
+
     // Desglose de lo aplicado
     private List<InsumoAplicadoDTO> insumosAplicados;
 
@@ -39,5 +47,6 @@ public class CostoAmbientacionDTO {
         private BigDecimal dosisAplicada; // ej: 120 (kg/ha o l/ha)
         private BigDecimal costoUnitario; // ej: USD/kg
         private BigDecimal costoTotalHa; // dosis * costo
+        private String origenDato; // ACTIVIDAD_REGISTRADA | SIMULACION_VRT
     }
 }

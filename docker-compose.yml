@@ -24,7 +24,7 @@ services:
     image: redis:7-alpine
     container_name: agronex-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     networks:
       - agronex-net
 
@@ -32,8 +32,8 @@ services:
     image: rabbitmq:3-management-alpine
     container_name: agronex-rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     networks:
       - agronex-net
 
@@ -55,22 +55,22 @@ services:
       - backend
 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v2.54.1
     container_name: agronex-prometheus
     volumes:
       - ./prometheus:/etc/prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     networks:
       - agronex-net
 
   grafana:
-    image: grafana/grafana-oss:latest
+    image: grafana/grafana-oss:11.1.0
     container_name: agronex-grafana
     ports:
-      - "3001:3000"
+      - "127.0.0.1:3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources

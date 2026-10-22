@@ -54,13 +54,13 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    @DisplayName("handleDataIntegrityViolation - Retorna 409 CONFLICT")
+    @DisplayName("handleDataIntegrityViolation - Retorna 409 CONFLICT y ofusca el error SQL")
     void handleDataIntegrityViolation_retorna409() {
         DataIntegrityViolationException ex = new DataIntegrityViolationException("Duplicate key", new RuntimeException("Email duplicado"));
         ProblemDetail pd = handler.handleDataIntegrityViolation(ex);
 
         assertEquals(HttpStatus.CONFLICT.value(), pd.getStatus());
-        assertTrue(pd.getDetail().contains("Email duplicado"));
+        assertTrue(pd.getDetail().contains("debido a un conflicto en los datos"));
     }
 
     @Test

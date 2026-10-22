@@ -1,7 +1,15 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "preserve",
+    "checkJs": false,
+    "strictNullChecks": true,
     "paths": {
       "@/*": ["./*"]
     }
-  }
+  },
+  "include": ["app/**/*", "components/**/*", "lib/**/*"],
+  "exclude": ["node_modules", ".next"]
 }

@@ -31,6 +31,9 @@ const CotizacionesPizarraBCR = dynamic(() => import("@/components/features/dashb
 const UNIDAD_LABEL = { UNIDADES: "und", LITROS: "L", KILOGRAMOS: "kg", TONELADAS: "tn" };
 const getUnidadLabel = (u) => UNIDAD_LABEL[u] ?? "und";
 
+const EMPTY_ARRAY = [];
+const EMPTY_OBJ = {};
+
 const CATEGORY_COLORS = {
     "servicios de campo": "#2D6A4F",      // Forest Green
     "arrendamiento": "#3B82F6",           // Royal Blue
@@ -94,35 +97,36 @@ export default function DashboardHome() {
 
             const [bootstrap, resResumen] = await Promise.all([
                 getDashboardBootstrapData(),
-                apiClient.get(`/dashboard/resumen`).catch(() => ({ data: {} })),
+                apiClient.get(`/dashboard/resumen`),
             ]);
 
-            const resumen = resResumen.data || {};
+            const resumen = resResumen?.data || EMPTY_OBJ;
 
             return {
                 userId,
                 nombre,
                 bootstrap,
-                stats: resumen.estadisticasCampos || {},
-                actividades: resumen.actividadesRecientes || [],
-                gastos: resumen.gastosRecientes || [],
-                cosechas: resumen.cosechasRecientes || [],
-                insumos: resumen.insumosResumen || [],
-                settings: resumen.configuracion || {}
+                stats: resumen.estadisticasCampos || EMPTY_OBJ,
+                actividades: resumen.actividadesRecientes || EMPTY_ARRAY,
+                gastos: resumen.gastosRecientes || EMPTY_ARRAY,
+                cosechas: resumen.cosechasRecientes || EMPTY_ARRAY,
+                insumos: resumen.insumosResumen || EMPTY_ARRAY,
+                settings: resumen.configuracion || EMPTY_OBJ
             };
         }
     });
 
-    const actos = queryData?.actividades || [];
-    const gast = queryData?.gastos || [];
-    const camps = queryData?.bootstrap?.campanias || [];
-    const coses = queryData?.cosechas || [];
-    const d = queryData?.stats || {};
-    const campos = queryData?.bootstrap?.campos || [];
-    const settingsData = queryData?.settings || {};
+    const actos = queryData?.actividades || EMPTY_ARRAY;
+    const gast = queryData?.gastos || EMPTY_ARRAY;
+    const camps = queryData?.bootstrap?.campanias || EMPTY_ARRAY;
+    const coses = queryData?.cosechas || EMPTY_ARRAY;
+    const d = queryData?.stats || EMPTY_OBJ;
+    const campos = queryData?.bootstrap?.campos || EMPTY_ARRAY;
+    const lotes = queryData?.bootstrap?.lotes || EMPTY_ARRAY;
+    const settingsData = queryData?.settings || EMPTY_OBJ;
 
     const userRole = settingsData.rol;
-    const userPermisos = settingsData.permisos || [];
+    const userPermisos = settingsData.permisos || EMPTY_ARRAY;
 
     // Memoized core metrics & stats
     const { totalCostosActs, totalGastosFijos, stats } = useMemo(() => {
@@ -137,17 +141,17 @@ export default function DashboardHome() {
             totalGastosFijos: gastosFijos,
             stats: {
                 camposActivos: d.camposActivos ?? (campos.length || 0),
-                lotesTotales: d.lotesTotales ?? (queryData?.bootstrap?.lotes?.length || 0),
+                lotesTotales: d.lotesTotales ?? (lotes.length || 0),
                 hectareasTotales: d.hectareasTotales ?? 0,
                 gastosAcumulados: costosActs + gastosFijos,
                 ciclosActivos: camps.length,
             }
         };
-    }, [actos, gast, d, campos, queryData?.bootstrap?.lotes, camps]);
+    }, [actos, gast, d, campos, lotes, camps]);
 
     // Memoized low stock inventory alerts
     const lowStockItems = useMemo(() => {
-        const allInsumos = queryData?.insumos || [];
+        const allInsumos = queryData?.insumos || EMPTY_ARRAY;
         return [...allInsumos]
             .filter(i => {
                 if (i.cantidad == null) return false;
@@ -180,7 +184,7 @@ export default function DashboardHome() {
     // Fast lookup map for insumos
     const insumosMap = useMemo(() => {
         const map = {};
-        (queryData?.insumos || []).forEach(ins => {
+        (queryData?.insumos || EMPTY_ARRAY).forEach(ins => {
             if (ins?.idInsumo) map[ins.idInsumo] = ins;
         });
         return map;

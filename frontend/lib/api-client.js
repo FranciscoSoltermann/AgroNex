@@ -33,6 +33,7 @@ apiClient.interceptors.request.use(async (config) => {
         url.includes('/registro/validar-disponibilidad') ||
         url.includes('/mercadopago/checkout') ||
         url.includes('/mercadopago/webhook') ||
+        url.includes('/arrepentimiento') ||
         url.includes('/health');
 
     if (url.includes('/public/') && publicSinToken) {

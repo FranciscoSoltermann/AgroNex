@@ -9,6 +9,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import org.agronex.backend.infrastructure.security.SecurityUtils;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/maquinaria/john-deere/telemetria")
 @RequiredArgsConstructor
@@ -19,8 +25,11 @@ public class JohnDeereTelemetriaController {
 
     @PostMapping("/labor-finalizada")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PROPIETARIO')") // En prod esto sería autenticado via Token de Servicio/Máquina
-    public ResponseEntity<Void> simularLaborFinalizada(@RequestBody @Valid LaborFinalizadaDTO dto) {
-        johnDeereTelemetriaService.procesarConsumoAutomatico(dto);
+    public ResponseEntity<Void> simularLaborFinalizada(
+            @RequestBody @Valid LaborFinalizadaDTO dto,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID idUsuario = SecurityUtils.requireUserId(jwt);
+        johnDeereTelemetriaService.procesarConsumoAutomatico(dto, idUsuario);
         return ResponseEntity.ok().build();
     }
 }

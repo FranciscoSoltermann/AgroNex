@@ -84,7 +84,7 @@ jobs:
           path: ./backend/target/site/jacoco/
 
   frontend-ci:
-    name: Frontend CI (Next.js & Lint)
+    name: Frontend CI (Next.js, Lint & Playwright)
     runs-on: ubuntu-latest
 
     steps:
@@ -113,6 +113,19 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://mock-supabase.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-anon-key
         run: npm run build
+
+      - name: Install Playwright Browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright UI Tests
+        working-directory: ./frontend
+        env:
+          CI: true
+          NEXT_PUBLIC_API_URL: http://localhost:8080/api
+          NEXT_PUBLIC_SUPABASE_URL: https://mock-supabase.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock-anon-key
+        run: npm run test:e2e
 
   docker-build:
     name: Validate Docker Containers

@@ -12,6 +12,7 @@ import org.agronex.backend.repository.ActividadRepository;
 import org.agronex.backend.repository.ActividadInsumoRepository;
 import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.InsumoRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,7 @@ public class ActividadService {
     private final AuditService auditService;
     private final UsuarioService usuarioService;
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public ActividadResponse registrarActividad(ActividadRequest request, UUID idUsuarioToken) {
         Campania campania = campaniaRepository.findById(request.getIdCampania())
@@ -149,6 +151,7 @@ public class ActividadService {
                 .map(actividadMapper::toResponse);
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public void eliminarActividad(UUID idActividad, UUID idUsuarioToken) {
         Actividad actividad = actividadRepository.findById(idActividad)
@@ -176,6 +179,7 @@ public class ActividadService {
         actividadRepository.delete(actividad);
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public ActividadResponse editarActividad(UUID idActividad, ActividadRequest request, UUID idUsuarioToken) {
         Actividad actividad = actividadRepository.findById(idActividad)
@@ -189,6 +193,10 @@ public class ActividadService {
 
         Campania campania = campaniaRepository.findById(request.getIdCampania())
                 .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
+
+        if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+            throw new AccessDeniedException("No tenés permiso para mover la actividad a esta campaña");
+        }
 
         // 1. Restore stock from old insumos
         restaurarStockInsumos(actividad);

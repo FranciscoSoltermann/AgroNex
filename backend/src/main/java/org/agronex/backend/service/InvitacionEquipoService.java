@@ -11,6 +11,7 @@ import org.agronex.backend.repository.InvitacionEquipoRepository;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -125,6 +126,7 @@ public class InvitacionEquipoService {
     }
 
     @Transactional
+    @CacheEvict(value = {"dashboardResumen", "campoStats"}, allEntries = true)
     public InvitacionResponse aceptarInvitacion(UUID idInvitacion, UUID idUsuarioInvitado) {
         InvitacionEquipo invitacion = invitacionRepository.findByIdInvitacionAndUsuarioInvitado_IdUsuario(idInvitacion, idUsuarioInvitado)
                 .orElseThrow(() -> new EntityNotFoundException("Invitación no encontrada"));

@@ -15,10 +15,11 @@ public class RabbitMQConfig {
     public static final String QUEUE_WEBHOOKS = "q.mercadopago.webhooks";
     public static final String QUEUE_WEBHOOKS_DLQ = "q.mercadopago.webhooks.dlq";
     public static final String ROUTING_KEY_WEBHOOKS = "mercadopago.webhook.#";
+    public static final String ROUTING_KEY_WEBHOOK_RECEIVED = "mercadopago.webhook.received";
 
     @Bean
-    public DirectExchange webhooksExchange() {
-        return new DirectExchange(EXCHANGE_WEBHOOKS);
+    public TopicExchange webhooksExchange() {
+        return new TopicExchange(EXCHANGE_WEBHOOKS);
     }
 
     @Bean
@@ -35,7 +36,7 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Binding bindingWebhooksQueue(Queue webhooksQueue, DirectExchange webhooksExchange) {
+    public Binding bindingWebhooksQueue(Queue webhooksQueue, TopicExchange webhooksExchange) {
         return BindingBuilder.bind(webhooksQueue).to(webhooksExchange).with(ROUTING_KEY_WEBHOOKS);
     }
 

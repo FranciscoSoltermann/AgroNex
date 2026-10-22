@@ -38,12 +38,20 @@ public class CheckoutRateLimitFilter extends OncePerRequestFilter {
 
     private static final String CHECKOUT_PATH = "/api/public/subscriptions/mercadopago/checkout";
     private static final String REGISTRO_DISPONIBILIDAD_PATH = "/api/public/auth/registro/validar-disponibilidad";
+    private static final String REGISTRO_ENVIAR_CODIGO_PATH = "/api/public/auth/registro/enviar-codigo";
+    private static final String REGISTRO_VERIFICAR_CODIGO_PATH = "/api/public/auth/registro/verificar-codigo";
 
     @Value("${public.mercadopago.checkout.rate-limit-per-minute:15}")
     private int requestsPerMinute;
 
     @Value("${public.auth.registro.rate-limit-per-minute:20}")
     private int authRegistroRequestsPerMinute;
+
+    @Value("${public.auth.otp.enviar.rate-limit-per-minute:5}")
+    private int authOtpEnviarRequestsPerMinute = 5;
+
+    @Value("${public.auth.otp.verificar.rate-limit-per-minute:10}")
+    private int authOtpVerificarRequestsPerMinute = 10;
 
     /**
      * IPs de proxies confiables separadas por coma (ej: 10.0.0.1,172.16.0.1).
@@ -66,7 +74,10 @@ public class CheckoutRateLimitFilter extends OncePerRequestFilter {
             return true;
         }
         String path = request.getServletPath();
-        return !CHECKOUT_PATH.equals(path) && !REGISTRO_DISPONIBILIDAD_PATH.equals(path);
+        return !CHECKOUT_PATH.equals(path) 
+                && !REGISTRO_DISPONIBILIDAD_PATH.equals(path)
+                && !REGISTRO_ENVIAR_CODIGO_PATH.equals(path)
+                && !REGISTRO_VERIFICAR_CODIGO_PATH.equals(path);
     }
 
     @Override
@@ -110,7 +121,16 @@ public class CheckoutRateLimitFilter extends OncePerRequestFilter {
     }
 
     private int getCap(String path) {
-        int configured = CHECKOUT_PATH.equals(path) ? requestsPerMinute : authRegistroRequestsPerMinute;
+        int configured;
+        if (CHECKOUT_PATH.equals(path)) {
+            configured = requestsPerMinute;
+        } else if (REGISTRO_ENVIAR_CODIGO_PATH.equals(path)) {
+            configured = authOtpEnviarRequestsPerMinute;
+        } else if (REGISTRO_VERIFICAR_CODIGO_PATH.equals(path)) {
+            configured = authOtpVerificarRequestsPerMinute;
+        } else {
+            configured = authRegistroRequestsPerMinute;
+        }
         return Math.max(1, Math.min(configured, 120));
     }
 

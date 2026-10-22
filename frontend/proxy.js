@@ -51,14 +51,35 @@ export async function proxy(request) {
     }
   }
 
+  // CSP Nonce Generation
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  request.headers.set('x-nonce', nonce);
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   });
 
+  const isDev = process.env.NODE_ENV === 'development';
+  let cspHeader = "";
+  if (isDev) {
+    cspHeader = `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self' https: wss: http://localhost:*;`;
+  } else {
+    cspHeader = `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'strict-dynamic'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self' https: wss:;`;
+  }
+  
+  response.headers.set('Content-Security-Policy', cspHeader);
+
+  const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard");
+
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    console.warn("⚠️ [AgroNex] NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY no están definidos.");
+    console.error("❌ [AgroNex] NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY no están definidos.");
+    if (isProtectedRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
     return response;
   }
 
@@ -99,8 +120,6 @@ export async function proxy(request) {
   if (process.env.NODE_ENV === "development" && request.cookies.get("playwright-bypass")?.value === "true") {
     user = { id: "mock-user-123" };
   }
-
-  const isProtectedRoute = request.nextUrl.pathname.startsWith("/dashboard");
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();

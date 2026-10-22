@@ -1,6 +1,13 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
+import {
+    bbox as turfBbox,
+    polygon as turfPolygon,
+    featureCollection as turfFeatureCollection,
+    intersect as turfIntersect
+} from '@turf/turf';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 import { Loader2, Zap, DollarSign, Sprout, Tractor, AlertCircle } from 'lucide-react';
@@ -14,16 +21,7 @@ export default function AmbientacionCostosMap({ lote }) {
     const [selectedAmbientacion, setSelectedAmbientacion] = useState(null);
     const [layerMode, setLayerMode] = useState('RINDE'); // 'RINDE' o 'ROI'
 
-    // Agregar Turf globalmente para la demo si no está
-    useEffect(() => {
-        if (!window.turf) {
-            const script = document.createElement('script');
-            script.src = "https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js";
-            document.head.appendChild(script);
-        }
-    }, []);
-
-    // 1. Fetch de los costos y ambientaciones simuladas del backend
+    // 1. Fetch de los costos y ambientaciones del backend
     const { data: ambientaciones, isLoading, error } = useQuery({
         queryKey: ['costos-ambientacion', lote?.idLote],
         queryFn: async () => {
@@ -40,7 +38,7 @@ export default function AmbientacionCostosMap({ lote }) {
             return response.data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries(['costos-ambientacion', lote?.idLote]);
+            queryClient.invalidateQueries({ queryKey: ['costos-ambientacion', lote?.idLote] });
         }
     });
 
@@ -84,19 +82,40 @@ export default function AmbientacionCostosMap({ lote }) {
         );
     }
 
-    // Helper to generate mock GeoJSON partitions for the ambientaciones if they don't have real coordinates
+    // Construir features espaciales: usa geometrías reales de cada ambientación si existen,
+    // o subdivide el polígono del lote en modo demostración usando Turf.
     const getMapFeatures = () => {
+        const tieneGeometriasPropias = ambientaciones.every(a => !!a.coordenadasGeoJson);
+        if (tieneGeometriasPropias) {
+            try {
+                return ambientaciones.map((amb) => {
+                    const parsed = JSON.parse(amb.coordenadasGeoJson);
+                    const featureBase = parsed.type === 'FeatureCollection' ? parsed.features[0]
+                        : parsed.type === 'Feature' ? parsed
+                        : { type: 'Feature', geometry: parsed };
+                    return {
+                        ...featureBase,
+                        properties: {
+                            ...(featureBase.properties || {}),
+                            id: amb.idAmbientacion,
+                            nombre: amb.nombre,
+                            color: amb.colorHex,
+                            rinde: amb.rindeEstimado
+                        }
+                    };
+                });
+            } catch (e) {
+                console.error("Error parseando GeoJSON de ambientación:", e);
+            }
+        }
+
         if (!lote?.coordenadasGeoJson) return null;
         
         try {
             const loteGeoJSON = JSON.parse(lote.coordenadasGeoJson);
+            const bbox = turfBbox(loteGeoJSON);
             
-            // Si el lote tiene coordenadas reales, vamos a simular 3 bandas horizontales para las ambientaciones
-            // usando Turf.js para el bounding box.
-            const bbox = window.turf ? window.turf.bbox(loteGeoJSON) : null;
-            
-            // Si no tenemos turf cargado o falla, mostramos el lote entero con el color de la seleccionada
-            if (!bbox || !window.turf) {
+            if (!bbox || bbox.length < 4) {
                 return [{
                     type: "Feature",
                     properties: { color: selectedAmbientacion?.colorHex || '#9ca3af', nombre: lote.nombre },
@@ -104,13 +123,14 @@ export default function AmbientacionCostosMap({ lote }) {
                 }];
             }
 
-            // Partir el bounding box en 3 (Norte, Centro, Sur) y hacer la intersección con el Lote
+            // Partir el bounding box en N franjas (Norte, Centro, Sur) y hacer la intersección con el Lote
             const height = bbox[3] - bbox[1];
             const step = height / ambientaciones.length;
+            const rawPolyLote = loteGeoJSON.type === 'FeatureCollection' ? loteGeoJSON.features[0] : loteGeoJSON;
+            const polyLote = rawPolyLote.type === 'Feature' ? rawPolyLote : { type: 'Feature', properties: {}, geometry: rawPolyLote };
             
             return ambientaciones.map((amb, i) => {
-                // Crear un poligono de corte
-                const polyCorte = window.turf.polygon([[
+                const polyCorte = turfPolygon([[
                     [bbox[0], bbox[1] + (step * i)],
                     [bbox[2], bbox[1] + (step * i)],
                     [bbox[2], bbox[1] + (step * (i + 1))],
@@ -119,11 +139,7 @@ export default function AmbientacionCostosMap({ lote }) {
                 ]]);
                 
                 try {
-                    // Intersecado el corte con el lote real (manejar si loteGeoJSON es FeatureCollection)
-                    const polyLote = loteGeoJSON.type === 'FeatureCollection' ? loteGeoJSON.features[0] : loteGeoJSON;
-                    
-                    // Turf v6+ require intersect(poly1, poly2)
-                    const intersection = window.turf.intersect(polyCorte, polyLote);
+                    const intersection = turfIntersect(turfFeatureCollection([polyCorte, polyLote]));
                     
                     if (!intersection) return null;
                     
@@ -136,7 +152,7 @@ export default function AmbientacionCostosMap({ lote }) {
                             rinde: amb.rindeEstimado
                         }
                     };
-                } catch(e) {
+                } catch (e) {
                     console.error("Error en Turf.js intersect:", e);
                     return null;
                 }
@@ -149,7 +165,12 @@ export default function AmbientacionCostosMap({ lote }) {
     };
 
     const mapFeatures = getMapFeatures();
-    const bounds = mapFeatures && window.turf ? window.turf.bbox(window.turf.featureCollection(mapFeatures)) : null;
+    const bounds = mapFeatures && mapFeatures.length > 0
+        ? turfBbox(turfFeatureCollection(mapFeatures))
+        : null;
+
+    const esModoDemo = ambientaciones.some(a => a.modoDemo !== false);
+    const primerAmb = ambientaciones[0] || {};
 
     // Función para calcular color de Rentabilidad (ROI)
     const getRoiColor = (margen) => {
@@ -163,10 +184,23 @@ export default function AmbientacionCostosMap({ lote }) {
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-6">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-wrap justify-between items-center gap-4 mb-4">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-800">Costos y Mapas Espaciales (John Deere VRT)</h2>
-                    <p className="text-sm text-gray-500">Lote: {lote.nombre}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl font-bold text-gray-800">Costos y Mapas Espaciales (John Deere VRT)</h2>
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            esModoDemo
+                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        }`}>
+                            {esModoDemo ? 'Modo Demostración (Simulación VRT)' : 'Datos Operativos Reales'}
+                        </span>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                        Lote: {lote.nombre}
+                        {primerAmb.fuenteDatos && ` · Fuente: ${primerAmb.fuenteDatos}`}
+                        {primerAmb.precioGranoReferenciaUsd && ` · Grano: USD ${primerAmb.precioGranoReferenciaUsd}/tn (${primerAmb.fuentePrecioGrano || 'Referencia'})`}
+                    </p>
                 </div>
                 <div className="flex bg-gray-100 p-1 rounded-lg">
                     <button 
@@ -183,6 +217,15 @@ export default function AmbientacionCostosMap({ lote }) {
                     </button>
                 </div>
             </div>
+
+            {esModoDemo && (
+                <div className="mb-6 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>
+                        Los valores marcados como simulación VRT emplean dosis y precios de referencia demostrativos hasta que el lote cuente con geometrías de ambientación, aplicaciones y cosechas reales registradas.
+                    </span>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Panel Izquierdo: Lista de Ambientaciones y Colores */}
@@ -261,9 +304,16 @@ export default function AmbientacionCostosMap({ lote }) {
                     <div className="bg-gray-50 rounded-xl p-6 border border-gray-100">
                         {selectedAmbientacion ? (
                             <div>
-                                <div className="flex items-center mb-6">
-                                    <div className="w-6 h-6 rounded-full mr-3 shadow-sm border border-gray-200" style={{ backgroundColor: selectedAmbientacion.colorHex }} />
-                                    <h3 className="text-xl font-bold text-gray-800">Zona: {selectedAmbientacion.nombre}</h3>
+                                <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+                                    <div className="flex items-center">
+                                        <div className="w-6 h-6 rounded-full mr-3 shadow-sm border border-gray-200" style={{ backgroundColor: selectedAmbientacion.colorHex }} />
+                                        <h3 className="text-xl font-bold text-gray-800">Zona: {selectedAmbientacion.nombre}</h3>
+                                    </div>
+                                    {selectedAmbientacion.fechaCalculo && (
+                                        <span className="text-[11px] text-gray-400">
+                                            Cálculo: {new Date(selectedAmbientacion.fechaCalculo).toLocaleString('es-AR')}
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="grid grid-cols-3 gap-4 mb-6">
@@ -287,6 +337,7 @@ export default function AmbientacionCostosMap({ lote }) {
                                         <thead className="bg-gray-50 text-gray-600 border-b border-gray-100">
                                             <tr>
                                                 <th className="p-2 font-medium">Insumo</th>
+                                                <th className="p-2 font-medium">Origen</th>
                                                 <th className="p-2 text-right font-medium">Dosis (VRT)</th>
                                                 <th className="p-2 text-right font-medium">Costo/Ha</th>
                                             </tr>
@@ -295,6 +346,7 @@ export default function AmbientacionCostosMap({ lote }) {
                                             {selectedAmbientacion.insumosAplicados.map((ins, idx) => (
                                                 <tr key={idx} className="hover:bg-gray-50">
                                                     <td className="p-2 font-medium text-gray-800">{ins.nombreInsumo}</td>
+                                                    <td className="p-2 text-gray-500">{ins.origenDato || (selectedAmbientacion.modoDemo ? 'SIMULACION_VRT' : 'OPERATIVO')}</td>
                                                     <td className="p-2 text-right text-gray-600">{ins.dosisAplicada}</td>
                                                     <td className="p-2 text-right font-medium text-red-600">${ins.costoTotalHa}</td>
                                                 </tr>

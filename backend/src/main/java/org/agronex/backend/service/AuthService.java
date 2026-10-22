@@ -44,8 +44,11 @@ public class AuthService {
     }
 
     @Transactional
-    public PersonaFisicaResponse registrarPersonaFisica(PersonaFisicaRequest request, UUID supabaseUuid) {
-        String emailNormalizado = normalizarEmail(request.getEmail());
+    public PersonaFisicaResponse registrarPersonaFisica(PersonaFisicaRequest request, UUID supabaseUuid, String tokenEmail) {
+        if (tokenEmail != null && request.getEmail() != null && !tokenEmail.equalsIgnoreCase(request.getEmail())) {
+            throw new IllegalArgumentException("El email del registro no coincide con el de la identidad autenticada.");
+        }
+        String emailNormalizado = normalizarEmail(tokenEmail != null ? tokenEmail : request.getEmail());
         String dniNormalizado = normalizarNumerico(request.getDni());
 
         if (usuarioRepository.existsById(supabaseUuid)) {
@@ -77,8 +80,11 @@ public class AuthService {
     }
 
     @Transactional
-    public PersonaJuridicaResponse registrarPersonaJuridica(PersonaJuridicaRequest request, UUID supabaseUuid) {
-        String emailNormalizado = normalizarEmail(request.getEmail());
+    public PersonaJuridicaResponse registrarPersonaJuridica(PersonaJuridicaRequest request, UUID supabaseUuid, String tokenEmail) {
+        if (tokenEmail != null && request.getEmail() != null && !tokenEmail.equalsIgnoreCase(request.getEmail())) {
+            throw new IllegalArgumentException("El email del registro no coincide con el de la identidad autenticada.");
+        }
+        String emailNormalizado = normalizarEmail(tokenEmail != null ? tokenEmail : request.getEmail());
         String cuitNormalizado = normalizarNumerico(request.getCuit());
 
         if (usuarioRepository.existsById(supabaseUuid)) {

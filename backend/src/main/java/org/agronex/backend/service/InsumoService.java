@@ -12,6 +12,7 @@ import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.InsumoRepository;
 import org.agronex.backend.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -31,6 +32,7 @@ public class InsumoService {
     private final AuditService auditService;
     private final UsuarioService usuarioService;
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public InsumoResponse crearInsumo(InsumoRequest request, UUID idUsuarioToken) {
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuarioToken);
@@ -90,6 +92,14 @@ public class InsumoService {
         List<Insumo> list;
         UUID idDatos = usuarioService.idUsuarioParaAccesoDatos(idUsuario);
 
+        if (idCampania != null) {
+            Campania campania = campaniaRepository.findById(idCampania)
+                    .orElseThrow(() -> new EntityNotFoundException("Campaña no encontrada"));
+            if (!campania.getLote().getCampo().getUsuario().getIdUsuario().equals(idDatos)) {
+                throw new AccessDeniedException("No tenés acceso a esta campaña");
+            }
+        }
+
         if (idCampo != null && idCampania != null) {
             // Filtrar por campo Y campaña
             list = insumoRepository.findByCampoIdCampoAndCampaniaIdCampania(idCampo, idCampania);
@@ -125,6 +135,7 @@ public class InsumoService {
         return insumoMapper.toResponse(insumo);
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public InsumoResponse actualizarInsumo(UUID id, InsumoRequest request, UUID idUsuarioToken) {
         Insumo insumo = insumoRepository.findById(id)
@@ -193,6 +204,7 @@ public class InsumoService {
         return insumoMapper.toResponse(guardado);
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public InsumoResponse reponerStock(UUID id, org.agronex.backend.dto.request.ReponerStockRequest request, UUID idUsuarioToken) {
         Insumo insumo = insumoRepository.findById(id)
@@ -231,6 +243,7 @@ public class InsumoService {
         return insumoMapper.toResponse(guardado);
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public void eliminarInsumo(UUID id, UUID idUsuarioToken) {
         Insumo insumo = insumoRepository.findById(id)

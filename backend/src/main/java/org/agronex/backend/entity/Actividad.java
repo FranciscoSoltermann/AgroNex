@@ -47,6 +47,7 @@ public class Actividad {
     private Campania campania;
 
     @Builder.Default
+    @org.hibernate.annotations.BatchSize(size = 100)
     @OneToMany(mappedBy = "actividad", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ActividadInsumo> insumosUtilizados = new ArrayList<>();
 }

@@ -63,4 +63,23 @@ class JohnDeereMachineServiceTest {
         assertNotNull(machines);
         assertTrue(machines.isEmpty());
     }
+
+    @Test
+    @DisplayName("simulatedMachines - Verifica que getMachineBreadcrumbs recupera máquina simulada en memoria")
+    void simulatedMachines_recuperaDeMemoria() {
+        UUID userId = UUID.randomUUID();
+        @SuppressWarnings("unchecked")
+        Map<UUID, List<Map<String, Object>>> simulatedMap = 
+            (Map<UUID, List<Map<String, Object>>>) ReflectionTestUtils.getField(machineService, "simulatedMachinesByUser");
+        assertNotNull(simulatedMap);
+
+        List<Map<String, Object>> list = new java.util.concurrent.CopyOnWriteArrayList<>();
+        list.add(Map.of("id", "sim-123", "breadcrumbs", Map.of("lat", -31.0, "lon", -60.0)));
+        simulatedMap.put(userId, list);
+
+        List<Map<String, Object>> breadcrumbs = machineService.getMachineBreadcrumbs(userId, "sim-123");
+        assertNotNull(breadcrumbs);
+        assertEquals(1, breadcrumbs.size());
+        assertEquals(-31.0, breadcrumbs.get(0).get("lat"));
+    }
 }

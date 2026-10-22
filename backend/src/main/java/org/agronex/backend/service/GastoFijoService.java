@@ -10,6 +10,7 @@ import org.agronex.backend.mapper.GastoFijoMapper;
 import org.agronex.backend.repository.CampaniaRepository;
 import org.agronex.backend.repository.CampoRepository;
 import org.agronex.backend.repository.GastoFijoRepository;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class GastoFijoService {
     private final AuditService auditService;
     private final UsuarioService usuarioService;
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public GastoFijoResponse registrarGasto(GastoFijoRequest request, UUID idUsuarioToken) {
         Campo campo = campoRepository.findById(request.getIdCampo())
@@ -76,6 +78,7 @@ public class GastoFijoService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    @CacheEvict(value = "dashboardResumen", allEntries = true)
     @Transactional
     public void eliminarGasto(UUID idGasto, UUID idUsuarioToken) {
         GastoFijo gastoFijo = gastoFijoRepository.findById(idGasto)

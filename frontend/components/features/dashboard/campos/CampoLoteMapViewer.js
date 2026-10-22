@@ -162,14 +162,27 @@ export default function CampoLoteMapViewer({
                                 dashArray: isSelected ? '4, 4' : undefined
                             }}
                             onEachFeature={(feature, layer) => {
-                                const tooltipContent = `
-                                    <div style="font-family: inherit; text-align: center; padding: 3px;">
-                                        <div style="font-weight: 800; font-size: 12px; color: #1f2937;">${lote.nombre}</div>
-                                        <div style="font-weight: 900; font-size: 11px; color: #059669;">${Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha</div>
-                                        ${isSelected ? '<div style="font-size: 10px; color: #d97706; font-weight: 700; margin-top: 2px;">📍 Lote Enfocado</div>' : ''}
-                                    </div>
-                                `;
-                                layer.bindTooltip(tooltipContent, {
+                                const tooltipEl = document.createElement('div');
+                                tooltipEl.style.cssText = 'font-family: inherit; text-align: center; padding: 3px;';
+                                
+                                const titleEl = document.createElement('div');
+                                titleEl.style.cssText = 'font-weight: 800; font-size: 12px; color: #1f2937;';
+                                titleEl.textContent = lote.nombre;
+                                tooltipEl.appendChild(titleEl);
+                                
+                                const areaEl = document.createElement('div');
+                                areaEl.style.cssText = 'font-weight: 900; font-size: 11px; color: #059669;';
+                                areaEl.textContent = `${Number(lote.superficie).toLocaleString("es-AR", { maximumFractionDigits: 2 })} Ha`;
+                                tooltipEl.appendChild(areaEl);
+                                
+                                if (isSelected) {
+                                    const focusEl = document.createElement('div');
+                                    focusEl.style.cssText = 'font-size: 10px; color: #d97706; font-weight: 700; margin-top: 2px;';
+                                    focusEl.textContent = '📍 Lote Enfocado';
+                                    tooltipEl.appendChild(focusEl);
+                                }
+
+                                layer.bindTooltip(tooltipEl, {
                                     permanent: isSelected,
                                     direction: 'top',
                                     className: 'leaflet-tooltip-custom'
